@@ -71,11 +71,8 @@ const defaultConfig = {
       { left: 1720, top: 870, width: 200, height: 194 },
       { left: 0, top: 1064, width: 1920, height: 16 }
     ],
+    queueProfileRight: 398,
     queueChatBox: { left: 616, top: 742, width: 688, height: 317 },
-    queueMaskParts: [
-      { left: 0, top: 174, width: 398, height: 884 },
-      { left: 1520, top: 60, width: 400, height: 1020 }
-    ],
     topBarSlots: [
       { left: 208, top: 0, width: 122, height: 75, asset: 'topbar-slot-0.png' },
       { left: 333, top: 0, width: 122, height: 75, asset: 'topbar-slot-1.png' },
@@ -340,8 +337,12 @@ async function migrateConfig(config) {
     config.protection.queueMode = defaultConfig.protection.queueMode;
     changed = true;
   }
-  if (!Array.isArray(config.protection.queueMaskParts) || config.protection.queueMaskParts.length !== 2) {
-    config.protection.queueMaskParts = structuredClone(defaultConfig.protection.queueMaskParts);
+  if (!Number.isFinite(Number(config.protection.queueProfileRight)) || Number(config.protection.queueProfileRight) < 0) {
+    config.protection.queueProfileRight = defaultConfig.protection.queueProfileRight;
+    changed = true;
+  }
+  if (config.protection.queueMaskParts) {
+    delete config.protection.queueMaskParts;
     changed = true;
   }
   const queueChatBox = config.protection.queueChatBox;

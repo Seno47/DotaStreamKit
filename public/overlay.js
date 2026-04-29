@@ -26,8 +26,20 @@ stream.onmessage = (event) => {
 };
 
 function queueMaskParts(protection, reference) {
-  if ((protection.queueMode || 'partial') !== 'full') return protection.queueMaskParts || [];
-  return [{ left: 0, top: 0, width: reference.width, height: reference.height }];
+  if ((protection.queueMode || 'partial') === 'full') {
+    return [{ left: 0, top: 0, width: reference.width, height: reference.height }];
+  }
+
+  const profileRight = clampNumber(protection.queueProfileRight, 0, reference.width, 398);
+  const chat = normalizeBox(protection.queueChatBox, { left: 616, top: 742, width: 688, height: 317 }, reference);
+  const chatRight = chat.left + chat.width;
+  const chatBottom = chat.top + chat.height;
+  return [
+    { left: profileRight, top: 0, width: reference.width - profileRight, height: chat.top },
+    { left: profileRight, top: chat.top, width: Math.max(0, chat.left - profileRight), height: chat.height },
+    { left: chatRight, top: chat.top, width: reference.width - chatRight, height: chat.height },
+    { left: profileRight, top: chatBottom, width: reference.width - profileRight, height: reference.height - chatBottom }
+  ].filter((part) => part.width > 0 && part.height > 0);
 }
 
 function normalizeReference(reference) {
@@ -37,6 +49,20 @@ function normalizeReference(reference) {
     return { width: 1920, height: 1080 };
   }
   return { width, height };
+}
+
+function normalizeBox(box, fallback, reference) {
+  const left = clampNumber(box?.left, 0, reference.width, fallback.left);
+  const top = clampNumber(box?.top, 0, reference.height, fallback.top);
+  const width = clampNumber(box?.width, 0, reference.width - left, fallback.width);
+  const height = clampNumber(box?.height, 0, reference.height - top, fallback.height);
+  return { left, top, width, height };
+}
+
+function clampNumber(value, min, max, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(Math.max(number, min), max);
 }
 
 function ensureQueueParts(count) {
