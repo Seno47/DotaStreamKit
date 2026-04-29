@@ -3,12 +3,15 @@ const els = {
   twitchStatus: document.querySelector('#twitchStatus'),
   autoDraft: document.querySelector('#autoDraft'),
   autoMinimap: document.querySelector('#autoMinimap'),
+  autoQueue: document.querySelector('#autoQueue'),
   minimapSize: document.querySelector('#minimapSize'),
   minimapSide: document.querySelector('#minimapSide'),
   minimapStyle: document.querySelector('#minimapStyle'),
+  queueMode: document.querySelector('#queueMode'),
   manualDraft: document.querySelector('#manualDraft'),
   manualMinimap: document.querySelector('#manualMinimap'),
   manualTopBar: document.querySelector('#manualTopBar'),
+  manualQueue: document.querySelector('#manualQueue'),
   gameState: document.querySelector('#gameState'),
   gameScreen: document.querySelector('#gameScreen'),
   heroState: document.querySelector('#heroState'),
@@ -51,6 +54,7 @@ const els = {
   detectDota: document.querySelector('#detectDota'),
   installGsi: document.querySelector('#installGsi'),
   draftScreenshotAsset: document.querySelector('#draftScreenshotAsset'),
+  queueScreenshotAsset: document.querySelector('#queueScreenshotAsset'),
   assetStatus: document.querySelector('#assetStatus'),
   events: document.querySelector('#events')
 };
@@ -104,12 +108,15 @@ function render(data) {
 
   els.autoDraft.checked = config.protection.autoDraft;
   els.autoMinimap.checked = config.protection.autoMinimap;
+  els.autoQueue.checked = config.protection.autoQueue;
   els.minimapSize.value = config.protection.minimapSize || 'normal';
   els.minimapSide.value = config.protection.minimapSide || 'left';
   els.minimapStyle.value = config.protection.minimapStyle || 'realistic';
+  els.queueMode.value = config.protection.queueMode || 'partial';
   toggleButton(els.manualDraft, config.protection.manualDraft || state.protection.draft);
   toggleButton(els.manualMinimap, config.protection.manualMinimap || state.protection.minimap);
   toggleButton(els.manualTopBar, config.protection.manualTopBar || state.protection.topBar);
+  toggleButton(els.manualQueue, config.protection.manualQueue || state.protection.queue);
 
   els.gameState.textContent = state.gsi.gameState || '-';
   els.gameScreen.textContent = state.gsi.leftGameView ? 'меню Dota / reconnect' : state.gsi.inGameScreen ? 'игровой экран' : '-';
@@ -352,12 +359,15 @@ async function saveProtection(patch) {
 
 els.autoDraft.addEventListener('change', () => saveProtection({ autoDraft: els.autoDraft.checked }).catch(alert));
 els.autoMinimap.addEventListener('change', () => saveProtection({ autoMinimap: els.autoMinimap.checked }).catch(alert));
+els.autoQueue.addEventListener('change', () => saveProtection({ autoQueue: els.autoQueue.checked }).catch(alert));
 els.minimapSize.addEventListener('change', () => saveProtection({ minimapSize: els.minimapSize.value }).catch(alert));
 els.minimapSide.addEventListener('change', () => saveProtection({ minimapSide: els.minimapSide.value }).catch(alert));
 els.minimapStyle.addEventListener('change', () => saveProtection({ minimapStyle: els.minimapStyle.value }).catch(alert));
+els.queueMode.addEventListener('change', () => saveProtection({ queueMode: els.queueMode.value }).catch(alert));
 els.manualDraft.addEventListener('click', () => saveProtection({ manualDraft: !snapshot.config.protection.manualDraft }).catch(alert));
 els.manualMinimap.addEventListener('click', () => saveProtection({ manualMinimap: !snapshot.config.protection.manualMinimap }).catch(alert));
 els.manualTopBar.addEventListener('click', () => saveProtection({ manualTopBar: !snapshot.config.protection.manualTopBar }).catch(alert));
+els.manualQueue.addEventListener('click', () => saveProtection({ manualQueue: !snapshot.config.protection.manualQueue }).catch(alert));
 
 els.clientId.addEventListener('change', () => saveTwitchAppConfig().catch(alert));
 els.clientSecret.addEventListener('change', () => saveTwitchAppConfig().catch(alert));
@@ -461,6 +471,7 @@ els.installGsi.addEventListener('click', () => api('/api/install-gsi', {
   alert(`GSI установлен:\n${result.cfgPath}\n\nПерезапусти Dota 2, если она уже была открыта.`);
 }).catch(alert));
 els.draftScreenshotAsset.addEventListener('change', () => uploadAsset('draft-screenshot.png', els.draftScreenshotAsset.files[0]).catch(alert));
+els.queueScreenshotAsset.addEventListener('change', () => uploadAsset('queue-screenshot.png', els.queueScreenshotAsset.files[0]).catch(alert));
 
 async function detectDota() {
   const result = await api('/api/dota/detect', null, 'GET');
@@ -494,8 +505,9 @@ async function refreshAssets() {
   const slots = Array.from({ length: 10 }, (_, index) => status[`topbar-slot-${index}.png`]).filter((item) => item?.exists);
   const full = formatAssetStatus(status['draft-screenshot.png']);
   const minimap = formatAssetStatus(status['fake-minimap-vision-realistic.png']);
+  const queue = formatAssetStatus(status['queue-screenshot.png']);
   const slotBytes = slots.reduce((sum, item) => sum + item.bytes, 0);
-  els.assetStatus.textContent = `Слоты: ${slots.length}/10, ${Math.round(slotBytes / 1024)} KB | Скрин: ${full} | Миникарта: ${minimap}`;
+  els.assetStatus.textContent = `Слоты: ${slots.length}/10, ${Math.round(slotBytes / 1024)} KB | Draft: ${full} | Поиск: ${queue} | Миникарта: ${minimap}`;
 }
 
 function formatAssetStatus(asset) {

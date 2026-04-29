@@ -46,9 +46,12 @@ const defaultConfig = {
   protection: {
     autoDraft: true,
     autoMinimap: true,
+    autoQueue: true,
     manualDraft: false,
     manualMinimap: false,
     manualTopBar: false,
+    manualQueue: false,
+    queueMode: 'partial',
     referenceSize: { width: 1920, height: 1080 },
     minimapSize: 'normal',
     minimapSide: 'left',
@@ -67,6 +70,11 @@ const defaultConfig = {
       { left: 0, top: 870, width: 1234, height: 194 },
       { left: 1720, top: 870, width: 200, height: 194 },
       { left: 0, top: 1064, width: 1920, height: 16 }
+    ],
+    queueChatBox: { left: 616, top: 742, width: 688, height: 317 },
+    queueMaskParts: [
+      { left: 0, top: 174, width: 398, height: 884 },
+      { left: 1520, top: 60, width: 400, height: 1020 }
     ],
     topBarSlots: [
       { left: 208, top: 0, width: 122, height: 75, asset: 'topbar-slot-0.png' },
@@ -112,7 +120,7 @@ const runtime = {
   state: {
     startedAt: new Date().toISOString(),
     gsi: { connected: false, lastSeenAt: null, gameState: null, clockTime: null, matchId: null, activeMatchId: null, playerActivity: null, playerTeam: null, winTeam: null, heroName: null, heroId: null, playerHeroPicked: false, draftActiveTeam: null, ownPickPhaseEnded: false, inGameScreen: false, leftGameView: false },
-    protection: { draft: false, minimap: false, topBar: false },
+    protection: { draft: false, minimap: false, topBar: false, queue: false },
     twitch: { authenticated: false, broadcasterId: null, broadcasterLogin: null, tokenExpiresAt: null },
     activePrediction: null,
     activePredictionMatchId: null,
@@ -326,6 +334,19 @@ async function migrateConfig(config) {
     config.protection.draftMaskParts = structuredClone(defaultConfig.protection.draftMaskParts);
     changed = true;
   }
+  if (!['partial', 'full'].includes(config.protection.queueMode)) {
+    config.protection.queueMode = defaultConfig.protection.queueMode;
+    changed = true;
+  }
+  if (!Array.isArray(config.protection.queueMaskParts) || config.protection.queueMaskParts.length !== 2) {
+    config.protection.queueMaskParts = structuredClone(defaultConfig.protection.queueMaskParts);
+    changed = true;
+  }
+  const queueChatBox = config.protection.queueChatBox;
+  if (!queueChatBox || !Number.isFinite(Number(queueChatBox.left)) || !Number.isFinite(Number(queueChatBox.width))) {
+    config.protection.queueChatBox = structuredClone(defaultConfig.protection.queueChatBox);
+    changed = true;
+  }
 
   if (changed) await persistConfig();
 }
@@ -363,6 +384,11 @@ async function ensureGeneratedAssets() {
   } catch {
     await copyDefaultAsset('draft-screenshot.png');
     await buildSlotsFromDraftScreenshot();
+  }
+  try {
+    await stat(join(assetDir, 'queue-screenshot.png'));
+  } catch {
+    await copyDefaultAsset('queue-screenshot.png');
   }
 }
 
@@ -720,8 +746,8 @@ async function assetStatus(res) {
 
 async function uploadAsset(req, res) {
   const body = await readBody(req);
-  if (body.name !== 'draft-screenshot.png') {
-    throw new Error('Only draft-screenshot.png can be uploaded from the dashboard');
+  if (!['draft-screenshot.png', 'queue-screenshot.png'].includes(body.name)) {
+    throw new Error('Only draft-screenshot.png or queue-screenshot.png can be uploaded from the dashboard');
   }
   const match = String(body.dataUrl || '').match(/^data:image\/(?:png|jpeg|webp);base64,([a-z0-9+/=]+)$/i);
   if (!match) throw new Error('Upload a PNG, JPEG or WebP image');
@@ -731,7 +757,7 @@ async function uploadAsset(req, res) {
 
   const optimized = await optimizeDraftScreenshot(buffer);
   await writeFile(join(assetDir, body.name), optimized);
-  await buildSlotsFromDraftScreenshot(optimized);
+  if (body.name === 'draft-screenshot.png') await buildSlotsFromDraftScreenshot(optimized);
   logEvent('system', `Overlay asset optimized: ${body.name}`, {
     originalBytes: buffer.length,
     optimizedBytes: optimized.length
@@ -781,6 +807,7 @@ function assetNames() {
     'fake-minimap-vision-simple.png',
     'fake-minimap-vision-empty.png',
     'draft-screenshot.png',
+    'queue-screenshot.png',
     ...Array.from({ length: 10 }, (_, index) => `topbar-slot-${index}.png`)
   ];
 }
@@ -944,11 +971,14 @@ async function updateConfig(req, res) {
 
 async function updateProtection(req, res) {
   const body = await readBody(req);
-  for (const key of ['manualDraft', 'manualMinimap', 'manualTopBar']) {
+  for (const key of ['manualDraft', 'manualMinimap', 'manualTopBar', 'manualQueue']) {
     if (typeof body[key] === 'boolean') runtime.config.protection[key] = body[key];
   }
-  for (const key of ['autoDraft', 'autoMinimap']) {
+  for (const key of ['autoDraft', 'autoMinimap', 'autoQueue']) {
     if (typeof body[key] === 'boolean') runtime.config.protection[key] = body[key];
+  }
+  if (['partial', 'full'].includes(body.queueMode)) {
+    runtime.config.protection.queueMode = body.queueMode;
   }
   if (['normal', 'large'].includes(body.minimapSize)) {
     runtime.config.protection.minimapSize = body.minimapSize;
@@ -1037,10 +1067,12 @@ function computeProtection(config, gsi) {
   const draftByState = heroSelection && !gsi.ownPickPhaseEnded;
   const topBarByState = heroSelection && gsi.ownPickPhaseEnded;
   const gameByState = connected && !gsi.leftGameView && /PRE_GAME|GAME_IN_PROGRESS/i.test(gameState);
+  const queueByState = connected && !gsi.inGameScreen && !/HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS|POST_GAME/i.test(gameState);
   return {
     draft: Boolean(config.protection.manualDraft || (config.protection.autoDraft && draftByState)),
     minimap: Boolean(config.protection.manualMinimap || (config.protection.autoMinimap && gameByState)),
-    topBar: Boolean(config.protection.manualTopBar || (config.protection.autoDraft && topBarByState))
+    topBar: Boolean(config.protection.manualTopBar || (config.protection.autoDraft && topBarByState)),
+    queue: Boolean(config.protection.manualQueue || (config.protection.autoQueue && queueByState))
   };
 }
 

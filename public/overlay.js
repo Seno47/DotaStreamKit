@@ -1,6 +1,8 @@
+const queueMask = document.querySelector('#queueMask');
 const draftScreenMask = document.querySelector('#draftScreenMask');
 const minimapMask = document.querySelector('#minimapMask');
 const topBarSlotsRoot = document.querySelector('#topBarSlots');
+let queuePartEls = [];
 let topBarSlotEls = [];
 let draftPartEls = [];
 let minimapLayerEl = null;
@@ -11,14 +13,35 @@ stream.onmessage = (event) => {
   const { config, state } = JSON.parse(event.data);
   const reference = config.protection.referenceSize || { width: 1920, height: 1080 };
   const draftParts = config.protection.draftMaskParts || [];
+  const queueParts = queueMaskParts(config.protection);
   const slots = config.protection.topBarSlots || [];
+  ensureQueueParts(queueParts.length);
   ensureDraftParts(draftParts.length);
   ensureTopBarSlots(slots.length);
+  applyQueueParts(queueParts, reference, state);
   applyDraftParts(draftParts, reference, state);
   applyTopBarSlots(slots, reference, state);
   applyMinimap(config.protection, reference, state);
   setVisible(minimapMask, state.protection.minimap);
 };
+
+function queueMaskParts(protection) {
+  if ((protection.queueMode || 'partial') !== 'full') return protection.queueMaskParts || [];
+  const reference = protection.referenceSize || { width: 1920, height: 1080 };
+  return [{ left: 0, top: 0, width: reference.width, height: reference.height }];
+}
+
+function ensureQueueParts(count) {
+  while (queuePartEls.length < count) {
+    const el = document.createElement('div');
+    el.className = 'queueMaskPart';
+    queueMask.append(el);
+    queuePartEls.push(el);
+  }
+  while (queuePartEls.length > count) {
+    queuePartEls.pop().remove();
+  }
+}
 
 function ensureDraftParts(count) {
   while (draftPartEls.length < count) {
@@ -42,6 +65,18 @@ function ensureTopBarSlots(count) {
   while (topBarSlotEls.length > count) {
     topBarSlotEls.pop().remove();
   }
+}
+
+function applyQueueParts(parts, reference, state) {
+  const version = assetVersion(state);
+  parts.forEach((part, index) => {
+    const el = queuePartEls[index];
+    applyScaledBox(el, part, reference);
+    el.style.backgroundImage = `url('/assets/queue-screenshot.png?v=${version}')`;
+    el.style.backgroundSize = '100vw 100vh';
+    el.style.backgroundPosition = `${-toPercent(part.left, reference.width)}vw ${-toPercent(part.top, reference.height)}vh`;
+    setVisible(el, state.protection.queue);
+  });
 }
 
 function applyDraftParts(parts, reference, state) {

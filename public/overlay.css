@@ -8,6 +8,7 @@ body {
 }
 
 #minimapMask,
+.queueMaskPart,
 .draftMaskPart,
 .topBarSlot {
   display: none;
@@ -19,6 +20,7 @@ body {
 }
 
 #minimapMask.visible,
+.queueMaskPart.visible,
 .draftMaskPart.visible,
 .topBarSlot.visible {
   display: block;
@@ -56,5 +58,9 @@ body {
 }
 
 #draftScreenMask {
+  background-color: transparent;
+}
+
+#queueMask {
   background-color: transparent;
 }
