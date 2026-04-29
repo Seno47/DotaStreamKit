@@ -56,6 +56,25 @@ select {
   margin-top: 6px;
 }
 
+input[type='file'] {
+  padding: 8px;
+}
+
+input[type='file']::file-selector-button {
+  margin-right: 10px;
+  border: 1px solid #3a4858;
+  border-radius: 6px;
+  background: #1f2631;
+  color: #f2f4f8;
+  padding: 8px 11px;
+  cursor: pointer;
+}
+
+input[type='file']::file-selector-button:hover {
+  background: #293342;
+  border-color: #5a8fbe;
+}
+
 label {
   display: block;
   color: #cdd3dd;
