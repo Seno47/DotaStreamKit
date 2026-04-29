@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>DotaStreamKit</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260429">
-    <link rel="stylesheet" href="/styles.css?v=20260429-sponsor-links">
+    <link rel="stylesheet" href="/styles.css?v=20260429-ui-refresh">
   </head>
   <body>
     <main class="shell">
@@ -67,8 +67,8 @@
         <article class="panel">
           <h2>Защита</h2>
           <div class="control-row">
-            <label><input type="checkbox" id="autoDraft"> Авто скрывать draft</label>
-            <label><input type="checkbox" id="autoMinimap"> Авто скрывать миникарту</label>
+            <label class="check"><input type="checkbox" id="autoDraft"> Авто скрывать draft</label>
+            <label class="check"><input type="checkbox" id="autoMinimap"> Авто скрывать миникарту</label>
             <label>Размер миникарты<select id="minimapSize"><option value="normal">Обычная</option><option value="large">Большая</option></select></label>
             <label>Сторона<select id="minimapSide"><option value="left">Слева</option><option value="right">Справа</option></select></label>
             <label>Фон миникарты<select id="minimapStyle"><option value="realistic">Реалистичный</option><option value="simple">Простой</option><option value="empty">Пустой</option></select></label>
@@ -109,6 +109,25 @@
 
         <article class="panel wide">
           <h2>Ставка за баллы канала</h2>
+          <section class="variable-guide" aria-label="Переменные шаблонов">
+            <div class="section-head">
+              <div>
+                <h3>Переменные шаблонов</h3>
+                <p>Нажми на переменную, чтобы вставить ее в активное поле заголовка.</p>
+              </div>
+            </div>
+            <div class="variable-grid">
+              <button type="button" class="variable-chip" data-var="{hero}"><code>{hero}</code><span>герой стримера</span></button>
+              <button type="button" class="variable-chip" data-var="{target}"><code>{target}</code><span>случайная цель из диапазона</span></button>
+              <button type="button" class="variable-chip" data-var="{minute}"><code>{minute}</code><span>выбранная минута</span></button>
+              <button type="button" class="variable-chip" data-var="{kills}"><code>{kills}</code><span>текущие киллы</span></button>
+              <button type="button" class="variable-chip" data-var="{deaths}"><code>{deaths}</code><span>текущие смерти</span></button>
+              <button type="button" class="variable-chip" data-var="{assists}"><code>{assists}</code><span>текущие ассисты</span></button>
+              <button type="button" class="variable-chip" data-var="{last_hits}"><code>{last_hits}</code><span>ластхиты</span></button>
+              <button type="button" class="variable-chip" data-var="{denies}"><code>{denies}</code><span>добивания</span></button>
+              <button type="button" class="variable-chip" data-var="{level}"><code>{level}</code><span>уровень героя</span></button>
+            </div>
+          </section>
           <form id="predictionForm" class="prediction-grid">
             <label>Заголовок<input id="predictionTitle" maxlength="45"></label>
             <label>Окно, сек<input id="predictionWindow" type="number" min="30" max="1800"></label>
@@ -118,7 +137,11 @@
             <label class="check"><input type="checkbox" id="autoResolve"> Закрывать автоматически</label>
             <label class="check"><input type="checkbox" id="autoCancelInvalidGame"> Отменять незасчитанную игру</label>
           </form>
-          <p class="muted">Переменные в шаблонах: <code>{hero}</code>, <code>{target}</code>, <code>{minute}</code>, <code>{kills}</code>, <code>{deaths}</code>, <code>{assists}</code>, <code>{last_hits}</code>, <code>{denies}</code>, <code>{level}</code>.</p>
+          <div class="prediction-preview" id="predictionPreview">
+            <span>Превью</span>
+            <strong id="previewTitle">-</strong>
+            <small><b id="previewYes">Да</b> / <b id="previewNo">Нет</b></small>
+          </div>
           <div id="predictionTypes" class="prediction-types"></div>
           <form id="predictionTypeForm" class="prediction-grid">
             <label>Режим типов<select id="predictionSelectionMode"><option value="selected">Один выбранный</option><option value="random">Случайный из включённых</option></select></label>
@@ -161,6 +184,6 @@
         </article>
       </section>
     </main>
-    <script src="/app.js?v=20260429-sponsor-links"></script>
+    <script src="/app.js?v=20260429-ui-refresh"></script>
   </body>
 </html>
