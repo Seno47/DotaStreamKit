@@ -107,6 +107,9 @@ label input[type='checkbox'] {
 }
 
 .sponsor-inline-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: #9ee7f1;
   font-size: 14px;
   font-weight: 700;
