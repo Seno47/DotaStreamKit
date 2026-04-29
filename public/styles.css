@@ -76,12 +76,12 @@ label input[type='checkbox'] {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  margin-bottom: 18px;
-  padding: 10px 12px;
-  border: 1px solid #2f3c4b;
+  margin-bottom: 8px;
+  padding: 13px 14px;
+  border: 1px solid #406170;
   border-radius: 8px;
   background:
-    linear-gradient(90deg, rgba(53, 81, 92, 0.35), rgba(23, 28, 36, 0.9)),
+    linear-gradient(90deg, rgba(42, 101, 111, 0.48), rgba(23, 28, 36, 0.92)),
     #171c24;
 }
 
@@ -100,9 +100,10 @@ label input[type='checkbox'] {
   letter-spacing: 0.08em;
 }
 
-.sponsor-main strong {
+.sponsor-name {
   color: #f2f4f8;
-  font-size: 16px;
+  font-size: 17px;
+  font-weight: 700;
 }
 
 .sponsor-strip a {
@@ -121,15 +122,33 @@ label input[type='checkbox'] {
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
+.sponsor-name:hover {
+  color: #9ee7f1;
+}
+
 .sponsor-links a:hover,
 .developer-link:hover {
   background: #1d2835;
   border-color: #5a8fbe;
 }
 
+.developer-strip {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 18px;
+}
+
 .developer-link span {
   color: #cbd5e1;
   font-size: 14px;
+}
+
+.developer-link {
+  opacity: 0.78;
+}
+
+.developer-link:hover {
+  opacity: 1;
 }
 
 .link-icon {
@@ -325,6 +344,7 @@ code {
 @media (max-width: 820px) {
   .top,
   .sponsor-strip,
+  .developer-strip,
   .grid,
   .prediction-grid,
   .prediction-types,
@@ -340,6 +360,10 @@ code {
 
   .sponsor-strip {
     justify-content: stretch;
+  }
+
+  .developer-strip {
+    justify-content: flex-start;
   }
 
   .sponsor-main {
