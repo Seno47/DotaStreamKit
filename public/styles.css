@@ -71,6 +71,82 @@ label input[type='checkbox'] {
   margin: 28px auto;
 }
 
+.sponsor-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 10px 12px;
+  border: 1px solid #2f3c4b;
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(53, 81, 92, 0.35), rgba(23, 28, 36, 0.9)),
+    #171c24;
+}
+
+.sponsor-main,
+.sponsor-links,
+.developer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sponsor-label {
+  color: #8b96a8;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.sponsor-main strong {
+  color: #f2f4f8;
+  font-size: 16px;
+}
+
+.sponsor-strip a {
+  color: #dce7f3;
+  text-decoration: none;
+}
+
+.sponsor-links a,
+.developer-link {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 9px;
+  border: 1px solid #3a4858;
+  border-radius: 8px;
+  background: #111821;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.sponsor-links a:hover,
+.developer-link:hover {
+  background: #1d2835;
+  border-color: #5a8fbe;
+}
+
+.developer-link span {
+  color: #cbd5e1;
+  font-size: 14px;
+}
+
+.link-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.telegram-icon {
+  fill: currentColor;
+  stroke: none;
+}
+
 .top {
   display: flex;
   justify-content: space-between;
@@ -248,6 +324,7 @@ code {
 
 @media (max-width: 820px) {
   .top,
+  .sponsor-strip,
   .grid,
   .prediction-grid,
   .prediction-types,
@@ -259,5 +336,13 @@ code {
   .top {
     display: grid;
     align-items: start;
+  }
+
+  .sponsor-strip {
+    justify-content: stretch;
+  }
+
+  .sponsor-main {
+    flex-wrap: wrap;
   }
 }
