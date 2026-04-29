@@ -8,6 +8,8 @@ Local desktop tool for Dota 2 streamers: stream protection overlays for OBS plus
 > **Sponsor: [XyraNet VPN](https://xyranet.pro)**
 > VPN service for streamers and gamers. Website: [xyranet.pro](https://xyranet.pro), Telegram bot: [@XyraNet_bot](https://t.me/XyraNet_bot).
 
+If the project helps you, please leave a star on GitHub: https://github.com/Seno47/DotaStreamKit
+
 ## Навигация
 
 - [Русский](#русский)
@@ -44,6 +46,12 @@ Local desktop tool for Dota 2 streamers: stream protection overlays for OBS plus
 > Telegram-бот: [@XyraNet_bot](https://t.me/XyraNet_bot)
 
 Если тебе нужен VPN для стримов, игр и повседневного использования, посмотри XyraNet VPN. Поддержка спонсора помогает проекту развиваться.
+
+Если проект понравился, поставь звезду на GitHub. Это помогает другим стримерам найти DotaStreamKit:
+
+```text
+https://github.com/Seno47/DotaStreamKit
+```
 
 ### Что умеет DotaStreamKit
 
@@ -324,6 +332,7 @@ npm start
 
 - Telegram-канал разработчика: https://t.me/ivagakura_projects
 - GitHub проекта: https://github.com/Seno47/DotaStreamKit
+- Поставить звезду проекту на GitHub: https://github.com/Seno47/DotaStreamKit
 - T-Bank: https://www.tinkoff.ru/rm/r_rjNFcYKfDe.jmzXvHFVxI/35eKu35373
 - TRON / TRC20: `TGZZQaMAvqVF7ae8C6Gfr8MxkTz3j1xqsg`
 - TON: `UQCpse9_qEK4xCAeYKI1xJc9pCqroEu6IYffnjnw4iEfBbrG`
@@ -343,6 +352,12 @@ npm start
 > Telegram bot: [@XyraNet_bot](https://t.me/XyraNet_bot)
 
 If you need a VPN for streaming, gaming, or everyday use, check out XyraNet VPN. Supporting the sponsor helps the project move forward.
+
+If you like the project, please leave a GitHub star. It helps other streamers discover DotaStreamKit:
+
+```text
+https://github.com/Seno47/DotaStreamKit
+```
 
 ### What DotaStreamKit Does
 
@@ -606,6 +621,7 @@ If DotaStreamKit helps you, you can support development:
 
 - Developer Telegram channel: https://t.me/ivagakura_projects
 - GitHub repository: https://github.com/Seno47/DotaStreamKit
+- Star the project on GitHub: https://github.com/Seno47/DotaStreamKit
 - T-Bank: https://www.tinkoff.ru/rm/r_rjNFcYKfDe.jmzXvHFVxI/35eKu35373
 - TRON / TRC20: `TGZZQaMAvqVF7ae8C6Gfr8MxkTz3j1xqsg`
 - TON: `UQCpse9_qEK4xCAeYKI1xJc9pCqroEu6IYffnjnw4iEfBbrG`
