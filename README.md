@@ -8,6 +8,16 @@
 npm start
 ```
 
+## Windows release
+
+Для стримеров без установленного Node.js можно собрать portable Windows-архив:
+
+```powershell
+npm run build:win
+```
+
+Архив `dist/DotaStreamKit-win-x64.zip` содержит `DotaStreamKit.exe`, portable `node.exe`, приложение и зависимости. После распаковки достаточно запустить `DotaStreamKit.exe`.
+
 Панель: `http://localhost:37273`  
 OBS Browser Source: `http://localhost:37273/overlay.html?v=27`
 
