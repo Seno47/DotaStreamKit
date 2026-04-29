@@ -178,6 +178,12 @@ setInterval(() => {
   }
 }, 5000);
 
+setInterval(() => {
+  refreshTwitchStreamStatus().catch((error) => logEvent('twitch', `Stream status check failed: ${error.message}`));
+}, 60000);
+
+refreshTwitchStreamStatus().catch((error) => logEvent('twitch', `Stream status check failed: ${error.message}`));
+
 async function loadJson(path, fallback) {
   try {
     return merge(structuredClone(fallback), JSON.parse(await readFile(path, 'utf8')));
@@ -1361,6 +1367,11 @@ async function isBroadcasterLive(force = false) {
   await persistState();
   broadcast();
   return runtime.twitchStreamStatus.isLive;
+}
+
+async function refreshTwitchStreamStatus() {
+  if (!runtime.state.twitchToken?.accessToken || runtime.state.twitch.needsReconnect) return;
+  await isBroadcasterLive(true);
 }
 
 async function createPrediction(req, res) {
