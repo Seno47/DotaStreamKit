@@ -106,9 +106,25 @@ label input[type='checkbox'] {
   font-weight: 700;
 }
 
+.sponsor-inline-link {
+  color: #9ee7f1;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  padding: 5px 8px;
+  border: 1px solid #4d8796;
+  border-radius: 6px;
+  background: rgba(20, 36, 43, 0.85);
+  white-space: nowrap;
+}
+
 .sponsor-strip a {
   color: #dce7f3;
   text-decoration: none;
+}
+
+.sponsor-strip .sponsor-inline-link {
+  color: #9ee7f1;
 }
 
 .sponsor-links a,
