@@ -6,13 +6,15 @@ param(
 $ErrorActionPreference = "Stop"
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
+$version = (Get-Content (Join-Path $root "package.json") -Raw | ConvertFrom-Json).version
 $dist = Join-Path $root "dist"
-$releaseRoot = Join-Path $dist "DotaStreamKit-$Configuration"
+$releaseName = "DotaStreamKit-$version-$Configuration"
+$releaseRoot = Join-Path $dist $releaseName
 $appDir = Join-Path $releaseRoot "app"
 $runtimeDir = Join-Path $releaseRoot "runtime"
 $launcherSource = Join-Path $PSScriptRoot "launcher\DotaStreamKitLauncher.cs"
 $launcherExe = Join-Path $releaseRoot "DotaStreamKit.exe"
-$zipPath = Join-Path $dist "DotaStreamKit-$Configuration.zip"
+$zipPath = Join-Path $dist "$releaseName.zip"
 $csc = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
 
 if (!(Test-Path $NodeExe)) {

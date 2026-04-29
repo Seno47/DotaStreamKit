@@ -87,9 +87,15 @@ http://localhost:37273/overlay.html
    https://github.com/Seno47/DotaStreamKit/releases
    ```
 
-2. Скачай архив для Windows, например `DotaStreamKit-win-x64.zip`.
+2. Скачай архив для своей системы:
+   - Windows: `DotaStreamKit-1.0.0-win-x64.zip`
+   - Linux Debian/Ubuntu x64: `DotaStreamKit-1.0.0-linux-x64.tar.gz`
+   - macOS Apple Silicon: `DotaStreamKit-1.0.0-darwin-arm64.tar.gz`
+   - macOS Intel: `DotaStreamKit-1.0.0-darwin-x64.tar.gz`
 3. Распакуй архив в удобную папку.
-4. Запусти `DotaStreamKit.exe`.
+4. Запусти:
+   - Windows: `DotaStreamKit.exe`
+   - Linux/macOS: `bash DotaStreamKit`
 5. Открой панель:
 
    ```text
@@ -393,9 +399,15 @@ The dashboard contains a server mode, but this README intentionally covers only 
    https://github.com/Seno47/DotaStreamKit/releases
    ```
 
-2. Download the Windows archive, for example `DotaStreamKit-win-x64.zip`.
+2. Download the archive for your system:
+   - Windows: `DotaStreamKit-1.0.0-win-x64.zip`
+   - Linux Debian/Ubuntu x64: `DotaStreamKit-1.0.0-linux-x64.tar.gz`
+   - macOS Apple Silicon: `DotaStreamKit-1.0.0-darwin-arm64.tar.gz`
+   - macOS Intel: `DotaStreamKit-1.0.0-darwin-x64.tar.gz`
 3. Extract it.
-4. Run `DotaStreamKit.exe`.
+4. Run:
+   - Windows: `DotaStreamKit.exe`
+   - Linux/macOS: `bash DotaStreamKit`
 5. Open:
 
    ```text
@@ -646,18 +658,25 @@ Useful commands:
 npm run check
 npm run stop
 npm run build:win
+npm run build:linux
+npm run build:mac
 ```
 
-Build a portable Windows archive:
+Build portable release archives:
 
 ```powershell
 npm run build:win
+npm run build:linux
+npm run build:mac
 ```
 
-The archive is written to:
+The archives are written to:
 
 ```text
-dist/DotaStreamKit-win-x64.zip
+dist/DotaStreamKit-1.0.0-win-x64.zip
+dist/DotaStreamKit-1.0.0-linux-x64.tar.gz
+dist/DotaStreamKit-1.0.0-darwin-arm64.tar.gz
+dist/DotaStreamKit-1.0.0-darwin-x64.tar.gz
 ```
 
 Local data, config, OAuth tokens, uploaded screenshots, and generated assets are stored in `data/`. This folder is ignored by Git.
