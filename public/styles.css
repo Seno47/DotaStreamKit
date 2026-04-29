@@ -447,6 +447,13 @@ dd {
   background: #101923;
 }
 
+.prediction-type .prediction-preview {
+  margin-bottom: 12px;
+  padding: 10px;
+  border-color: #2f465a;
+  background: #0f1720;
+}
+
 .prediction-preview span {
   color: #8b96a8;
   font-size: 13px;

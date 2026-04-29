@@ -36,12 +36,9 @@ const els = {
   autoCreate: document.querySelector('#autoCreate'),
   autoResolve: document.querySelector('#autoResolve'),
   autoCancelInvalidGame: document.querySelector('#autoCancelInvalidGame'),
-  predictionPreview: document.querySelector('#predictionPreview'),
-  previewTitle: document.querySelector('#previewTitle'),
-  previewYes: document.querySelector('#previewYes'),
-  previewNo: document.querySelector('#previewNo'),
   predictionSelectionMode: document.querySelector('#predictionSelectionMode'),
   selectedPredictionType: document.querySelector('#selectedPredictionType'),
+  selectedPredictionTypeWrap: document.querySelector('#selectedPredictionTypeWrap'),
   predictionTypes: document.querySelector('#predictionTypes'),
   variableChips: document.querySelectorAll('.variable-chip'),
   createPrediction: document.querySelector('#createPrediction'),
@@ -151,7 +148,8 @@ function render(data) {
   els.predictionSelectionMode.value = config.predictions.selectionMode || 'selected';
   els.selectedPredictionType.value = config.predictions.selectedType || 'win_loss';
   renderPredictionTypes(config.predictions.types || {});
-  renderPredictionPreview();
+  renderPredictionTypeVisibility();
+  renderPredictionTypePreviews();
 
   renderPrediction(state.activePrediction);
   renderEvents(state.events || []);
@@ -203,6 +201,11 @@ function buildPredictionTypeControls() {
           <p>${def.description}</p>
         </div>
         <label class="check"><input data-field="enabled" type="checkbox"> Включен</label>
+      </div>
+      <div class="prediction-preview">
+        <span>Превью</span>
+        <strong data-preview-title>-</strong>
+        <small><b data-preview-yes>Да</b> / <b data-preview-no>Нет</b></small>
       </div>
       <div class="prediction-type-grid">
         <label>Шанс выбора<input data-field="weight" type="number" min="1" max="100"></label>
@@ -268,21 +271,33 @@ function getTypeField(card, field) {
   return input.type === 'checkbox' ? input.checked : input.value;
 }
 
-function renderPredictionPreview() {
-  if (!els.previewTitle) return;
-  const typeConfig = selectedTypeConfigFromForm();
-  const template = typeConfig.titleTemplate || els.predictionTitle.value || '{hero}: {target}+?';
-  const yesTitle = typeConfig.yesTitle || els.winTitle.value || 'Да';
-  const noTitle = typeConfig.noTitle || els.loseTitle.value || 'Нет';
-
-  els.previewTitle.textContent = fillTemplate(template, typeConfig);
-  els.previewYes.textContent = yesTitle;
-  els.previewNo.textContent = noTitle;
+function renderPredictionTypePreviews() {
+  for (const def of predictionTypeDefs) {
+    const card = els.predictionTypes.querySelector(`[data-type="${def.type}"]`);
+    if (!card) continue;
+    const typeConfig = typeConfigFromCard(card);
+    const template = typeConfig.titleTemplate || els.predictionTitle.value || '{hero}: {target}+?';
+    const yesTitle = typeConfig.yesTitle || els.winTitle.value || 'Да';
+    const noTitle = typeConfig.noTitle || els.loseTitle.value || 'Нет';
+    const title = card.querySelector('[data-preview-title]');
+    const yes = card.querySelector('[data-preview-yes]');
+    const no = card.querySelector('[data-preview-no]');
+    if (title) title.textContent = fillTemplate(template, typeConfig);
+    if (yes) yes.textContent = yesTitle;
+    if (no) no.textContent = noTitle;
+  }
 }
 
-function selectedTypeConfigFromForm() {
+function renderPredictionTypeVisibility() {
+  const selectedMode = els.predictionSelectionMode.value === 'selected';
   const selectedType = els.selectedPredictionType.value || 'win_loss';
-  const card = els.predictionTypes.querySelector(`[data-type="${selectedType}"]`);
+  els.selectedPredictionTypeWrap.hidden = !selectedMode;
+  for (const card of els.predictionTypes.querySelectorAll('.prediction-type')) {
+    card.hidden = selectedMode && card.dataset.type !== selectedType;
+  }
+}
+
+function typeConfigFromCard(card) {
   return {
     titleTemplate: String(getTypeField(card, 'titleTemplate') || '').trim(),
     yesTitle: String(getTypeField(card, 'yesTitle') || '').trim(),
@@ -422,11 +437,17 @@ els.predictionTypeForm.addEventListener('submit', async (event) => {
 document.addEventListener('focusin', (event) => rememberTemplateInput(event.target));
 document.addEventListener('input', (event) => {
   if (event.target.closest?.('#predictionForm, #predictionTypeForm, #predictionTypes')) {
-    renderPredictionPreview();
+    renderPredictionTypePreviews();
   }
 });
-els.selectedPredictionType.addEventListener('change', renderPredictionPreview);
-els.predictionSelectionMode.addEventListener('change', renderPredictionPreview);
+els.selectedPredictionType.addEventListener('change', () => {
+  renderPredictionTypeVisibility();
+  renderPredictionTypePreviews();
+});
+els.predictionSelectionMode.addEventListener('change', () => {
+  renderPredictionTypeVisibility();
+  renderPredictionTypePreviews();
+});
 els.variableChips.forEach((button) => {
   button.addEventListener('click', () => insertVariable(button.dataset.var));
 });

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>DotaStreamKit</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260429">
-    <link rel="stylesheet" href="/styles.css?v=20260429-file-input">
+    <link rel="stylesheet" href="/styles.css?v=20260429-type-preview">
   </head>
   <body>
     <main class="shell">
@@ -140,15 +140,10 @@
             <label class="check"><input type="checkbox" id="autoResolve"> Закрывать автоматически</label>
             <label class="check"><input type="checkbox" id="autoCancelInvalidGame"> Отменять незасчитанную игру</label>
           </form>
-          <div class="prediction-preview" id="predictionPreview">
-            <span>Превью</span>
-            <strong id="previewTitle">-</strong>
-            <small><b id="previewYes">Да</b> / <b id="previewNo">Нет</b></small>
-          </div>
           <div id="predictionTypes" class="prediction-types"></div>
           <form id="predictionTypeForm" class="prediction-grid">
             <label>Режим типов<select id="predictionSelectionMode"><option value="selected">Один выбранный</option><option value="random">Случайный из включённых</option></select></label>
-            <label>Выбранный тип<select id="selectedPredictionType"></select></label>
+            <label id="selectedPredictionTypeWrap">Выбранный тип<select id="selectedPredictionType"></select></label>
             <button type="submit">Сохранить настройки</button>
           </form>
           <div class="button-row">
@@ -188,6 +183,6 @@
         </article>
       </section>
     </main>
-    <script src="/app.js?v=20260429-queue-mask"></script>
+    <script src="/app.js?v=20260429-type-preview"></script>
   </body>
 </html>
