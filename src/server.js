@@ -127,21 +127,9 @@ const defaultConfig = {
       streamer_deaths: { enabled: true, weight: 1, min: 4, max: 9, titleTemplate: '{hero}: {target}+ смертей?', yesTitle: 'Да', noTitle: 'Нет' },
       streamer_assists: { enabled: true, weight: 2, min: 8, max: 20, titleTemplate: '{hero}: {target}+ ассистов?', yesTitle: 'Да', noTitle: 'Нет' },
       no_death_until: { enabled: true, weight: 1, minMinute: 8, maxMinute: 15, titleTemplate: '{hero} не умрет до {minute}:00?', yesTitle: 'Не умрет', noTitle: 'Умрет' },
-      last_hits_by_minute: { enabled: true, weight: 2, min: 45, max: 85, minMinute: 10, maxMinute: 10, titleTemplate: '{hero}: {target}+ ластхитов к {minute}:00?', yesTitle: 'Да', noTitle: 'Нет' },
-      custom_condition: {
-        enabled: false,
-        weight: 1,
-        min: 40,
-        max: 40,
-        minMinute: 40,
-        maxMinute: 40,
-        condition: 'game_duration_at_least',
-        metric: 'clock_minutes',
-        titleTemplate: 'Продлится ли игра {minute}:00?',
-        yesTitle: 'Да',
-        noTitle: 'Нет'
-      }
-    }
+      last_hits_by_minute: { enabled: true, weight: 2, min: 45, max: 85, minMinute: 10, maxMinute: 10, titleTemplate: '{hero}: {target}+ ластхитов к {minute}:00?', yesTitle: 'Да', noTitle: 'Нет' }
+    },
+    customTemplates: []
   }
 };
 
@@ -1627,26 +1615,59 @@ function resetTwitchStreamStatus() {
 function normalizePredictionSettings(settings) {
   if (!['selected', 'random'].includes(settings.selectionMode)) settings.selectionMode = 'selected';
   settings.types = merge(structuredClone(defaultConfig.predictions.types), settings.types || {});
-  if (!settings.types[settings.selectedType]) settings.selectedType = 'win_loss';
+  delete settings.types.custom_condition;
+  for (const type of Object.keys(settings.types)) {
+    if (!defaultConfig.predictions.types[type]) delete settings.types[type];
+  }
+  settings.customTemplates = normalizeCustomPredictionTemplates(settings.customTemplates);
+  if (!allPredictionTypes(settings)[settings.selectedType]) settings.selectedType = 'win_loss';
   for (const [type, config] of Object.entries(settings.types)) {
     config.enabled = config.enabled !== false;
     config.weight = clampInt(config.weight, 1, 100);
-    if (['streamer_kills', 'streamer_deaths', 'streamer_assists', 'last_hits_by_minute', 'custom_condition'].includes(type)) {
+    if (['streamer_kills', 'streamer_deaths', 'streamer_assists', 'last_hits_by_minute'].includes(type)) {
       config.min = clampInt(config.min, 0, 999);
       config.max = clampInt(config.max, config.min, 999);
     }
-    if (['no_death_until', 'last_hits_by_minute', 'custom_condition'].includes(type)) {
+    if (['no_death_until', 'last_hits_by_minute'].includes(type)) {
       config.minMinute = clampInt(config.minMinute, 1, 180);
       config.maxMinute = clampInt(config.maxMinute, config.minMinute, 180);
-    }
-    if (type === 'custom_condition') {
-      if (!customPredictionConditions.includes(config.condition)) config.condition = 'game_duration_at_least';
-      if (!customPredictionMetrics.includes(config.metric)) config.metric = 'clock_minutes';
     }
     config.titleTemplate = String(config.titleTemplate || defaultConfig.predictions.types[type]?.titleTemplate || '').slice(0, 120);
     config.yesTitle = String(config.yesTitle || 'Да').slice(0, 25);
     config.noTitle = String(config.noTitle || 'Нет').slice(0, 25);
   }
+}
+
+function normalizeCustomPredictionTemplates(templates) {
+  if (!Array.isArray(templates)) return [];
+  return templates.slice(0, 30).map((template, index) => {
+    const id = normalizeCustomPredictionId(template.id) || `custom_${Date.now().toString(36)}_${index}`;
+    const condition = customPredictionConditions.includes(template.condition) ? template.condition : 'game_duration_at_least';
+    const metric = customPredictionMetrics.includes(template.metric) ? template.metric : 'clock_minutes';
+    const min = clampInt(template.min, 0, 999);
+    const minMinute = clampInt(template.minMinute, 1, 180);
+    return {
+      id,
+      label: String(template.label || template.titleTemplate || 'Custom prediction').slice(0, 60),
+      enabled: template.enabled !== false,
+      weight: clampInt(template.weight, 1, 100),
+      min,
+      max: clampInt(template.max, min, 999),
+      minMinute,
+      maxMinute: clampInt(template.maxMinute, minMinute, 180),
+      condition,
+      metric,
+      titleTemplate: String(template.titleTemplate || 'Custom prediction?').slice(0, 120),
+      yesTitle: String(template.yesTitle || 'Да').slice(0, 25),
+      noTitle: String(template.noTitle || 'Нет').slice(0, 25)
+    };
+  });
+}
+
+function normalizeCustomPredictionId(value) {
+  const id = String(value || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_').replace(/^_+|_+$/g, '');
+  if (!id || id === 'custom_condition') return '';
+  return id.startsWith('custom_') ? id.slice(0, 48) : `custom_${id}`.slice(0, 48);
 }
 
 function normalizeDraftTeam(value) {
@@ -1990,7 +2011,7 @@ function buildPredictionDraft(overrides = {}) {
 
   const settings = runtime.config.predictions;
   const type = choosePredictionType(settings);
-  const typeConfig = settings.types?.[type] || defaultConfig.predictions.types[type] || defaultConfig.predictions.types.win_loss;
+  const typeConfig = allPredictionTypes(settings)[type] || defaultConfig.predictions.types.win_loss;
   const target = randomRange(typeConfig.min, typeConfig.max);
   const minute = randomRange(typeConfig.minMinute, typeConfig.maxMinute);
   const variables = predictionVariables({ target, minute, type });
@@ -2002,7 +2023,9 @@ function buildPredictionDraft(overrides = {}) {
     yesTitle,
     noTitle,
     meta: {
-      type,
+      type: typeConfig.baseType || type,
+      typeId: type,
+      typeLabel: typeConfig.label || null,
       condition: typeConfig.condition || null,
       metric: typeConfig.metric || null,
       target,
@@ -2015,7 +2038,7 @@ function buildPredictionDraft(overrides = {}) {
 }
 
 function choosePredictionType(settings) {
-  const types = settings.types || {};
+  const types = allPredictionTypes(settings);
   if (settings.selectionMode === 'selected' && types[settings.selectedType]?.enabled !== false) return settings.selectedType;
   const enabled = Object.entries(types).filter(([, config]) => config?.enabled !== false);
   if (!enabled.length) return 'win_loss';
@@ -2026,6 +2049,18 @@ function choosePredictionType(settings) {
     if (roll <= 0) return type;
   }
   return enabled[0][0];
+}
+
+function allPredictionTypes(settings) {
+  const types = { ...(settings.types || {}) };
+  for (const template of settings.customTemplates || []) {
+    types[template.id] = {
+      ...template,
+      baseType: 'custom_condition',
+      label: template.label || template.titleTemplate || template.id
+    };
+  }
+  return types;
 }
 
 function predictionVariables(extra = {}) {
@@ -2126,7 +2161,7 @@ function normalizePrediction(item, yesTitle = runtime.config.predictions.winTitl
     status: item.status,
     createdAt: item.created_at,
     lockedAt: item.locked_at,
-    type: meta?.type || null,
+    type: meta?.typeLabel || meta?.typeId || meta?.type || null,
     target: meta?.target || null,
     minute: meta?.minute || null,
     outcomes: (item.outcomes || []).map((outcome) => ({

@@ -41,6 +41,17 @@ const els = {
   selectedPredictionType: document.querySelector('#selectedPredictionType'),
   selectedPredictionTypeWrap: document.querySelector('#selectedPredictionTypeWrap'),
   predictionTypes: document.querySelector('#predictionTypes'),
+  customPredictionForm: document.querySelector('#customPredictionForm'),
+  customPredictionName: document.querySelector('#customPredictionName'),
+  customPredictionCondition: document.querySelector('#customPredictionCondition'),
+  customPredictionMetric: document.querySelector('#customPredictionMetric'),
+  customPredictionMin: document.querySelector('#customPredictionMin'),
+  customPredictionMax: document.querySelector('#customPredictionMax'),
+  customPredictionMinMinute: document.querySelector('#customPredictionMinMinute'),
+  customPredictionMaxMinute: document.querySelector('#customPredictionMaxMinute'),
+  customPredictionTitle: document.querySelector('#customPredictionTitle'),
+  customPredictionYes: document.querySelector('#customPredictionYes'),
+  customPredictionNo: document.querySelector('#customPredictionNo'),
   variableChips: document.querySelectorAll('.variable-chip'),
   createPrediction: document.querySelector('#createPrediction'),
   lockPrediction: document.querySelector('#lockPrediction'),
@@ -110,7 +121,6 @@ const translations = {
     disconnect: 'Отключить',
     bindChannel: 'Привязать канал',
     predictions: 'Ставка за баллы канала',
-    variablesToggle: 'Нажми, чтобы свернуть или развернуть',
     variablesTitle: 'Переменные шаблонов',
     variablesHelp: 'Нажми на переменную, чтобы вставить ее в активное поле заголовка.',
     varHero: 'герой стримера',
@@ -185,6 +195,12 @@ const translations = {
     descLastHits: 'Случайная цель по ластхитам и минута проверки.',
     typeCustom: 'Свой прогноз',
     descCustom: 'Пользовательское условие по времени игры или выбранной метрике.',
+    customBuilderTitle: 'Конструктор своего прогноза',
+    customBuilderHelp: 'Собери условие, задай текст прогноза и сохрани шаблон. После сохранения он появится в выборе типов.',
+    customName: 'Название шаблона',
+    customNamePlaceholder: 'Игра 40+ минут',
+    saveTemplate: 'Сохранить шаблон',
+    customTemplateSaved: 'Шаблон сохранен',
     condition: 'Условие',
     metric: 'Метрика',
     conditionGameDuration: 'Игра дойдет до минуты',
@@ -279,7 +295,6 @@ const translations = {
     disconnect: 'Disconnect',
     bindChannel: 'Bind channel',
     predictions: 'Channel Points prediction',
-    variablesToggle: 'Click to collapse or expand',
     variablesTitle: 'Template variables',
     variablesHelp: 'Click a variable to insert it into the active title field.',
     varHero: 'streamer hero',
@@ -354,6 +369,12 @@ const translations = {
     descLastHits: 'Random last-hit target and check minute.',
     typeCustom: 'Custom prediction',
     descCustom: 'Custom condition based on game time or a selected metric.',
+    customBuilderTitle: 'Custom prediction builder',
+    customBuilderHelp: 'Build a condition, set the prediction text, and save the template. It will appear in the type selector.',
+    customName: 'Template name',
+    customNamePlaceholder: 'Game 40+ minutes',
+    saveTemplate: 'Save template',
+    customTemplateSaved: 'Template saved',
     condition: 'Condition',
     metric: 'Metric',
     conditionGameDuration: 'Game reaches minute',
@@ -416,8 +437,7 @@ const localizedPredictionDefaults = {
       streamer_deaths: { titleTemplate: '{hero}: {target}+ смертей?', yesTitle: 'Да', noTitle: 'Нет' },
       streamer_assists: { titleTemplate: '{hero}: {target}+ ассистов?', yesTitle: 'Да', noTitle: 'Нет' },
       no_death_until: { titleTemplate: '{hero} не умрет до {minute}:00?', yesTitle: 'Не умрет', noTitle: 'Умрет' },
-      last_hits_by_minute: { titleTemplate: '{hero}: {target}+ ластхитов к {minute}:00?', yesTitle: 'Да', noTitle: 'Нет' },
-      custom_condition: { titleTemplate: 'Продлится ли игра {minute}:00?', yesTitle: 'Да', noTitle: 'Нет' }
+      last_hits_by_minute: { titleTemplate: '{hero}: {target}+ ластхитов к {minute}:00?', yesTitle: 'Да', noTitle: 'Нет' }
     }
   },
   en: {
@@ -430,21 +450,22 @@ const localizedPredictionDefaults = {
       streamer_deaths: { titleTemplate: '{hero}: {target}+ deaths?', yesTitle: 'Yes', noTitle: 'No' },
       streamer_assists: { titleTemplate: '{hero}: {target}+ assists?', yesTitle: 'Yes', noTitle: 'No' },
       no_death_until: { titleTemplate: '{hero} survives until {minute}:00?', yesTitle: 'Survives', noTitle: 'Dies' },
-      last_hits_by_minute: { titleTemplate: '{hero}: {target}+ last hits by {minute}:00?', yesTitle: 'Yes', noTitle: 'No' },
-      custom_condition: { titleTemplate: 'Will the game reach {minute}:00?', yesTitle: 'Yes', noTitle: 'No' }
+      last_hits_by_minute: { titleTemplate: '{hero}: {target}+ last hits by {minute}:00?', yesTitle: 'Yes', noTitle: 'No' }
     }
   }
 };
 
-const predictionTypeDefs = [
+const builtinPredictionTypeDefs = [
   { type: 'win_loss', labelKey: 'typeWinLoss', descriptionKey: 'descWinLoss', ranges: [] },
   { type: 'streamer_kills', labelKey: 'typeKills', descriptionKey: 'descKills', ranges: ['min', 'max'] },
   { type: 'streamer_deaths', labelKey: 'typeDeaths', descriptionKey: 'descDeaths', ranges: ['min', 'max'] },
   { type: 'streamer_assists', labelKey: 'typeAssists', descriptionKey: 'descAssists', ranges: ['min', 'max'] },
   { type: 'no_death_until', labelKey: 'typeNoDeath', descriptionKey: 'descNoDeath', ranges: ['minMinute', 'maxMinute'] },
-  { type: 'last_hits_by_minute', labelKey: 'typeLastHits', descriptionKey: 'descLastHits', ranges: ['min', 'max', 'minMinute', 'maxMinute'] },
-  { type: 'custom_condition', labelKey: 'typeCustom', descriptionKey: 'descCustom', ranges: ['min', 'max', 'minMinute', 'maxMinute'], custom: true }
+  { type: 'last_hits_by_minute', labelKey: 'typeLastHits', descriptionKey: 'descLastHits', ranges: ['min', 'max', 'minMinute', 'maxMinute'] }
 ];
+
+let predictionTypeDefs = [...builtinPredictionTypeDefs];
+let predictionTypeControlKey = '';
 
 buildPredictionTypeControls();
 
@@ -534,8 +555,6 @@ function applyLanguage(config) {
 
   setText(els.predictionForm.closest('article').querySelector('h2'), 'predictions');
   setText('.variable-summary span', 'variablesTitle');
-  setText('.variable-summary small', 'variablesToggle');
-  setText('.variable-guide h3', 'variablesTitle');
   setText('.variable-guide p', 'variablesHelp');
   const variableKeys = ['varHero', 'varTarget', 'varMinute', 'varClockMinutes', 'varKills', 'varDeaths', 'varAssists', 'varLastHits', 'varDenies', 'varLevel', 'varTeamKills', 'varTeamDeaths', 'varTeamAssists', 'varEnemyKills', 'varEnemyDeaths', 'varEnemyAssists', 'varTotalKills', 'varTotalDeaths', 'varTotalAssists'];
   document.querySelectorAll('.variable-chip span').forEach((span, index) => {
@@ -553,6 +572,23 @@ function applyLanguage(config) {
   setOptionText(els.predictionSelectionMode, 'random', t('randomMode'));
   setLabelText(els.selectedPredictionTypeWrap, t('selectedType'));
   els.predictionTypeForm.querySelector('button[type="submit"]').textContent = t('saveSettings');
+  setText('.custom-builder h3', 'customBuilderTitle');
+  setText('.custom-builder .section-head p', 'customBuilderHelp');
+  setLabelText(els.customPredictionName.closest('label'), t('customName'));
+  els.customPredictionName.placeholder = t('customNamePlaceholder');
+  setLabelText(els.customPredictionCondition.closest('label'), t('condition'));
+  setLabelText(els.customPredictionMetric.closest('label'), t('metric'));
+  setLabelText(els.customPredictionMin.closest('label'), t('targetFrom'));
+  setLabelText(els.customPredictionMax.closest('label'), t('targetTo'));
+  setLabelText(els.customPredictionMinMinute.closest('label'), t('minuteFrom'));
+  setLabelText(els.customPredictionMaxMinute.closest('label'), t('minuteTo'));
+  setLabelText(els.customPredictionTitle.closest('label'), t('title'));
+  setLabelText(els.customPredictionYes.closest('label'), t('yesOutcome'));
+  setLabelText(els.customPredictionNo.closest('label'), t('noOutcome'));
+  els.customPredictionForm.querySelector('button[type="submit"]').textContent = t('saveTemplate');
+  applyConditionOptions(els.customPredictionCondition);
+  applyMetricOptions(els.customPredictionMetric);
+  updateCustomBuilderFieldVisibility();
   els.createPrediction.textContent = t('create');
   els.lockPrediction.textContent = t('lock');
   els.cancelPrediction.textContent = t('cancel');
@@ -601,6 +637,53 @@ function setPrefixText(container, text) {
     if (node.nodeType === Node.TEXT_NODE) node.remove();
   }
   container.prepend(document.createTextNode(`${text} `));
+}
+
+function applyConditionOptions(select) {
+  if (!select) return;
+  const current = select.value || 'game_duration_at_least';
+  select.innerHTML = '';
+  [
+    ['game_duration_at_least', 'conditionGameDuration'],
+    ['metric_reaches_target', 'conditionReachTarget'],
+    ['metric_by_minute', 'conditionByMinute']
+  ].forEach(([value, key]) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = t(key);
+    select.append(option);
+  });
+  select.value = current;
+}
+
+function applyMetricOptions(select) {
+  if (!select) return;
+  const current = select.value || 'clock_minutes';
+  select.innerHTML = '';
+  [
+    ['clock_minutes', 'metricClockMinutes'],
+    ['kills', 'metricKills'],
+    ['deaths', 'metricDeaths'],
+    ['assists', 'metricAssists'],
+    ['last_hits', 'metricLastHits'],
+    ['denies', 'metricDenies'],
+    ['level', 'metricLevel'],
+    ['team_kills', 'metricTeamKills'],
+    ['team_deaths', 'metricTeamDeaths'],
+    ['team_assists', 'metricTeamAssists'],
+    ['enemy_kills', 'metricEnemyKills'],
+    ['enemy_deaths', 'metricEnemyDeaths'],
+    ['enemy_assists', 'metricEnemyAssists'],
+    ['total_kills', 'metricTotalKills'],
+    ['total_deaths', 'metricTotalDeaths'],
+    ['total_assists', 'metricTotalAssists']
+  ].forEach(([value, key]) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = t(key);
+    select.append(option);
+  });
+  select.value = current;
 }
 
 function maybeApplyInitialPredictionTemplates(config) {
@@ -715,6 +798,7 @@ function render(data) {
   els.autoResolve.checked = config.predictions.autoResolve;
   els.autoCancelInvalidGame.checked = config.predictions.autoCancelInvalidGame ?? true;
   els.predictionSelectionMode.value = config.predictions.selectionMode || 'selected';
+  syncPredictionTypeDefinitions(config.predictions);
   els.selectedPredictionType.value = config.predictions.selectedType || 'win_loss';
   renderPredictionTypes(config.predictions.types || {});
   renderPredictionTypeVisibility();
@@ -754,15 +838,18 @@ function renderPrediction(prediction) {
 }
 
 function buildPredictionTypeControls() {
+  els.selectedPredictionType.innerHTML = '';
+  els.predictionTypes.innerHTML = '';
   for (const def of predictionTypeDefs) {
     const option = document.createElement('option');
     option.value = def.type;
-    option.textContent = t(def.labelKey);
+    option.textContent = def.label || t(def.labelKey);
     els.selectedPredictionType.append(option);
 
     const card = document.createElement('section');
     card.className = 'prediction-type';
     card.dataset.type = def.type;
+    card.dataset.custom = def.custom ? 'true' : 'false';
     card.innerHTML = `
       <div class="prediction-type-header">
         <div>
@@ -794,13 +881,29 @@ function buildPredictionTypeControls() {
   applyPredictionTypeLanguage();
 }
 
+function syncPredictionTypeDefinitions(predictions) {
+  const customDefs = (predictions.customTemplates || []).map((template) => ({
+    type: template.id,
+    label: template.label || template.titleTemplate || template.id,
+    descriptionKey: 'descCustom',
+    ranges: ['min', 'max', 'minMinute', 'maxMinute'],
+    custom: true,
+    savedCustom: true
+  }));
+  const key = customDefs.map((def) => `${def.type}:${def.label}`).join('|');
+  if (key === predictionTypeControlKey) return;
+  predictionTypeControlKey = key;
+  predictionTypeDefs = [...builtinPredictionTypeDefs, ...customDefs];
+  buildPredictionTypeControls();
+}
+
 function applyPredictionTypeLanguage() {
   for (const def of predictionTypeDefs) {
     const option = els.selectedPredictionType.querySelector(`option[value="${def.type}"]`);
-    if (option) option.textContent = t(def.labelKey);
+    if (option) option.textContent = def.label || t(def.labelKey);
     const card = els.predictionTypes.querySelector(`[data-type="${def.type}"]`);
     if (!card) continue;
-    card.querySelector('[data-type-title]').textContent = t(def.labelKey);
+    card.querySelector('[data-type-title]').textContent = def.label || t(def.labelKey);
     card.querySelector('[data-type-description]').textContent = t(def.descriptionKey);
     setLabelText(card.querySelector('[data-field="enabled"]').closest('label'), t('enabled'));
     const fieldLabels = {
@@ -844,8 +947,9 @@ function applyPredictionTypeLanguage() {
 }
 
 function renderPredictionTypes(types) {
+  const customById = Object.fromEntries((snapshot?.config?.predictions?.customTemplates || []).map((template) => [template.id, template]));
   for (const def of predictionTypeDefs) {
-    const config = types[def.type] || {};
+    const config = types[def.type] || customById[def.type] || {};
     const card = els.predictionTypes.querySelector(`[data-type="${def.type}"]`);
     if (!card) continue;
     setTypeField(card, 'enabled', config.enabled !== false);
@@ -873,6 +977,7 @@ function setTypeField(card, field, value) {
 function collectPredictionTypes() {
   const types = {};
   for (const def of predictionTypeDefs) {
+    if (def.savedCustom) continue;
     const card = els.predictionTypes.querySelector(`[data-type="${def.type}"]`);
     types[def.type] = {
       enabled: getTypeField(card, 'enabled'),
@@ -889,6 +994,29 @@ function collectPredictionTypes() {
     }
   }
   return types;
+}
+
+function collectCustomPredictionTemplates() {
+  return predictionTypeDefs.filter((def) => def.savedCustom).map((def) => {
+    const card = els.predictionTypes.querySelector(`[data-type="${def.type}"]`);
+    const min = Number(getTypeField(card, 'min') || 0);
+    const minMinute = Number(getTypeField(card, 'minMinute') || 10);
+    return {
+      id: def.type,
+      label: def.label || String(getTypeField(card, 'titleTemplate') || def.type).slice(0, 60),
+      enabled: getTypeField(card, 'enabled'),
+      weight: Number(getTypeField(card, 'weight') || 1),
+      condition: String(getTypeField(card, 'condition') || 'game_duration_at_least'),
+      metric: String(getTypeField(card, 'metric') || 'clock_minutes'),
+      min,
+      max: Number(getTypeField(card, 'max') || min),
+      minMinute,
+      maxMinute: Number(getTypeField(card, 'maxMinute') || minMinute),
+      titleTemplate: String(getTypeField(card, 'titleTemplate') || '').trim(),
+      yesTitle: String(getTypeField(card, 'yesTitle') || '').trim(),
+      noTitle: String(getTypeField(card, 'noTitle') || '').trim()
+    };
+  });
 }
 
 function getTypeField(card, field) {
@@ -938,7 +1066,7 @@ function typeConfigFromCard(card) {
 }
 
 function updateCustomConditionFieldVisibility(card) {
-  if (!card || card.dataset.type !== 'custom_condition') return;
+  if (!card || card.dataset.custom !== 'true') return;
   const condition = String(getTypeField(card, 'condition') || 'game_duration_at_least');
   const metricWrap = card.querySelector('[data-field-label="metric"]');
   const minWrap = card.querySelector('[data-field-label="min"]');
@@ -952,6 +1080,52 @@ function updateCustomConditionFieldVisibility(card) {
   if (maxWrap) maxWrap.hidden = isDuration;
   if (minMinuteWrap) minMinuteWrap.hidden = !usesMinute;
   if (maxMinuteWrap) maxMinuteWrap.hidden = !usesMinute;
+}
+
+function updateCustomBuilderFieldVisibility() {
+  const condition = els.customPredictionCondition.value || 'game_duration_at_least';
+  const isDuration = condition === 'game_duration_at_least';
+  const usesMinute = condition === 'game_duration_at_least' || condition === 'metric_by_minute';
+  els.customPredictionMetric.closest('label').hidden = isDuration;
+  els.customPredictionMin.closest('label').hidden = isDuration;
+  els.customPredictionMax.closest('label').hidden = isDuration;
+  els.customPredictionMinMinute.closest('label').hidden = !usesMinute;
+  els.customPredictionMaxMinute.closest('label').hidden = !usesMinute;
+}
+
+function customTemplateFromBuilder() {
+  const label = els.customPredictionName.value.trim() || els.customPredictionTitle.value.trim() || t('typeCustom');
+  const min = Number(els.customPredictionMin.value || 0);
+  const minMinute = Number(els.customPredictionMinMinute.value || 40);
+  return {
+    id: `custom_${Date.now().toString(36)}`,
+    label,
+    enabled: true,
+    weight: 1,
+    condition: els.customPredictionCondition.value || 'game_duration_at_least',
+    metric: els.customPredictionMetric.value || 'clock_minutes',
+    min,
+    max: Number(els.customPredictionMax.value || min),
+    minMinute,
+    maxMinute: Number(els.customPredictionMaxMinute.value || minMinute),
+    titleTemplate: els.customPredictionTitle.value.trim() || label,
+    yesTitle: els.customPredictionYes.value.trim() || t('yes'),
+    noTitle: els.customPredictionNo.value.trim() || t('no')
+  };
+}
+
+function resetCustomBuilder() {
+  els.customPredictionName.value = '';
+  els.customPredictionCondition.value = 'game_duration_at_least';
+  els.customPredictionMetric.value = 'clock_minutes';
+  els.customPredictionMin.value = '40';
+  els.customPredictionMax.value = '40';
+  els.customPredictionMinMinute.value = '40';
+  els.customPredictionMaxMinute.value = '40';
+  els.customPredictionTitle.value = currentLang === 'en' ? 'Will the game reach {minute}:00?' : 'Продлится ли игра {minute}:00?';
+  els.customPredictionYes.value = t('yes');
+  els.customPredictionNo.value = t('no');
+  updateCustomBuilderFieldVisibility();
 }
 
 function fillTemplate(template, typeConfig) {
@@ -1104,6 +1278,21 @@ els.predictionTypeForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   await savePredictionConfig().catch(alert);
 });
+els.customPredictionForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  try {
+    const template = customTemplateFromBuilder();
+    const config = predictionConfigFromForm();
+    config.customTemplates = [...config.customTemplates, template];
+    config.selectedType = template.id;
+    config.selectionMode = 'selected';
+    await api('/api/config', { predictions: config });
+    resetCustomBuilder();
+    alert(t('customTemplateSaved'));
+  } catch (error) {
+    alert(error);
+  }
+});
 document.addEventListener('focusin', (event) => rememberTemplateInput(event.target));
 document.addEventListener('input', (event) => {
   if (event.target.closest?.('#predictionForm, #predictionTypeForm, #predictionTypes')) {
@@ -1127,6 +1316,7 @@ els.predictionSelectionMode.addEventListener('change', () => {
   renderPredictionTypeVisibility();
   renderPredictionTypePreviews();
 });
+els.customPredictionCondition.addEventListener('change', updateCustomBuilderFieldVisibility);
 els.variableChips.forEach((button) => {
   button.addEventListener('click', () => insertVariable(button.dataset.var));
 });
@@ -1146,7 +1336,8 @@ function predictionConfigFromForm() {
     autoCancelInvalidGame: els.autoCancelInvalidGame.checked,
     selectionMode: els.predictionSelectionMode.value,
     selectedType: els.selectedPredictionType.value,
-    types: collectPredictionTypes()
+    types: collectPredictionTypes(),
+    customTemplates: collectCustomPredictionTemplates()
   };
 }
 

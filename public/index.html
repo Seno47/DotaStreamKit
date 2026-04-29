@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>DotaStreamKit</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260429">
-    <link rel="stylesheet" href="/styles.css?v=20260429-custom-predictions">
+    <link rel="stylesheet" href="/styles.css?v=20260429-custom-template-builder">
   </head>
   <body>
     <main class="shell">
@@ -116,11 +116,10 @@
           <details class="variable-guide" open>
             <summary class="variable-summary">
               <span>Переменные шаблонов</span>
-              <small>Нажми, чтобы свернуть или развернуть</small>
+              <i class="variable-arrow" aria-hidden="true"></i>
             </summary>
             <div class="section-head">
               <div>
-                <h3>Переменные шаблонов</h3>
                 <p>Нажми на переменную, чтобы вставить ее в активное поле заголовка.</p>
               </div>
             </div>
@@ -161,6 +160,27 @@
             <label id="selectedPredictionTypeWrap">Выбранный тип<select id="selectedPredictionType"></select></label>
             <button type="submit">Сохранить настройки</button>
           </form>
+          <section class="custom-builder">
+            <div class="section-head">
+              <div>
+                <h3>Конструктор своего прогноза</h3>
+                <p>Собери условие, задай текст прогноза и сохрани шаблон. После сохранения он появится в выборе типов.</p>
+              </div>
+            </div>
+            <form id="customPredictionForm" class="prediction-type-grid">
+              <label data-custom-label="name">Название шаблона<input id="customPredictionName" maxlength="60" placeholder="Игра 40+ минут"></label>
+              <label data-custom-label="condition">Условие<select id="customPredictionCondition"></select></label>
+              <label data-custom-label="metric">Метрика<select id="customPredictionMetric"></select></label>
+              <label data-custom-label="min">Цель от<input id="customPredictionMin" type="number" min="0" max="999" value="40"></label>
+              <label data-custom-label="max">Цель до<input id="customPredictionMax" type="number" min="0" max="999" value="40"></label>
+              <label data-custom-label="minMinute">Минута от<input id="customPredictionMinMinute" type="number" min="1" max="180" value="40"></label>
+              <label data-custom-label="maxMinute">Минута до<input id="customPredictionMaxMinute" type="number" min="1" max="180" value="40"></label>
+              <label class="full" data-custom-label="title">Заголовок<input id="customPredictionTitle" maxlength="120" value="Продлится ли игра {minute}:00?"></label>
+              <label data-custom-label="yes">Исход Да<input id="customPredictionYes" maxlength="25" value="Да"></label>
+              <label data-custom-label="no">Исход Нет<input id="customPredictionNo" maxlength="25" value="Нет"></label>
+              <button type="submit">Сохранить шаблон</button>
+            </form>
+          </section>
           <div class="button-row">
             <button id="createPrediction">Создать</button>
             <button id="lockPrediction">Закрыть прием</button>
@@ -198,6 +218,6 @@
         </article>
       </section>
     </main>
-    <script src="/app.js?v=20260429-custom-predictions"></script>
+    <script src="/app.js?v=20260429-custom-template-builder"></script>
   </body>
 </html>

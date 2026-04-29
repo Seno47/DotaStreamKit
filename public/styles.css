@@ -427,7 +427,7 @@ dd {
 .variable-summary {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   gap: 12px;
   cursor: pointer;
   list-style: none;
@@ -438,9 +438,17 @@ dd {
   display: none;
 }
 
-.variable-summary small {
-  color: #8ea0b5;
-  font-weight: 400;
+.variable-arrow {
+  width: 11px;
+  height: 11px;
+  border-right: 2px solid #8ea0b5;
+  border-bottom: 2px solid #8ea0b5;
+  transform: rotate(45deg);
+  transition: transform 160ms ease;
+}
+
+.variable-guide[open] .variable-arrow {
+  transform: rotate(225deg);
 }
 
 .variable-guide .section-head {
@@ -520,6 +528,14 @@ dd {
   border: 1px solid #293240;
   border-radius: 6px;
   padding: 12px;
+}
+
+.custom-builder {
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid #2d4051;
+  border-radius: 8px;
+  background: #101720;
 }
 
 .prediction-type h3 {
