@@ -190,6 +190,35 @@ dd {
   align-self: center;
 }
 
+.prediction-types {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.prediction-type {
+  background: #11161d;
+  border: 1px solid #293240;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.prediction-type h3 {
+  font-size: 15px;
+  margin: 0 0 10px;
+}
+
+.prediction-type-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.prediction-type-grid .full {
+  grid-column: 1 / -1;
+}
+
 .active-box,
 .events {
   background: #11161d;
@@ -217,6 +246,8 @@ code {
   .top,
   .grid,
   .prediction-grid,
+  .prediction-types,
+  .prediction-type-grid,
   .facts {
     grid-template-columns: 1fr;
   }

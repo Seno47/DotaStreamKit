@@ -67,14 +67,18 @@
             <label class="check"><input type="checkbox" id="autoCreate"> Создавать автоматически</label>
             <label class="check"><input type="checkbox" id="autoResolve"> Закрывать автоматически</label>
             <label class="check"><input type="checkbox" id="autoCancelInvalidGame"> Отменять незасчитанную игру</label>
+            <label>Режим типов<select id="predictionSelectionMode"><option value="selected">Один выбранный</option><option value="random">Случайный из включённых</option></select></label>
+            <label>Выбранный тип<select id="selectedPredictionType"></select></label>
             <button type="submit">Сохранить настройки</button>
           </form>
+          <div id="predictionTypes" class="prediction-types"></div>
+          <p class="muted">Переменные в шаблонах: <code>{hero}</code>, <code>{target}</code>, <code>{minute}</code>, <code>{kills}</code>, <code>{deaths}</code>, <code>{assists}</code>, <code>{last_hits}</code>, <code>{denies}</code>, <code>{level}</code>.</p>
           <div class="button-row">
             <button id="createPrediction">Создать</button>
             <button id="lockPrediction">Закрыть прием</button>
             <button id="cancelPrediction">Отменить</button>
-            <button id="resolveWin">Победа</button>
-            <button id="resolveLose">Поражение</button>
+            <button id="resolveWin">Исход Да</button>
+            <button id="resolveLose">Исход Нет</button>
           </div>
           <div id="activePrediction" class="active-box">Нет активной ставки.</div>
         </article>

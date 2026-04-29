@@ -81,7 +81,17 @@ const defaultConfig = {
     titleTemplate: 'Победа в этой игре?',
     winTitle: 'Победа',
     loseTitle: 'Поражение',
-    windowSeconds: 180
+    windowSeconds: 180,
+    selectionMode: 'selected',
+    selectedType: 'win_loss',
+    types: {
+      win_loss: { enabled: true, weight: 3, titleTemplate: 'Победа на {hero}?', yesTitle: 'Победа', noTitle: 'Поражение' },
+      streamer_kills: { enabled: true, weight: 2, min: 5, max: 12, titleTemplate: '{hero}: {target}+ киллов?', yesTitle: 'Да', noTitle: 'Нет' },
+      streamer_deaths: { enabled: true, weight: 1, min: 4, max: 9, titleTemplate: '{hero}: {target}+ смертей?', yesTitle: 'Да', noTitle: 'Нет' },
+      streamer_assists: { enabled: true, weight: 2, min: 8, max: 20, titleTemplate: '{hero}: {target}+ ассистов?', yesTitle: 'Да', noTitle: 'Нет' },
+      no_death_until: { enabled: true, weight: 1, minMinute: 8, maxMinute: 15, titleTemplate: '{hero} не умрет до {minute}:00?', yesTitle: 'Не умрет', noTitle: 'Умрет' },
+      last_hits_by_minute: { enabled: true, weight: 2, min: 45, max: 85, minMinute: 10, maxMinute: 10, titleTemplate: '{hero}: {target}+ ластхитов к {minute}:00?', yesTitle: 'Да', noTitle: 'Нет' }
+    }
   }
 };
 
@@ -97,6 +107,7 @@ const runtime = {
     twitch: { authenticated: false, broadcasterId: null, broadcasterLogin: null, tokenExpiresAt: null },
     activePrediction: null,
     activePredictionMatchId: null,
+    activePredictionMeta: null,
     predictionCancelCandidate: null,
     events: []
   }
@@ -211,6 +222,10 @@ async function persistConfig() {
 
 async function migrateConfig(config) {
   let changed = false;
+  const beforePredictions = JSON.stringify(config.predictions || {});
+  config.predictions = merge(structuredClone(defaultConfig.predictions), config.predictions || {});
+  normalizePredictionSettings(config.predictions);
+  if (JSON.stringify(config.predictions) !== beforePredictions) changed = true;
   const box = config.protection?.topBarBox;
   const hasOldCenteredTopBarBox = box?.left === 485 && box?.top === 0 && box?.width === 950 && box?.height === 86;
   const hasFullWidthTopBarBox = box?.left === 0 && box?.top === 0 && box?.width === 1920 && box?.height === 124;
@@ -836,6 +851,7 @@ async function updateConfig(req, res) {
   next.predictions.windowSeconds = clampInt(next.predictions.windowSeconds, 30, 1800);
   next.predictions.autoLockAtGameSeconds = clampInt(next.predictions.autoLockAtGameSeconds, 0, 3600);
   next.predictions.autoCancelDisconnectSeconds = clampInt(next.predictions.autoCancelDisconnectSeconds, 300, 1800);
+  normalizePredictionSettings(next.predictions);
   runtime.config = next;
   runtime.state.protection = computeProtection(runtime.config, runtime.state.gsi);
   await persistConfig();
@@ -881,6 +897,12 @@ async function handleGsi(req, res) {
   const playerTeam = normalizeTeam(player.team_name || player.team || player.activity);
   const heroName = hero.name || hero.localized_name || previous.heroName || null;
   const heroId = hero.id ?? hero.hero_id ?? previous.heroId ?? null;
+  const kills = statNumber(player.kills, previous.kills);
+  const deaths = statNumber(player.deaths, previous.deaths);
+  const assists = statNumber(player.assists, previous.assists);
+  const lastHits = statNumber(player.last_hits ?? player.lastHits, previous.lastHits);
+  const denies = statNumber(player.denies, previous.denies);
+  const level = statNumber(hero.level, previous.level);
   const playerHeroPicked = inferPlayerHeroPicked(previous, gameState, hero);
   const draftActiveTeam = inferDraftActiveTeam(draft);
   const ownPickPhaseEnded = inferOwnPickPhaseEnded({ gameState, playerHeroPicked, draftActiveTeam, playerTeam });
@@ -905,6 +927,12 @@ async function handleGsi(req, res) {
     winTeam: normalizeTeam(map.win_team),
     heroName,
     heroId,
+    kills,
+    deaths,
+    assists,
+    lastHits,
+    denies,
+    level,
     playerHeroPicked,
     draftActiveTeam,
     ownPickPhaseEnded,
@@ -1024,10 +1052,12 @@ async function maybeAutomatePrediction(previous, gsi) {
     }
   }
 
-  const result = inferResult(gsi);
+  const result = inferPredictionResult(gsi);
   if (settings.autoResolve && result) {
     const latestActive = runtime.state.activePrediction || active;
-    const outcome = latestActive.outcomes.find((item) => item.kind === result);
+    const outcome = latestActive.outcomes.find((item) => item.kind === result
+      || (result === 'yes' && item.kind === 'win')
+      || (result === 'no' && item.kind === 'lose'));
     if (!outcome) return;
     try {
       await twitchEndPrediction(latestActive.id, 'RESOLVED', outcome.id);
@@ -1036,6 +1066,41 @@ async function maybeAutomatePrediction(previous, gsi) {
       logEvent('twitch', `Auto resolve failed: ${error.message}`);
     }
   }
+}
+
+function inferPredictionResult(gsi) {
+  const meta = runtime.state.activePredictionMeta;
+  if (!meta?.type || meta.type === 'win_loss' || meta.type === 'manual') {
+    const result = inferResult(gsi);
+    return result === 'win' ? 'yes' : result === 'lose' ? 'no' : null;
+  }
+
+  const stat = predictionStatValue(meta.type, gsi);
+  if (['streamer_kills', 'streamer_deaths', 'streamer_assists'].includes(meta.type)) {
+    if (Number.isFinite(stat) && stat >= meta.target) return 'yes';
+    if (/POST_GAME/i.test(String(gsi.gameState || ''))) return 'no';
+    return null;
+  }
+
+  if (meta.type === 'no_death_until') {
+    if (Number(gsi.deaths || 0) > 0) return 'no';
+    if (Number(gsi.clockTime) >= meta.deadlineSeconds) return 'yes';
+    return null;
+  }
+
+  if (meta.type === 'last_hits_by_minute') {
+    if (Number(gsi.clockTime) < meta.deadlineSeconds) return null;
+    return Number(gsi.lastHits || 0) >= meta.target ? 'yes' : 'no';
+  }
+
+  return null;
+}
+
+function predictionStatValue(type, gsi) {
+  if (type === 'streamer_kills') return Number(gsi.kills);
+  if (type === 'streamer_deaths') return Number(gsi.deaths);
+  if (type === 'streamer_assists') return Number(gsi.assists);
+  return NaN;
 }
 
 function shouldAutoCreatePredictionAfterPick(previous, gsi) {
@@ -1165,11 +1230,37 @@ function normalizeTeam(value) {
   return null;
 }
 
+function normalizePredictionSettings(settings) {
+  if (!['selected', 'random'].includes(settings.selectionMode)) settings.selectionMode = 'selected';
+  settings.types = merge(structuredClone(defaultConfig.predictions.types), settings.types || {});
+  if (!settings.types[settings.selectedType]) settings.selectedType = 'win_loss';
+  for (const [type, config] of Object.entries(settings.types)) {
+    config.enabled = config.enabled !== false;
+    config.weight = clampInt(config.weight, 1, 100);
+    if (['streamer_kills', 'streamer_deaths', 'streamer_assists', 'last_hits_by_minute'].includes(type)) {
+      config.min = clampInt(config.min, 0, 999);
+      config.max = clampInt(config.max, config.min, 999);
+    }
+    if (['no_death_until', 'last_hits_by_minute'].includes(type)) {
+      config.minMinute = clampInt(config.minMinute, 1, 180);
+      config.maxMinute = clampInt(config.maxMinute, config.minMinute, 180);
+    }
+    config.titleTemplate = String(config.titleTemplate || defaultConfig.predictions.types[type]?.titleTemplate || '').slice(0, 120);
+    config.yesTitle = String(config.yesTitle || 'Да').slice(0, 25);
+    config.noTitle = String(config.noTitle || 'Нет').slice(0, 25);
+  }
+}
+
 function normalizeDraftTeam(value) {
   const raw = String(value ?? '').toLowerCase();
   if (raw.includes('radiant') || raw.includes('good') || raw === '2' || raw === 'team2') return 'radiant';
   if (raw.includes('dire') || raw.includes('bad') || raw === '3' || raw === 'team3') return 'dire';
   return null;
+}
+
+function statNumber(value, fallback = null) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
 }
 
 function clampInt(value, min, max) {
@@ -1386,27 +1477,120 @@ async function createPredictionFromSettings(overrides = {}) {
   }
   const broadcaster = runtime.state.twitchToken?.broadcasterId;
   if (!broadcaster) throw new Error('Twitch is not authenticated. Connect Twitch from the dashboard.');
-  const settings = { ...runtime.config.predictions, ...overrides };
-  const title = String(settings.title || settings.titleTemplate || '').slice(0, 45);
-  const winTitle = String(settings.winTitle || 'Win').slice(0, 25);
-  const loseTitle = String(settings.loseTitle || 'Lose').slice(0, 25);
-  const predictionWindow = clampInt(settings.windowSeconds, 30, 1800);
+  const draft = buildPredictionDraft(overrides);
+  const predictionWindow = clampInt(overrides.windowSeconds ?? runtime.config.predictions.windowSeconds, 30, 1800);
   const body = {
     broadcaster_id: broadcaster,
-    title,
-    outcomes: [{ title: winTitle }, { title: loseTitle }],
+    title: draft.title,
+    outcomes: [{ title: draft.yesTitle }, { title: draft.noTitle }],
     prediction_window: predictionWindow
   };
   const result = await twitchRequest('/predictions', { method: 'POST', body: JSON.stringify(body) });
   const item = result.data?.[0];
   if (!item) throw new Error('Twitch did not return a prediction');
-  runtime.state.activePrediction = normalizePrediction(item, winTitle, loseTitle);
+  runtime.state.activePredictionMeta = draft.meta;
+  runtime.state.activePrediction = normalizePrediction(item, draft.yesTitle, draft.noTitle, draft.meta);
   runtime.state.activePredictionMatchId = runtime.state.gsi.activeMatchId || runtime.state.gsi.matchId || null;
   runtime.state.predictionCancelCandidate = null;
   await persistState();
-  logEvent('twitch', `Prediction created: ${title}`);
+  logEvent('twitch', `Prediction created: ${draft.title}`);
   broadcast();
   return runtime.state.activePrediction;
+}
+
+function buildPredictionDraft(overrides = {}) {
+  if (overrides.title) {
+    const yesTitle = String(overrides.winTitle || runtime.config.predictions.winTitle || 'Да').slice(0, 25);
+    const noTitle = String(overrides.loseTitle || runtime.config.predictions.loseTitle || 'Нет').slice(0, 25);
+    return {
+      title: String(overrides.title).slice(0, 45),
+      yesTitle,
+      noTitle,
+      meta: {
+        type: 'manual',
+        variables: predictionVariables(),
+        outcomes: { yesTitle, noTitle }
+      }
+    };
+  }
+
+  const settings = runtime.config.predictions;
+  const type = choosePredictionType(settings);
+  const typeConfig = settings.types?.[type] || defaultConfig.predictions.types[type] || defaultConfig.predictions.types.win_loss;
+  const target = randomRange(typeConfig.min, typeConfig.max);
+  const minute = randomRange(typeConfig.minMinute, typeConfig.maxMinute);
+  const variables = predictionVariables({ target, minute, type });
+  const yesTitle = renderTemplate(typeConfig.yesTitle || 'Да', variables).slice(0, 25);
+  const noTitle = renderTemplate(typeConfig.noTitle || 'Нет', variables).slice(0, 25);
+  const title = renderTemplate(typeConfig.titleTemplate || settings.titleTemplate, variables).slice(0, 45);
+  return {
+    title,
+    yesTitle,
+    noTitle,
+    meta: {
+      type,
+      target,
+      minute,
+      deadlineSeconds: minute ? minute * 60 : null,
+      variables,
+      outcomes: { yesTitle, noTitle }
+    }
+  };
+}
+
+function choosePredictionType(settings) {
+  const types = settings.types || {};
+  if (settings.selectionMode === 'selected' && types[settings.selectedType]?.enabled !== false) return settings.selectedType;
+  const enabled = Object.entries(types).filter(([, config]) => config?.enabled !== false);
+  if (!enabled.length) return 'win_loss';
+  const total = enabled.reduce((sum, [, config]) => sum + Math.max(1, Number(config.weight) || 1), 0);
+  let roll = Math.random() * total;
+  for (const [type, config] of enabled) {
+    roll -= Math.max(1, Number(config.weight) || 1);
+    if (roll <= 0) return type;
+  }
+  return enabled[0][0];
+}
+
+function predictionVariables(extra = {}) {
+  const gsi = runtime.state.gsi;
+  const hero = formatHeroName(gsi.heroName || gsi.heroId || 'герой');
+  return {
+    hero,
+    hero_raw: gsi.heroName || '',
+    hero_id: gsi.heroId || '',
+    target: extra.target ?? '',
+    minute: extra.minute ?? '',
+    kills: gsi.kills ?? 0,
+    deaths: gsi.deaths ?? 0,
+    assists: gsi.assists ?? 0,
+    last_hits: gsi.lastHits ?? 0,
+    denies: gsi.denies ?? 0,
+    level: gsi.level ?? 0,
+    team: gsi.playerTeam || '',
+    type: extra.type || ''
+  };
+}
+
+function renderTemplate(template, variables) {
+  return String(template || '').replace(/\{([a-zA-Z0-9_]+)\}/g, (_, key) => variables[key] ?? '');
+}
+
+function formatHeroName(value) {
+  const raw = String(value || '').replace(/^npc_dota_hero_/, '').replace(/_/g, ' ').trim();
+  if (!raw) return 'герой';
+  return raw.replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function randomRange(min, max) {
+  const low = Number(min);
+  const high = Number(max);
+  if (!Number.isFinite(low) && !Number.isFinite(high)) return null;
+  const from = Number.isFinite(low) ? low : high;
+  const to = Number.isFinite(high) ? high : from;
+  const minValue = Math.min(from, to);
+  const maxValue = Math.max(from, to);
+  return Math.floor(minValue + Math.random() * (maxValue - minValue + 1));
 }
 
 async function getPredictions(res) {
@@ -1435,10 +1619,12 @@ async function twitchEndPrediction(id, status, winningOutcomeId = null) {
   const result = await twitchRequest(`/predictions?${params}`, { method: 'PATCH' });
   const item = result.data?.[0];
   if (item) {
-    runtime.state.activePrediction = normalizePrediction(item);
+    const meta = runtime.state.activePredictionMeta;
+    runtime.state.activePrediction = normalizePrediction(item, meta?.outcomes?.yesTitle, meta?.outcomes?.noTitle, meta);
     if (['RESOLVED', 'CANCELED'].includes(item.status)) {
       runtime.state.activePrediction = null;
       runtime.state.activePredictionMatchId = null;
+      runtime.state.activePredictionMeta = null;
       runtime.state.predictionCancelCandidate = null;
     }
     await persistState();
@@ -1447,20 +1633,23 @@ async function twitchEndPrediction(id, status, winningOutcomeId = null) {
   return result;
 }
 
-function normalizePrediction(item, winTitle = runtime.config.predictions.winTitle, loseTitle = runtime.config.predictions.loseTitle) {
+function normalizePrediction(item, yesTitle = runtime.config.predictions.winTitle, noTitle = runtime.config.predictions.loseTitle, meta = null) {
   return {
     id: item.id,
     title: item.title,
     status: item.status,
     createdAt: item.created_at,
     lockedAt: item.locked_at,
+    type: meta?.type || null,
+    target: meta?.target || null,
+    minute: meta?.minute || null,
     outcomes: (item.outcomes || []).map((outcome) => ({
       id: outcome.id,
       title: outcome.title,
       users: outcome.users,
       channelPoints: outcome.channel_points,
       color: outcome.color,
-      kind: outcome.title === winTitle ? 'win' : outcome.title === loseTitle ? 'lose' : null
+      kind: outcome.title === yesTitle ? 'yes' : outcome.title === noTitle ? 'no' : null
     }))
   };
 }

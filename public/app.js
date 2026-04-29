@@ -25,6 +25,9 @@ const els = {
   autoCreate: document.querySelector('#autoCreate'),
   autoResolve: document.querySelector('#autoResolve'),
   autoCancelInvalidGame: document.querySelector('#autoCancelInvalidGame'),
+  predictionSelectionMode: document.querySelector('#predictionSelectionMode'),
+  selectedPredictionType: document.querySelector('#selectedPredictionType'),
+  predictionTypes: document.querySelector('#predictionTypes'),
   createPrediction: document.querySelector('#createPrediction'),
   lockPrediction: document.querySelector('#lockPrediction'),
   cancelPrediction: document.querySelector('#cancelPrediction'),
@@ -40,6 +43,17 @@ const els = {
 };
 
 let snapshot = null;
+
+const predictionTypeDefs = [
+  { type: 'win_loss', label: 'Победа/поражение', ranges: [] },
+  { type: 'streamer_kills', label: 'Киллы стримера', ranges: ['min', 'max'] },
+  { type: 'streamer_deaths', label: 'Смерти стримера', ranges: ['min', 'max'] },
+  { type: 'streamer_assists', label: 'Ассисты стримера', ranges: ['min', 'max'] },
+  { type: 'no_death_until', label: 'Не умереть до минуты', ranges: ['minMinute', 'maxMinute'] },
+  { type: 'last_hits_by_minute', label: 'Ластхиты к минуте', ranges: ['min', 'max', 'minMinute', 'maxMinute'] }
+];
+
+buildPredictionTypeControls();
 
 const stream = new EventSource('/api/events');
 stream.onmessage = (event) => {
@@ -99,6 +113,9 @@ function render(data) {
   els.autoCreate.checked = config.predictions.autoCreate;
   els.autoResolve.checked = config.predictions.autoResolve;
   els.autoCancelInvalidGame.checked = config.predictions.autoCancelInvalidGame ?? true;
+  els.predictionSelectionMode.value = config.predictions.selectionMode || 'selected';
+  els.selectedPredictionType.value = config.predictions.selectedType || 'win_loss';
+  renderPredictionTypes(config.predictions.types || {});
 
   renderPrediction(state.activePrediction);
   renderEvents(state.events || []);
@@ -114,7 +131,85 @@ function renderPrediction(prediction) {
     return;
   }
   const outcomes = prediction.outcomes.map((item) => `${item.title}: ${item.channelPoints || 0}`).join(' | ');
-  els.activePrediction.textContent = `${prediction.title} (${prediction.status}) ${outcomes}`;
+  const type = prediction.type ? ` [${prediction.type}]` : '';
+  els.activePrediction.textContent = `${prediction.title}${type} (${prediction.status}) ${outcomes}`;
+}
+
+function buildPredictionTypeControls() {
+  for (const def of predictionTypeDefs) {
+    const option = document.createElement('option');
+    option.value = def.type;
+    option.textContent = def.label;
+    els.selectedPredictionType.append(option);
+
+    const card = document.createElement('section');
+    card.className = 'prediction-type';
+    card.dataset.type = def.type;
+    card.innerHTML = `
+      <h3>${def.label}</h3>
+      <div class="prediction-type-grid">
+        <label class="check full"><input data-field="enabled" type="checkbox"> Включен</label>
+        <label>Вес<input data-field="weight" type="number" min="1" max="100"></label>
+        ${def.ranges.includes('min') ? '<label>Цель min<input data-field="min" type="number" min="0" max="999"></label>' : ''}
+        ${def.ranges.includes('max') ? '<label>Цель max<input data-field="max" type="number" min="0" max="999"></label>' : ''}
+        ${def.ranges.includes('minMinute') ? '<label>Минута min<input data-field="minMinute" type="number" min="1" max="180"></label>' : ''}
+        ${def.ranges.includes('maxMinute') ? '<label>Минута max<input data-field="maxMinute" type="number" min="1" max="180"></label>' : ''}
+        <label class="full">Заголовок<input data-field="titleTemplate" maxlength="120"></label>
+        <label>Исход Да<input data-field="yesTitle" maxlength="25"></label>
+        <label>Исход Нет<input data-field="noTitle" maxlength="25"></label>
+      </div>
+    `;
+    els.predictionTypes.append(card);
+  }
+}
+
+function renderPredictionTypes(types) {
+  for (const def of predictionTypeDefs) {
+    const config = types[def.type] || {};
+    const card = els.predictionTypes.querySelector(`[data-type="${def.type}"]`);
+    if (!card) continue;
+    setTypeField(card, 'enabled', config.enabled !== false);
+    setTypeField(card, 'weight', config.weight ?? 1);
+    setTypeField(card, 'min', config.min ?? 0);
+    setTypeField(card, 'max', config.max ?? config.min ?? 0);
+    setTypeField(card, 'minMinute', config.minMinute ?? 10);
+    setTypeField(card, 'maxMinute', config.maxMinute ?? config.minMinute ?? 10);
+    setTypeField(card, 'titleTemplate', config.titleTemplate || '');
+    setTypeField(card, 'yesTitle', config.yesTitle || 'Да');
+    setTypeField(card, 'noTitle', config.noTitle || 'Нет');
+  }
+}
+
+function setTypeField(card, field, value) {
+  const input = card.querySelector(`[data-field="${field}"]`);
+  if (!input || document.activeElement === input) return;
+  if (input.type === 'checkbox') input.checked = Boolean(value);
+  else input.value = value;
+}
+
+function collectPredictionTypes() {
+  const types = {};
+  for (const def of predictionTypeDefs) {
+    const card = els.predictionTypes.querySelector(`[data-type="${def.type}"]`);
+    types[def.type] = {
+      enabled: getTypeField(card, 'enabled'),
+      weight: Number(getTypeField(card, 'weight')),
+      titleTemplate: String(getTypeField(card, 'titleTemplate')).trim(),
+      yesTitle: String(getTypeField(card, 'yesTitle')).trim(),
+      noTitle: String(getTypeField(card, 'noTitle')).trim()
+    };
+    for (const field of ['min', 'max', 'minMinute', 'maxMinute']) {
+      const value = getTypeField(card, field);
+      if (value !== null) types[def.type][field] = Number(value);
+    }
+  }
+  return types;
+}
+
+function getTypeField(card, field) {
+  const input = card?.querySelector(`[data-field="${field}"]`);
+  if (!input) return null;
+  return input.type === 'checkbox' ? input.checked : input.value;
 }
 
 function renderEvents(events) {
@@ -168,25 +263,36 @@ els.logoutTwitch.addEventListener('click', () => api('/api/twitch/logout').catch
 
 els.predictionForm.addEventListener('submit', async (event) => {
   event.preventDefault();
-  await api('/api/config', {
-    predictions: {
-      titleTemplate: els.predictionTitle.value.trim(),
-      windowSeconds: Number(els.predictionWindow.value),
-      winTitle: els.winTitle.value.trim(),
-      loseTitle: els.loseTitle.value.trim(),
-      autoCreate: els.autoCreate.checked,
-      autoResolve: els.autoResolve.checked,
-      autoCancelInvalidGame: els.autoCancelInvalidGame.checked
-    }
-  }).catch(alert);
+  await savePredictionConfig().catch(alert);
 });
 
-els.createPrediction.addEventListener('click', () => api('/api/twitch/predictions', {
-  title: els.predictionTitle.value.trim(),
-  windowSeconds: Number(els.predictionWindow.value),
-  winTitle: els.winTitle.value.trim(),
-  loseTitle: els.loseTitle.value.trim()
-}).catch(alert));
+async function savePredictionConfig() {
+  await api('/api/config', { predictions: predictionConfigFromForm() });
+}
+
+function predictionConfigFromForm() {
+  return {
+    titleTemplate: els.predictionTitle.value.trim(),
+    windowSeconds: Number(els.predictionWindow.value),
+    winTitle: els.winTitle.value.trim(),
+    loseTitle: els.loseTitle.value.trim(),
+    autoCreate: els.autoCreate.checked,
+    autoResolve: els.autoResolve.checked,
+    autoCancelInvalidGame: els.autoCancelInvalidGame.checked,
+    selectionMode: els.predictionSelectionMode.value,
+    selectedType: els.selectedPredictionType.value,
+    types: collectPredictionTypes()
+  };
+}
+
+els.createPrediction.addEventListener('click', async () => {
+  try {
+    await savePredictionConfig();
+    await api('/api/twitch/predictions', {});
+  } catch (error) {
+    alert(error);
+  }
+});
 
 els.lockPrediction.addEventListener('click', () => withPrediction((p) => api(`/api/twitch/predictions/${p.id}/lock`).catch(alert)));
 els.cancelPrediction.addEventListener('click', () => withPrediction((p) => api(`/api/twitch/predictions/${p.id}/cancel`).catch(alert)));
@@ -215,7 +321,8 @@ function withPrediction(fn) {
 
 function resolveKind(kind) {
   return withPrediction((prediction) => {
-    const outcome = prediction.outcomes.find((item) => item.kind === kind);
+    const wanted = kind === 'win' ? 'yes' : kind === 'lose' ? 'no' : kind;
+    const outcome = prediction.outcomes.find((item) => item.kind === wanted || item.kind === kind);
     if (!outcome) return alert('Не найден исход для закрытия');
     return api(`/api/twitch/predictions/${prediction.id}/resolve`, { winningOutcomeId: outcome.id }).catch(alert);
   });
