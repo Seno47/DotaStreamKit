@@ -25,6 +25,7 @@ const els = {
   targetChannelStatus: document.querySelector('#targetChannelStatus'),
   logoutTwitch: document.querySelector('#logoutTwitch'),
   predictionForm: document.querySelector('#predictionForm'),
+  predictionTypeForm: document.querySelector('#predictionTypeForm'),
   predictionTitle: document.querySelector('#predictionTitle'),
   predictionWindow: document.querySelector('#predictionWindow'),
   winTitle: document.querySelector('#winTitle'),
@@ -123,6 +124,7 @@ function render(data) {
   els.targetChannelStatus.textContent = state.twitch.effectiveBroadcasterId
     ? `Канал прогнозов: ${state.twitch.effectiveBroadcasterLogin || '-'} (${state.twitch.effectiveBroadcasterId})${channelLive}${checkedAt}${state.twitch.targetMatchesToken === false ? ' / отдельный от OAuth аккаунта' : ''}`
     : 'Канал прогнозов не выбран.';
+  updateConditionalVisibility(config);
   if (document.activeElement !== els.dotaPath) {
     els.dotaPath.value = config.dota?.installPath || '';
   }
@@ -139,6 +141,17 @@ function render(data) {
 
   renderPrediction(state.activePrediction);
   renderEvents(state.events || []);
+}
+
+function updateConditionalVisibility(config) {
+  const serverMode = (config.deployment?.mode || 'local') === 'server';
+  const separateChannel = (config.twitch?.channelMode || 'personal') === 'separate';
+  document.querySelectorAll('[data-visible-for="server"]').forEach((item) => {
+    item.hidden = !serverMode;
+  });
+  document.querySelectorAll('[data-visible-for="separate-channel"]').forEach((item) => {
+    item.hidden = !separateChannel;
+  });
 }
 
 function toggleButton(button, enabled) {
@@ -298,6 +311,10 @@ els.resolveTwitchChannel.addEventListener('click', () => api('/api/twitch/resolv
 }).catch(alert));
 
 els.predictionForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  await savePredictionConfig().catch(alert);
+});
+els.predictionTypeForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   await savePredictionConfig().catch(alert);
 });

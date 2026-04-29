@@ -48,19 +48,19 @@
           <h2>Twitch</h2>
           <div class="stack">
             <label>Режим запуска<select id="deploymentMode"><option value="local">Локально</option><option value="server">Сервер</option></select></label>
-            <label>Public URL сервера<input id="publicBaseUrl" autocomplete="off" placeholder="https://example.com"></label>
+            <label data-visible-for="server">Public URL сервера<input id="publicBaseUrl" autocomplete="off" placeholder="https://example.com"></label>
             <label>Client ID<input id="clientId" autocomplete="off"></label>
             <label>Client Secret<input id="clientSecret" type="password" autocomplete="off" placeholder="не менять, если уже сохранен"></label>
             <label>Канал для прогнозов<select id="twitchChannelMode"><option value="personal">Личный Twitch аккаунт</option><option value="separate">Отдельный аккаунт / канал стримера по нику</option></select></label>
-            <label>Ник стримера<input id="targetChannelLogin" autocomplete="off" placeholder="senodoto"></label>
+            <label data-visible-for="separate-channel">Ник стримера<input id="targetChannelLogin" autocomplete="off" placeholder="senodoto"></label>
           </div>
           <div class="button-row">
             <a class="button" href="/auth/twitch">Подключить Twitch</a>
             <button id="logoutTwitch">Отключить</button>
-            <button id="resolveTwitchChannel">Найти канал</button>
+            <button id="resolveTwitchChannel" data-visible-for="separate-channel">Привязать канал</button>
           </div>
           <p class="muted">Redirect URI в Twitch app: <code id="effectiveRedirectUri">http://localhost:37273/auth/twitch/callback</code></p>
-          <p class="muted" id="targetChannelStatus">Канал прогнозов не выбран.</p>
+          <p class="muted" id="targetChannelStatus" data-visible-for="separate-channel">Канал прогнозов не выбран.</p>
         </article>
 
         <article class="panel wide">
@@ -73,12 +73,14 @@
             <label class="check"><input type="checkbox" id="autoCreate"> Создавать автоматически</label>
             <label class="check"><input type="checkbox" id="autoResolve"> Закрывать автоматически</label>
             <label class="check"><input type="checkbox" id="autoCancelInvalidGame"> Отменять незасчитанную игру</label>
+          </form>
+          <p class="muted">Переменные в шаблонах: <code>{hero}</code>, <code>{target}</code>, <code>{minute}</code>, <code>{kills}</code>, <code>{deaths}</code>, <code>{assists}</code>, <code>{last_hits}</code>, <code>{denies}</code>, <code>{level}</code>.</p>
+          <div id="predictionTypes" class="prediction-types"></div>
+          <form id="predictionTypeForm" class="prediction-grid">
             <label>Режим типов<select id="predictionSelectionMode"><option value="selected">Один выбранный</option><option value="random">Случайный из включённых</option></select></label>
             <label>Выбранный тип<select id="selectedPredictionType"></select></label>
             <button type="submit">Сохранить настройки</button>
           </form>
-          <div id="predictionTypes" class="prediction-types"></div>
-          <p class="muted">Переменные в шаблонах: <code>{hero}</code>, <code>{target}</code>, <code>{minute}</code>, <code>{kills}</code>, <code>{deaths}</code>, <code>{assists}</code>, <code>{last_hits}</code>, <code>{denies}</code>, <code>{level}</code>.</p>
           <div class="button-row">
             <button id="createPrediction">Создать</button>
             <button id="lockPrediction">Закрыть прием</button>

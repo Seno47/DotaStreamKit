@@ -186,6 +186,10 @@ dd {
   margin-bottom: 16px;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 .prediction-grid .check {
   align-self: center;
 }
