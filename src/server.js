@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { readFile, writeFile, mkdir, stat, rm } from 'node:fs/promises';
+import { copyFile, readFile, writeFile, mkdir, stat, rm } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { basename, dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,6 +14,7 @@ const rootDir = normalize(join(__dirname, '..'));
 const publicDir = join(rootDir, 'public');
 const dataDir = join(rootDir, 'data');
 const assetDir = join(dataDir, 'assets');
+const defaultAssetDir = join(publicDir, 'default-assets');
 const configPath = join(dataDir, 'config.json');
 const statePath = join(dataDir, 'state.json');
 const twitchTokenPath = join(dataDir, 'twitch-token.json');
@@ -353,24 +354,57 @@ async function deleteTwitchTokenBackup() {
 }
 
 async function ensureGeneratedAssets() {
-  const wardPath = join(assetDir, 'ward-eye.png');
-  try {
-    await stat(wardPath);
-  } catch {
-    await writeFile(wardPath, await generateWardEyePng());
-  }
-  const sentryPath = join(assetDir, 'sentry-eye.png');
-  try {
-    await stat(sentryPath);
-  } catch {
-    await writeFile(sentryPath, await generateSentryEyePng());
-  }
-
+  await seedDefaultAssets();
+  await ensureBaseWardAssets();
   await rebuildMinimapAssets();
   try {
     await stat(join(assetDir, 'draft-screenshot.png'));
     await buildSlotsFromDraftScreenshot();
-  } catch {}
+  } catch {
+    await copyDefaultAsset('draft-screenshot.png');
+    await buildSlotsFromDraftScreenshot();
+  }
+}
+
+async function seedDefaultAssets() {
+  for (const name of defaultSeedAssetNames()) {
+    await copyDefaultAsset(name, false);
+  }
+}
+
+async function copyDefaultAsset(name, skipIfExists = true) {
+  const target = join(assetDir, name);
+  if (skipIfExists) {
+    try {
+      await stat(target);
+      return false;
+    } catch {}
+  }
+  try {
+    await copyFile(join(defaultAssetDir, name), target);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function ensureBaseWardAssets() {
+  const wardCopied = await copyDefaultAsset('ward-eye.png');
+  if (!wardCopied) {
+    try {
+      await stat(join(assetDir, 'ward-eye.png'));
+    } catch {
+      await writeFile(join(assetDir, 'ward-eye.png'), await generateWardEyePng());
+    }
+  }
+  const sentryCopied = await copyDefaultAsset('sentry-eye.png');
+  if (!sentryCopied) {
+    try {
+      await stat(join(assetDir, 'sentry-eye.png'));
+    } catch {
+      await writeFile(join(assetDir, 'sentry-eye.png'), await generateSentryEyePng());
+    }
+  }
 }
 
 async function rebuildMinimapAssets() {
@@ -746,6 +780,16 @@ function assetNames() {
     'fake-minimap-vision-empty.png',
     'draft-screenshot.png',
     ...Array.from({ length: 10 }, (_, index) => `topbar-slot-${index}.png`)
+  ];
+}
+
+function defaultSeedAssetNames() {
+  return [
+    'draft-screenshot.png',
+    'ward-eye.png',
+    'sentry-eye.png',
+    'minimap-base-realistic.png',
+    'minimap-base-simple.png'
   ];
 }
 
