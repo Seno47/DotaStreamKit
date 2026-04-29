@@ -26,7 +26,8 @@ const twitchScopes = ['channel:manage:predictions', 'user:write:chat'];
 
 const defaultConfig = {
   ui: {
-    language: 'auto'
+    language: 'auto',
+    predictionTemplateLanguage: ''
   },
   deployment: {
     mode: 'local',
@@ -1363,6 +1364,7 @@ function normalizeDeploymentConfig(config) {
 
 function normalizeUiConfig(config) {
   if (!['auto', 'ru', 'en'].includes(config.language)) config.language = 'auto';
+  if (!['', 'ru', 'en'].includes(config.predictionTemplateLanguage)) config.predictionTemplateLanguage = '';
 }
 
 function normalizeTwitchConfig(config) {

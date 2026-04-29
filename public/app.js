@@ -335,6 +335,36 @@ const translations = {
 
 let currentLang = resolveLanguage('auto');
 let currentLanguageSetting = 'auto';
+let predictionTemplateLanguagePending = false;
+
+const localizedPredictionDefaults = {
+  ru: {
+    titleTemplate: 'Победа в этой игре?',
+    winTitle: 'Победа',
+    loseTitle: 'Поражение',
+    types: {
+      win_loss: { titleTemplate: 'Победа на {hero}?', yesTitle: 'Победа', noTitle: 'Поражение' },
+      streamer_kills: { titleTemplate: '{hero}: {target}+ киллов?', yesTitle: 'Да', noTitle: 'Нет' },
+      streamer_deaths: { titleTemplate: '{hero}: {target}+ смертей?', yesTitle: 'Да', noTitle: 'Нет' },
+      streamer_assists: { titleTemplate: '{hero}: {target}+ ассистов?', yesTitle: 'Да', noTitle: 'Нет' },
+      no_death_until: { titleTemplate: '{hero} не умрет до {minute}:00?', yesTitle: 'Не умрет', noTitle: 'Умрет' },
+      last_hits_by_minute: { titleTemplate: '{hero}: {target}+ ластхитов к {minute}:00?', yesTitle: 'Да', noTitle: 'Нет' }
+    }
+  },
+  en: {
+    titleTemplate: 'Win this game?',
+    winTitle: 'Win',
+    loseTitle: 'Loss',
+    types: {
+      win_loss: { titleTemplate: 'Win on {hero}?', yesTitle: 'Win', noTitle: 'Loss' },
+      streamer_kills: { titleTemplate: '{hero}: {target}+ kills?', yesTitle: 'Yes', noTitle: 'No' },
+      streamer_deaths: { titleTemplate: '{hero}: {target}+ deaths?', yesTitle: 'Yes', noTitle: 'No' },
+      streamer_assists: { titleTemplate: '{hero}: {target}+ assists?', yesTitle: 'Yes', noTitle: 'No' },
+      no_death_until: { titleTemplate: '{hero} survives until {minute}:00?', yesTitle: 'Survives', noTitle: 'Dies' },
+      last_hits_by_minute: { titleTemplate: '{hero}: {target}+ last hits by {minute}:00?', yesTitle: 'Yes', noTitle: 'No' }
+    }
+  }
+};
 
 const predictionTypeDefs = [
   { type: 'win_loss', labelKey: 'typeWinLoss', descriptionKey: 'descWinLoss', ranges: [] },
@@ -500,9 +530,62 @@ function setPrefixText(container, text) {
   container.prepend(document.createTextNode(`${text} `));
 }
 
+function maybeApplyInitialPredictionTemplates(config) {
+  const appliedLanguage = config.ui?.predictionTemplateLanguage;
+  if (appliedLanguage === 'ru' || appliedLanguage === 'en' || predictionTemplateLanguagePending) return;
+
+  const templateLanguage = currentLang === 'en' ? 'en' : 'ru';
+  const patch = {
+    ui: {
+      predictionTemplateLanguage: templateLanguage
+    }
+  };
+
+  if (templateLanguage === 'en' && predictionTextMatches(config.predictions, localizedPredictionDefaults.ru)) {
+    patch.predictions = predictionTextPatch('en');
+  }
+
+  predictionTemplateLanguagePending = true;
+  api('/api/config', patch)
+    .catch((error) => console.warn('Failed to apply localized prediction templates', error))
+    .finally(() => {
+      predictionTemplateLanguagePending = false;
+    });
+}
+
+function predictionTextPatch(language) {
+  const defaults = localizedPredictionDefaults[language];
+  return {
+    titleTemplate: defaults.titleTemplate,
+    winTitle: defaults.winTitle,
+    loseTitle: defaults.loseTitle,
+    types: Object.fromEntries(Object.entries(defaults.types).map(([type, values]) => [type, { ...values }]))
+  };
+}
+
+function predictionTextMatches(predictions, defaults) {
+  if (!predictions || !defaults) return false;
+  if (!sameText(predictions.titleTemplate, defaults.titleTemplate)) return false;
+  if (!sameText(predictions.winTitle, defaults.winTitle)) return false;
+  if (!sameText(predictions.loseTitle, defaults.loseTitle)) return false;
+  for (const [type, typeDefaults] of Object.entries(defaults.types)) {
+    const typeConfig = predictions.types?.[type];
+    if (!typeConfig) return false;
+    if (!sameText(typeConfig.titleTemplate, typeDefaults.titleTemplate)) return false;
+    if (!sameText(typeConfig.yesTitle, typeDefaults.yesTitle)) return false;
+    if (!sameText(typeConfig.noTitle, typeDefaults.noTitle)) return false;
+  }
+  return true;
+}
+
+function sameText(left, right) {
+  return String(left || '') === String(right || '');
+}
+
 function render(data) {
   const { config, state } = data;
   applyLanguage(config);
+  maybeApplyInitialPredictionTemplates(config);
   els.gsiStatus.textContent = state.gsi.connected ? 'Dota GSI online' : 'Dota GSI offline';
   els.gsiStatus.className = `pill ${state.gsi.connected ? 'ok' : 'bad'}`;
   const liveSuffix = state.twitch.isLive === true ? ' / live' : state.twitch.isLive === false ? ' / offline' : '';
