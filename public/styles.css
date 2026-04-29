@@ -129,6 +129,7 @@ label input[type='checkbox'] {
   gap: 8px;
   font-size: 14px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .sponsor-links a:first-child {
