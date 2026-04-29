@@ -4,9 +4,14 @@ Local desktop tool for Dota 2 streamers: stream protection overlays for OBS plus
 
 Русская версия ниже. English version is after it.
 
+> [!IMPORTANT]
+> **Sponsor: [XyraNet VPN](https://xyranet.pro)**
+> VPN service for streamers and gamers. Website: [xyranet.pro](https://xyranet.pro), Telegram bot: [@XyraNet_bot](https://t.me/XyraNet_bot).
+
 ## Навигация
 
 - [Русский](#русский)
+  - [Спонсор](#спонсор)
   - [Что умеет DotaStreamKit](#что-умеет-dotastreamkit)
   - [Быстрый старт через релиз](#быстрый-старт-через-релиз)
   - [Настройка Twitch](#настройка-twitch)
@@ -17,6 +22,7 @@ Local desktop tool for Dota 2 streamers: stream protection overlays for OBS plus
   - [Частые проблемы](#частые-проблемы)
   - [Support](#support)
 - [English](#english)
+  - [Sponsor](#sponsor)
   - [What DotaStreamKit Does](#what-dotastreamkit-does)
   - [Quick Start With a Release](#quick-start-with-a-release)
   - [Twitch Setup](#twitch-setup)
@@ -29,6 +35,15 @@ Local desktop tool for Dota 2 streamers: stream protection overlays for OBS plus
 - [Development](#development)
 
 ## Русский
+
+### Спонсор
+
+> [!NOTE]
+> **XyraNet VPN** поддерживает разработку DotaStreamKit.
+> Сайт: [xyranet.pro](https://xyranet.pro)
+> Telegram-бот: [@XyraNet_bot](https://t.me/XyraNet_bot)
+
+Если тебе нужен VPN для стримов, игр и повседневного использования, посмотри XyraNet VPN. Поддержка спонсора помогает проекту развиваться.
 
 ### Что умеет DotaStreamKit
 
@@ -319,6 +334,15 @@ npm start
 Проверяй сеть перед переводом. Для ERC20 и BEP20 адрес одинаковый, но сеть перевода должна быть выбрана правильно.
 
 ## English
+
+### Sponsor
+
+> [!NOTE]
+> **XyraNet VPN** supports DotaStreamKit development.
+> Website: [xyranet.pro](https://xyranet.pro)
+> Telegram bot: [@XyraNet_bot](https://t.me/XyraNet_bot)
+
+If you need a VPN for streaming, gaming, or everyday use, check out XyraNet VPN. Supporting the sponsor helps the project move forward.
 
 ### What DotaStreamKit Does
 
