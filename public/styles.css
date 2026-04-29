@@ -385,4 +385,8 @@ code {
   .sponsor-main {
     flex-wrap: wrap;
   }
+
+  .sponsor-links {
+    flex-wrap: wrap;
+  }
 }
