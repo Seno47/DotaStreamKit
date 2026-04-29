@@ -85,10 +85,11 @@ function render(data) {
   els.gsiStatus.textContent = state.gsi.connected ? 'Dota GSI online' : 'Dota GSI offline';
   els.gsiStatus.className = `pill ${state.gsi.connected ? 'ok' : 'bad'}`;
   const liveSuffix = state.twitch.isLive === true ? ' / live' : state.twitch.isLive === false ? ' / offline' : '';
+  const predictionChannel = state.twitch.effectiveBroadcasterLogin || state.twitch.broadcasterLogin || 'Twitch';
   els.twitchStatus.textContent = state.twitch.authenticated
     ? state.twitch.needsReconnect
       ? `Twitch: ${state.twitch.broadcasterLogin} / reconnect`
-      : `Twitch: ${state.twitch.broadcasterLogin}${liveSuffix}`
+      : `Twitch: ${predictionChannel}${liveSuffix}`
     : state.twitch.needsReconnect
       ? 'Twitch reconnect'
       : 'Twitch disconnected';
@@ -117,8 +118,10 @@ function render(data) {
     els.targetChannelLogin.value = config.twitch.targetChannelLogin || config.twitch.targetBroadcasterLogin || '';
   }
   els.effectiveRedirectUri.textContent = state.twitch.effectiveRedirectUri || config.twitch.redirectUri || '';
+  const channelLive = state.twitch.isLive === true ? ' / live' : state.twitch.isLive === false ? ' / offline' : ' / статус не проверен';
+  const checkedAt = state.twitch.streamCheckedAt ? ` / проверено ${new Date(state.twitch.streamCheckedAt).toLocaleTimeString()}` : '';
   els.targetChannelStatus.textContent = state.twitch.effectiveBroadcasterId
-    ? `Канал прогнозов: ${state.twitch.effectiveBroadcasterLogin || '-'} (${state.twitch.effectiveBroadcasterId})${state.twitch.targetMatchesToken === false ? ' / отдельный от OAuth аккаунта' : ''}`
+    ? `Канал прогнозов: ${state.twitch.effectiveBroadcasterLogin || '-'} (${state.twitch.effectiveBroadcasterId})${channelLive}${checkedAt}${state.twitch.targetMatchesToken === false ? ' / отдельный от OAuth аккаунта' : ''}`
     : 'Канал прогнозов не выбран.';
   if (document.activeElement !== els.dotaPath) {
     els.dotaPath.value = config.dota?.installPath || '';

@@ -106,7 +106,7 @@ const defaultConfig = {
 const runtime = {
   clients: new Set(),
   oauthStates: new Set(),
-  twitchStreamStatus: { checkedAt: 0, isLive: null, streamId: null, gameName: null, title: null },
+  twitchStreamStatus: { broadcasterId: null, checkedAt: 0, isLive: null, streamId: null, gameName: null, title: null },
   config: structuredClone(defaultConfig),
   state: {
     startedAt: new Date().toISOString(),
@@ -885,7 +885,7 @@ async function updateConfig(req, res) {
   normalizePredictionSettings(next.predictions);
   runtime.config = next;
   if (body.twitch?.channelMode || body.twitch?.targetChannelLogin) {
-    runtime.twitchStreamStatus = { checkedAt: 0, isLive: null, streamId: null, gameName: null, title: null };
+    resetTwitchStreamStatus();
     await resolveConfiguredTwitchChannel();
   }
   hydrateTwitchStatus();
@@ -1312,6 +1312,10 @@ function twitchTargetChannel() {
   };
 }
 
+function resetTwitchStreamStatus() {
+  runtime.twitchStreamStatus = { broadcasterId: null, checkedAt: 0, isLive: null, streamId: null, gameName: null, title: null };
+}
+
 function normalizePredictionSettings(settings) {
   if (!['selected', 'random'].includes(settings.selectionMode)) settings.selectionMode = 'selected';
   settings.types = merge(structuredClone(defaultConfig.predictions.types), settings.types || {});
@@ -1544,7 +1548,7 @@ async function resolveTwitchChannelApi(req, res) {
   runtime.config.twitch.targetChannelLogin = user.login;
   runtime.config.twitch.targetBroadcasterLogin = user.login;
   runtime.config.twitch.targetBroadcasterId = user.id;
-  runtime.twitchStreamStatus = { checkedAt: 0, isLive: null, streamId: null, gameName: null, title: null };
+  resetTwitchStreamStatus();
   await persistConfig();
   hydrateTwitchStatus();
   await persistState();
@@ -1589,13 +1593,18 @@ async function isBroadcasterLive(force = false) {
 
   const now = Date.now();
   const cached = runtime.twitchStreamStatus;
-  if (!force && cached.checkedAt && now - cached.checkedAt < 60000 && typeof cached.isLive === 'boolean') {
+  if (!force
+    && String(cached.broadcasterId || '') === String(broadcaster)
+    && cached.checkedAt
+    && now - cached.checkedAt < 60000
+    && typeof cached.isLive === 'boolean') {
     return cached.isLive;
   }
 
   const result = await twitchRequest(`/streams?user_id=${encodeURIComponent(broadcaster)}&first=1`);
   const stream = (result.data || []).find((item) => String(item.user_id) === String(broadcaster) && item.type === 'live') || null;
   runtime.twitchStreamStatus = {
+    broadcasterId: broadcaster,
     checkedAt: now,
     isLive: Boolean(stream),
     streamId: stream?.id || null,
