@@ -28,6 +28,7 @@ const queueAutoOffDelayMs = 2500;
 const queueAutoStaleKeepMs = 10 * 60 * 1000;
 const inGameStatePattern = /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS|POST_GAME/i;
 const queueSearchPattern = /queue|search|matchmaking|match_making|find.?match|finding.?match|game.?search|party.?search/i;
+const dotaProcessName = 'dota2.exe';
 const customPredictionConditions = ['game_duration_at_least', 'metric_reaches_target', 'metric_by_minute'];
 const customPredictionMetrics = [
   'clock_minutes',
@@ -143,6 +144,7 @@ const runtime = {
   clients: new Set(),
   oauthStates: new Set(),
   queueAuto: { active: false, desired: false, desiredSince: 0 },
+  dotaProcess: { running: null, checkedAt: null },
   twitchStreamStatus: { broadcasterId: null, checkedAt: 0, isLive: null, streamId: null, gameName: null, title: null },
   config: structuredClone(defaultConfig),
   state: {
@@ -180,6 +182,10 @@ const runtime = {
       queueSearchSignal: false,
       inGameScreen: false,
       leftGameView: false
+    },
+    dota: {
+      processRunning: null,
+      processCheckedAt: null
     },
     protection: { draft: false, minimap: false, topBar: false, queue: false },
     twitch: { authenticated: false, broadcasterId: null, broadcasterLogin: null, tokenExpiresAt: null },
@@ -233,6 +239,11 @@ runtime.state.gsi = {
   inGameScreen: false,
   leftGameView: false
 };
+runtime.state.dota = {
+  processRunning: null,
+  processCheckedAt: null
+};
+await refreshDotaProcessState();
 runtime.state.protection = computeProtection(runtime.config, runtime.state.gsi);
 await restoreTwitchStatus();
 
@@ -290,21 +301,48 @@ server.listen(port, listenHost, () => {
 });
 
 setInterval(() => {
-  if (!runtime.state.gsi.lastSeenAt) return;
-  const connected = Date.now() - Date.parse(runtime.state.gsi.lastSeenAt) < 15000;
-  if (!connected) {
+  refreshRuntimePresence().catch((error) => logEvent('system', `Runtime presence check failed: ${error.message}`));
+}, 5000);
+
+async function refreshRuntimePresence() {
+  const processChanged = await refreshDotaProcessState();
+  const hasSeenGsi = Boolean(runtime.state.gsi.lastSeenAt);
+  const connected = hasSeenGsi && Date.now() - Date.parse(runtime.state.gsi.lastSeenAt) < 15000;
+  if (hasSeenGsi && !connected) {
     maybeCancelPredictionForGsiTimeout().catch((error) => logEvent('twitch', `Auto cancel failed: ${error.message}`));
   }
   const connectionChanged = runtime.state.gsi.connected !== connected;
   runtime.state.gsi.connected = connected;
   const protection = computeProtection(runtime.config, runtime.state.gsi);
   const protectionChanged = !sameProtection(runtime.state.protection, protection);
-  if (connectionChanged || protectionChanged) {
+  if (processChanged || connectionChanged || protectionChanged) {
     runtime.state.protection = protection;
     persistState();
     broadcast();
   }
-}, 5000);
+}
+
+async function refreshDotaProcessState() {
+  const running = await isDotaProcessRunning();
+  const checkedAt = new Date().toISOString();
+  const changed = runtime.dotaProcess.running !== running;
+  runtime.dotaProcess = { running, checkedAt };
+  runtime.state.dota = { processRunning: running, processCheckedAt: checkedAt };
+  return changed;
+}
+
+async function isDotaProcessRunning() {
+  try {
+    if (process.platform === 'win32') {
+      const { stdout } = await execFileAsync('tasklist', ['/FI', `IMAGENAME eq ${dotaProcessName}`, '/NH'], { windowsHide: true });
+      return stdout.toLowerCase().includes(dotaProcessName);
+    }
+    const { stdout } = await execFileAsync('pgrep', ['-x', 'dota2'], { windowsHide: true });
+    return stdout.trim().length > 0;
+  } catch {
+    return false;
+  }
+}
 
 setInterval(() => {
   refreshTwitchStreamStatus().catch((error) => logEvent('twitch', `Stream status check failed: ${error.message}`));
@@ -1209,6 +1247,10 @@ function stableQueueAutoState(config, gsi) {
     resetQueueAuto(false);
     return false;
   }
+  if (runtime.dotaProcess.running === false) {
+    resetQueueAuto(false);
+    return false;
+  }
 
   const desired = inferQueueSearchScreen(gsi);
   const now = Date.now();
@@ -1240,10 +1282,13 @@ function sameProtection(left, right) {
 }
 
 function inferQueueSearchScreen(gsi) {
+  if (runtime.dotaProcess.running === false) return false;
   const state = String(gsi.gameState || '');
   if (inGameStatePattern.test(state)) return false;
   if (gsi.queueSearchSignal) return true;
   if (runtime.config.protection.queueAutoMode === 'search') return false;
+
+  if (runtime.dotaProcess.running === true && !gsi.lastSeenAt) return true;
 
   const lastSeenAt = Date.parse(gsi.lastSeenAt || '');
   const hasSeenGsi = Number.isFinite(lastSeenAt);
