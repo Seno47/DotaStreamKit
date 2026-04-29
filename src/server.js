@@ -23,6 +23,25 @@ const port = Number(process.env.PORT || 37273);
 const twitchApi = 'https://api.twitch.tv/helix';
 const twitchId = 'https://id.twitch.tv/oauth2';
 const twitchScopes = ['channel:manage:predictions', 'user:write:chat'];
+const customPredictionConditions = ['game_duration_at_least', 'metric_reaches_target', 'metric_by_minute'];
+const customPredictionMetrics = [
+  'clock_minutes',
+  'kills',
+  'deaths',
+  'assists',
+  'last_hits',
+  'denies',
+  'level',
+  'team_kills',
+  'team_deaths',
+  'team_assists',
+  'enemy_kills',
+  'enemy_deaths',
+  'enemy_assists',
+  'total_kills',
+  'total_deaths',
+  'total_assists'
+];
 
 const defaultConfig = {
   ui: {
@@ -108,7 +127,20 @@ const defaultConfig = {
       streamer_deaths: { enabled: true, weight: 1, min: 4, max: 9, titleTemplate: '{hero}: {target}+ смертей?', yesTitle: 'Да', noTitle: 'Нет' },
       streamer_assists: { enabled: true, weight: 2, min: 8, max: 20, titleTemplate: '{hero}: {target}+ ассистов?', yesTitle: 'Да', noTitle: 'Нет' },
       no_death_until: { enabled: true, weight: 1, minMinute: 8, maxMinute: 15, titleTemplate: '{hero} не умрет до {minute}:00?', yesTitle: 'Не умрет', noTitle: 'Умрет' },
-      last_hits_by_minute: { enabled: true, weight: 2, min: 45, max: 85, minMinute: 10, maxMinute: 10, titleTemplate: '{hero}: {target}+ ластхитов к {minute}:00?', yesTitle: 'Да', noTitle: 'Нет' }
+      last_hits_by_minute: { enabled: true, weight: 2, min: 45, max: 85, minMinute: 10, maxMinute: 10, titleTemplate: '{hero}: {target}+ ластхитов к {minute}:00?', yesTitle: 'Да', noTitle: 'Нет' },
+      custom_condition: {
+        enabled: false,
+        weight: 1,
+        min: 40,
+        max: 40,
+        minMinute: 40,
+        maxMinute: 40,
+        condition: 'game_duration_at_least',
+        metric: 'clock_minutes',
+        titleTemplate: 'Продлится ли игра {minute}:00?',
+        yesTitle: 'Да',
+        noTitle: 'Нет'
+      }
     }
   }
 };
@@ -120,7 +152,39 @@ const runtime = {
   config: structuredClone(defaultConfig),
   state: {
     startedAt: new Date().toISOString(),
-    gsi: { connected: false, lastSeenAt: null, gameState: null, clockTime: null, matchId: null, activeMatchId: null, playerActivity: null, playerTeam: null, winTeam: null, heroName: null, heroId: null, playerHeroPicked: false, draftActiveTeam: null, ownPickPhaseEnded: false, inGameScreen: false, leftGameView: false },
+    gsi: {
+      connected: false,
+      lastSeenAt: null,
+      gameState: null,
+      clockTime: null,
+      matchId: null,
+      activeMatchId: null,
+      playerActivity: null,
+      playerTeam: null,
+      winTeam: null,
+      heroName: null,
+      heroId: null,
+      kills: null,
+      deaths: null,
+      assists: null,
+      lastHits: null,
+      denies: null,
+      level: null,
+      teamKills: null,
+      teamDeaths: null,
+      teamAssists: null,
+      enemyKills: null,
+      enemyDeaths: null,
+      enemyAssists: null,
+      totalKills: null,
+      totalDeaths: null,
+      totalAssists: null,
+      playerHeroPicked: false,
+      draftActiveTeam: null,
+      ownPickPhaseEnded: false,
+      inGameScreen: false,
+      leftGameView: false
+    },
     protection: { draft: false, minimap: false, topBar: false, queue: false },
     twitch: { authenticated: false, broadcasterId: null, broadcasterLogin: null, tokenExpiresAt: null },
     activePrediction: null,
@@ -139,7 +203,39 @@ await migrateConfig(runtime.config);
 runtime.state = { ...runtime.state, ...(await loadJson(statePath, {})) };
 runtime.state.twitchToken = runtime.state.twitchToken || await loadTwitchTokenBackup();
 runtime.state.startedAt = new Date().toISOString();
-runtime.state.gsi = { connected: false, lastSeenAt: null, gameState: null, clockTime: null, matchId: null, activeMatchId: null, playerActivity: null, playerTeam: null, winTeam: null, heroName: null, heroId: null, playerHeroPicked: false, draftActiveTeam: null, ownPickPhaseEnded: false, inGameScreen: false, leftGameView: false };
+runtime.state.gsi = {
+  connected: false,
+  lastSeenAt: null,
+  gameState: null,
+  clockTime: null,
+  matchId: null,
+  activeMatchId: null,
+  playerActivity: null,
+  playerTeam: null,
+  winTeam: null,
+  heroName: null,
+  heroId: null,
+  kills: null,
+  deaths: null,
+  assists: null,
+  lastHits: null,
+  denies: null,
+  level: null,
+  teamKills: null,
+  teamDeaths: null,
+  teamAssists: null,
+  enemyKills: null,
+  enemyDeaths: null,
+  enemyAssists: null,
+  totalKills: null,
+  totalDeaths: null,
+  totalAssists: null,
+  playerHeroPicked: false,
+  draftActiveTeam: null,
+  ownPickPhaseEnded: false,
+  inGameScreen: false,
+  leftGameView: false
+};
 runtime.state.protection = computeProtection(runtime.config, runtime.state.gsi);
 await restoreTwitchStatus();
 
@@ -1020,6 +1116,7 @@ async function handleGsi(req, res) {
   const matchId = map.matchid || map.match_id || null;
   const playerActivity = player.activity || null;
   const playerTeam = normalizeTeam(player.team_name || player.team || player.activity);
+  const teamStats = collectTeamStats(payload, playerTeam);
   const heroName = hero.name || hero.localized_name || previous.heroName || null;
   const heroId = hero.id ?? hero.hero_id ?? previous.heroId ?? null;
   const kills = statNumber(player.kills, previous.kills);
@@ -1058,6 +1155,7 @@ async function handleGsi(req, res) {
     lastHits,
     denies,
     level,
+    ...teamStats,
     playerHeroPicked,
     draftActiveTeam,
     ownPickPhaseEnded,
@@ -1127,6 +1225,69 @@ function inferInGameScreen(gameState, playerActivity) {
   if (/DISCONNECT|POST_GAME/i.test(state)) return false;
   if (activity && !['playing', 'spectating'].includes(activity)) return false;
   return /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS/i.test(state);
+}
+
+function collectTeamStats(payload, playerTeam) {
+  const players = Object.values(payload.allplayers || payload.players || {}).filter((item) => item && typeof item === 'object');
+  const empty = {
+    teamKills: null,
+    teamDeaths: null,
+    teamAssists: null,
+    enemyKills: null,
+    enemyDeaths: null,
+    enemyAssists: null,
+    totalKills: null,
+    totalDeaths: null,
+    totalAssists: null
+  };
+  if (!players.length) return empty;
+
+  const totals = {
+    teamKills: 0,
+    teamDeaths: 0,
+    teamAssists: 0,
+    enemyKills: 0,
+    enemyDeaths: 0,
+    enemyAssists: 0,
+    totalKills: 0,
+    totalDeaths: 0,
+    totalAssists: 0
+  };
+  let hasTeam = false;
+  let hasEnemy = false;
+
+  for (const player of players) {
+    const team = normalizeTeam(player.team_name || player.team || player.team_slot || player.player_slot);
+    const kills = statNumber(player.kills, 0) || 0;
+    const deaths = statNumber(player.deaths, 0) || 0;
+    const assists = statNumber(player.assists, 0) || 0;
+    totals.totalKills += kills;
+    totals.totalDeaths += deaths;
+    totals.totalAssists += assists;
+    if (playerTeam && team === playerTeam) {
+      totals.teamKills += kills;
+      totals.teamDeaths += deaths;
+      totals.teamAssists += assists;
+      hasTeam = true;
+    } else if (playerTeam && team && team !== playerTeam) {
+      totals.enemyKills += kills;
+      totals.enemyDeaths += deaths;
+      totals.enemyAssists += assists;
+      hasEnemy = true;
+    }
+  }
+
+  return {
+    teamKills: hasTeam ? totals.teamKills : null,
+    teamDeaths: hasTeam ? totals.teamDeaths : null,
+    teamAssists: hasTeam ? totals.teamAssists : null,
+    enemyKills: hasEnemy ? totals.enemyKills : null,
+    enemyDeaths: hasEnemy ? totals.enemyDeaths : null,
+    enemyAssists: hasEnemy ? totals.enemyAssists : null,
+    totalKills: totals.totalKills,
+    totalDeaths: totals.totalDeaths,
+    totalAssists: totals.totalAssists
+  };
 }
 
 function inferLeftGameView({ connected, activeMatchId, gameState, playerActivity, hasLivePayload }) {
@@ -1202,6 +1363,10 @@ function inferPredictionResult(gsi) {
     return result === 'win' ? 'yes' : result === 'lose' ? 'no' : null;
   }
 
+  if (meta.type === 'custom_condition') {
+    return inferCustomConditionResult(meta, gsi);
+  }
+
   const stat = predictionStatValue(meta.type, gsi);
   if (['streamer_kills', 'streamer_deaths', 'streamer_assists'].includes(meta.type)) {
     if (Number.isFinite(stat) && stat >= meta.target) return 'yes';
@@ -1227,6 +1392,53 @@ function predictionStatValue(type, gsi) {
   if (type === 'streamer_kills') return Number(gsi.kills);
   if (type === 'streamer_deaths') return Number(gsi.deaths);
   if (type === 'streamer_assists') return Number(gsi.assists);
+  return NaN;
+}
+
+function inferCustomConditionResult(meta, gsi) {
+  const state = String(gsi.gameState || '');
+  const target = Number(meta.target || 0);
+  const deadlineSeconds = Number(meta.deadlineSeconds || 0);
+  const metricValue = predictionMetricValue(meta.metric, gsi);
+
+  if (meta.condition === 'game_duration_at_least') {
+    if (Number(gsi.clockTime || 0) >= deadlineSeconds) return 'yes';
+    if (/POST_GAME/i.test(state)) return 'no';
+    return null;
+  }
+
+  if (meta.condition === 'metric_reaches_target') {
+    if (Number.isFinite(metricValue) && metricValue >= target) return 'yes';
+    if (/POST_GAME/i.test(state)) return 'no';
+    return null;
+  }
+
+  if (meta.condition === 'metric_by_minute') {
+    if (/POST_GAME/i.test(state) && Number(gsi.clockTime || 0) < deadlineSeconds) return 'no';
+    if (Number(gsi.clockTime || 0) < deadlineSeconds) return null;
+    return Number.isFinite(metricValue) && metricValue >= target ? 'yes' : 'no';
+  }
+
+  return null;
+}
+
+function predictionMetricValue(metric, gsi) {
+  if (metric === 'clock_minutes') return Number(gsi.clockTime || 0) / 60;
+  if (metric === 'kills') return Number(gsi.kills);
+  if (metric === 'deaths') return Number(gsi.deaths);
+  if (metric === 'assists') return Number(gsi.assists);
+  if (metric === 'last_hits') return Number(gsi.lastHits);
+  if (metric === 'denies') return Number(gsi.denies);
+  if (metric === 'level') return Number(gsi.level);
+  if (metric === 'team_kills') return Number(gsi.teamKills);
+  if (metric === 'team_deaths') return Number(gsi.teamDeaths);
+  if (metric === 'team_assists') return Number(gsi.teamAssists);
+  if (metric === 'enemy_kills') return Number(gsi.enemyKills);
+  if (metric === 'enemy_deaths') return Number(gsi.enemyDeaths);
+  if (metric === 'enemy_assists') return Number(gsi.enemyAssists);
+  if (metric === 'total_kills') return Number(gsi.totalKills);
+  if (metric === 'total_deaths') return Number(gsi.totalDeaths);
+  if (metric === 'total_assists') return Number(gsi.totalAssists);
   return NaN;
 }
 
@@ -1419,13 +1631,17 @@ function normalizePredictionSettings(settings) {
   for (const [type, config] of Object.entries(settings.types)) {
     config.enabled = config.enabled !== false;
     config.weight = clampInt(config.weight, 1, 100);
-    if (['streamer_kills', 'streamer_deaths', 'streamer_assists', 'last_hits_by_minute'].includes(type)) {
+    if (['streamer_kills', 'streamer_deaths', 'streamer_assists', 'last_hits_by_minute', 'custom_condition'].includes(type)) {
       config.min = clampInt(config.min, 0, 999);
       config.max = clampInt(config.max, config.min, 999);
     }
-    if (['no_death_until', 'last_hits_by_minute'].includes(type)) {
+    if (['no_death_until', 'last_hits_by_minute', 'custom_condition'].includes(type)) {
       config.minMinute = clampInt(config.minMinute, 1, 180);
       config.maxMinute = clampInt(config.maxMinute, config.minMinute, 180);
+    }
+    if (type === 'custom_condition') {
+      if (!customPredictionConditions.includes(config.condition)) config.condition = 'game_duration_at_least';
+      if (!customPredictionMetrics.includes(config.metric)) config.metric = 'clock_minutes';
     }
     config.titleTemplate = String(config.titleTemplate || defaultConfig.predictions.types[type]?.titleTemplate || '').slice(0, 120);
     config.yesTitle = String(config.yesTitle || 'Да').slice(0, 25);
@@ -1434,6 +1650,11 @@ function normalizePredictionSettings(settings) {
 }
 
 function normalizeDraftTeam(value) {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) {
+    if (numeric >= 0 && numeric < 128) return 'radiant';
+    if (numeric >= 128) return 'dire';
+  }
   const raw = String(value ?? '').toLowerCase();
   if (raw.includes('radiant') || raw.includes('good') || raw === '2' || raw === 'team2') return 'radiant';
   if (raw.includes('dire') || raw.includes('bad') || raw === '3' || raw === 'team3') return 'dire';
@@ -1782,6 +2003,8 @@ function buildPredictionDraft(overrides = {}) {
     noTitle,
     meta: {
       type,
+      condition: typeConfig.condition || null,
+      metric: typeConfig.metric || null,
       target,
       minute,
       deadlineSeconds: minute ? minute * 60 : null,
@@ -1814,12 +2037,22 @@ function predictionVariables(extra = {}) {
     hero_id: gsi.heroId || '',
     target: extra.target ?? '',
     minute: extra.minute ?? '',
+    clock_minutes: Math.max(0, Math.floor(Number(gsi.clockTime || 0) / 60)),
     kills: gsi.kills ?? 0,
     deaths: gsi.deaths ?? 0,
     assists: gsi.assists ?? 0,
     last_hits: gsi.lastHits ?? 0,
     denies: gsi.denies ?? 0,
     level: gsi.level ?? 0,
+    team_kills: gsi.teamKills ?? 0,
+    team_deaths: gsi.teamDeaths ?? 0,
+    team_assists: gsi.teamAssists ?? 0,
+    enemy_kills: gsi.enemyKills ?? 0,
+    enemy_deaths: gsi.enemyDeaths ?? 0,
+    enemy_assists: gsi.enemyAssists ?? 0,
+    total_kills: gsi.totalKills ?? 0,
+    total_deaths: gsi.totalDeaths ?? 0,
+    total_assists: gsi.totalAssists ?? 0,
     team: gsi.playerTeam || '',
     type: extra.type || ''
   };
@@ -2112,6 +2345,7 @@ function makeGsiConfig() {
     "map" "1"
     "player" "1"
     "hero" "1"
+    "allplayers" "1"
     "draft" "1"
   }
 }

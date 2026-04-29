@@ -424,6 +424,29 @@ dd {
   background: #111820;
 }
 
+.variable-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+}
+
+.variable-summary::-webkit-details-marker {
+  display: none;
+}
+
+.variable-summary small {
+  color: #8ea0b5;
+  font-weight: 400;
+}
+
+.variable-guide .section-head {
+  margin-top: 12px;
+}
+
 .variable-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

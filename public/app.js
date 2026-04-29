@@ -110,17 +110,28 @@ const translations = {
     disconnect: 'Отключить',
     bindChannel: 'Привязать канал',
     predictions: 'Ставка за баллы канала',
+    variablesToggle: 'Нажми, чтобы свернуть или развернуть',
     variablesTitle: 'Переменные шаблонов',
     variablesHelp: 'Нажми на переменную, чтобы вставить ее в активное поле заголовка.',
     varHero: 'герой стримера',
     varTarget: 'случайная цель из диапазона',
     varMinute: 'выбранная минута',
+    varClockMinutes: 'текущая минута игры',
     varKills: 'текущие киллы',
     varDeaths: 'текущие смерти',
     varAssists: 'текущие ассисты',
     varLastHits: 'ластхиты',
     varDenies: 'добивания',
     varLevel: 'уровень героя',
+    varTeamKills: 'киллы команды стримера',
+    varTeamDeaths: 'смерти команды стримера',
+    varTeamAssists: 'ассисты команды стримера',
+    varEnemyKills: 'киллы команды противника',
+    varEnemyDeaths: 'смерти команды противника',
+    varEnemyAssists: 'ассисты команды противника',
+    varTotalKills: 'киллы обеих команд',
+    varTotalDeaths: 'смерти обеих команд',
+    varTotalAssists: 'ассисты обеих команд',
     title: 'Заголовок',
     windowSec: 'Окно, сек',
     outcome1: 'Исход 1',
@@ -172,6 +183,29 @@ const translations = {
     descNoDeath: 'Случайная минута, до которой герой должен выжить.',
     typeLastHits: 'Ластхиты к минуте',
     descLastHits: 'Случайная цель по ластхитам и минута проверки.',
+    typeCustom: 'Свой прогноз',
+    descCustom: 'Пользовательское условие по времени игры или выбранной метрике.',
+    condition: 'Условие',
+    metric: 'Метрика',
+    conditionGameDuration: 'Игра дойдет до минуты',
+    conditionReachTarget: 'Метрика достигнет цели до конца игры',
+    conditionByMinute: 'Метрика будет на минуте',
+    metricClockMinutes: 'Минута игры',
+    metricKills: 'Киллы стримера',
+    metricDeaths: 'Смерти стримера',
+    metricAssists: 'Ассисты стримера',
+    metricLastHits: 'Ластхиты стримера',
+    metricDenies: 'Добивания стримера',
+    metricLevel: 'Уровень стримера',
+    metricTeamKills: 'Киллы команды стримера',
+    metricTeamDeaths: 'Смерти команды стримера',
+    metricTeamAssists: 'Ассисты команды стримера',
+    metricEnemyKills: 'Киллы противника',
+    metricEnemyDeaths: 'Смерти противника',
+    metricEnemyAssists: 'Ассисты противника',
+    metricTotalKills: 'Киллы обеих команд',
+    metricTotalDeaths: 'Смерти обеих команд',
+    metricTotalAssists: 'Ассисты обеих команд',
     gameScreenMenu: 'меню Dota / reconnect',
     gameScreenGame: 'игровой экран',
     picked: 'выбран',
@@ -245,17 +279,28 @@ const translations = {
     disconnect: 'Disconnect',
     bindChannel: 'Bind channel',
     predictions: 'Channel Points prediction',
+    variablesToggle: 'Click to collapse or expand',
     variablesTitle: 'Template variables',
     variablesHelp: 'Click a variable to insert it into the active title field.',
     varHero: 'streamer hero',
     varTarget: 'random target from range',
     varMinute: 'selected minute',
+    varClockMinutes: 'current game minute',
     varKills: 'current kills',
     varDeaths: 'current deaths',
     varAssists: 'current assists',
     varLastHits: 'last hits',
     varDenies: 'denies',
     varLevel: 'hero level',
+    varTeamKills: 'streamer team kills',
+    varTeamDeaths: 'streamer team deaths',
+    varTeamAssists: 'streamer team assists',
+    varEnemyKills: 'enemy team kills',
+    varEnemyDeaths: 'enemy team deaths',
+    varEnemyAssists: 'enemy team assists',
+    varTotalKills: 'both teams kills',
+    varTotalDeaths: 'both teams deaths',
+    varTotalAssists: 'both teams assists',
     title: 'Title',
     windowSec: 'Window, sec',
     outcome1: 'Outcome 1',
@@ -307,6 +352,29 @@ const translations = {
     descNoDeath: 'Random minute the hero must survive until.',
     typeLastHits: 'Last hits by minute',
     descLastHits: 'Random last-hit target and check minute.',
+    typeCustom: 'Custom prediction',
+    descCustom: 'Custom condition based on game time or a selected metric.',
+    condition: 'Condition',
+    metric: 'Metric',
+    conditionGameDuration: 'Game reaches minute',
+    conditionReachTarget: 'Metric reaches target before game end',
+    conditionByMinute: 'Metric value at minute',
+    metricClockMinutes: 'Game minute',
+    metricKills: 'Streamer kills',
+    metricDeaths: 'Streamer deaths',
+    metricAssists: 'Streamer assists',
+    metricLastHits: 'Streamer last hits',
+    metricDenies: 'Streamer denies',
+    metricLevel: 'Streamer level',
+    metricTeamKills: 'Streamer team kills',
+    metricTeamDeaths: 'Streamer team deaths',
+    metricTeamAssists: 'Streamer team assists',
+    metricEnemyKills: 'Enemy kills',
+    metricEnemyDeaths: 'Enemy deaths',
+    metricEnemyAssists: 'Enemy assists',
+    metricTotalKills: 'Both teams kills',
+    metricTotalDeaths: 'Both teams deaths',
+    metricTotalAssists: 'Both teams assists',
     gameScreenMenu: 'Dota menu / reconnect',
     gameScreenGame: 'game screen',
     picked: 'picked',
@@ -348,7 +416,8 @@ const localizedPredictionDefaults = {
       streamer_deaths: { titleTemplate: '{hero}: {target}+ смертей?', yesTitle: 'Да', noTitle: 'Нет' },
       streamer_assists: { titleTemplate: '{hero}: {target}+ ассистов?', yesTitle: 'Да', noTitle: 'Нет' },
       no_death_until: { titleTemplate: '{hero} не умрет до {minute}:00?', yesTitle: 'Не умрет', noTitle: 'Умрет' },
-      last_hits_by_minute: { titleTemplate: '{hero}: {target}+ ластхитов к {minute}:00?', yesTitle: 'Да', noTitle: 'Нет' }
+      last_hits_by_minute: { titleTemplate: '{hero}: {target}+ ластхитов к {minute}:00?', yesTitle: 'Да', noTitle: 'Нет' },
+      custom_condition: { titleTemplate: 'Продлится ли игра {minute}:00?', yesTitle: 'Да', noTitle: 'Нет' }
     }
   },
   en: {
@@ -361,7 +430,8 @@ const localizedPredictionDefaults = {
       streamer_deaths: { titleTemplate: '{hero}: {target}+ deaths?', yesTitle: 'Yes', noTitle: 'No' },
       streamer_assists: { titleTemplate: '{hero}: {target}+ assists?', yesTitle: 'Yes', noTitle: 'No' },
       no_death_until: { titleTemplate: '{hero} survives until {minute}:00?', yesTitle: 'Survives', noTitle: 'Dies' },
-      last_hits_by_minute: { titleTemplate: '{hero}: {target}+ last hits by {minute}:00?', yesTitle: 'Yes', noTitle: 'No' }
+      last_hits_by_minute: { titleTemplate: '{hero}: {target}+ last hits by {minute}:00?', yesTitle: 'Yes', noTitle: 'No' },
+      custom_condition: { titleTemplate: 'Will the game reach {minute}:00?', yesTitle: 'Yes', noTitle: 'No' }
     }
   }
 };
@@ -372,7 +442,8 @@ const predictionTypeDefs = [
   { type: 'streamer_deaths', labelKey: 'typeDeaths', descriptionKey: 'descDeaths', ranges: ['min', 'max'] },
   { type: 'streamer_assists', labelKey: 'typeAssists', descriptionKey: 'descAssists', ranges: ['min', 'max'] },
   { type: 'no_death_until', labelKey: 'typeNoDeath', descriptionKey: 'descNoDeath', ranges: ['minMinute', 'maxMinute'] },
-  { type: 'last_hits_by_minute', labelKey: 'typeLastHits', descriptionKey: 'descLastHits', ranges: ['min', 'max', 'minMinute', 'maxMinute'] }
+  { type: 'last_hits_by_minute', labelKey: 'typeLastHits', descriptionKey: 'descLastHits', ranges: ['min', 'max', 'minMinute', 'maxMinute'] },
+  { type: 'custom_condition', labelKey: 'typeCustom', descriptionKey: 'descCustom', ranges: ['min', 'max', 'minMinute', 'maxMinute'], custom: true }
 ];
 
 buildPredictionTypeControls();
@@ -462,9 +533,11 @@ function applyLanguage(config) {
   setPrefixText(els.effectiveRedirectUri.parentElement, t('redirectUri'));
 
   setText(els.predictionForm.closest('article').querySelector('h2'), 'predictions');
+  setText('.variable-summary span', 'variablesTitle');
+  setText('.variable-summary small', 'variablesToggle');
   setText('.variable-guide h3', 'variablesTitle');
   setText('.variable-guide p', 'variablesHelp');
-  const variableKeys = ['varHero', 'varTarget', 'varMinute', 'varKills', 'varDeaths', 'varAssists', 'varLastHits', 'varDenies', 'varLevel'];
+  const variableKeys = ['varHero', 'varTarget', 'varMinute', 'varClockMinutes', 'varKills', 'varDeaths', 'varAssists', 'varLastHits', 'varDenies', 'varLevel', 'varTeamKills', 'varTeamDeaths', 'varTeamAssists', 'varEnemyKills', 'varEnemyDeaths', 'varEnemyAssists', 'varTotalKills', 'varTotalDeaths', 'varTotalAssists'];
   document.querySelectorAll('.variable-chip span').forEach((span, index) => {
     span.textContent = t(variableKeys[index]);
   });
@@ -705,6 +778,8 @@ function buildPredictionTypeControls() {
       </div>
       <div class="prediction-type-grid">
         <label data-field-label="weight">${t('weight')}<input data-field="weight" type="number" min="1" max="100"></label>
+        ${def.custom ? `<label data-field-label="condition">${t('condition')}<select data-field="condition"><option value="game_duration_at_least">${t('conditionGameDuration')}</option><option value="metric_reaches_target">${t('conditionReachTarget')}</option><option value="metric_by_minute">${t('conditionByMinute')}</option></select></label>` : ''}
+        ${def.custom ? `<label data-field-label="metric">${t('metric')}<select data-field="metric"><option value="clock_minutes">${t('metricClockMinutes')}</option><option value="kills">${t('metricKills')}</option><option value="deaths">${t('metricDeaths')}</option><option value="assists">${t('metricAssists')}</option><option value="last_hits">${t('metricLastHits')}</option><option value="denies">${t('metricDenies')}</option><option value="level">${t('metricLevel')}</option><option value="team_kills">${t('metricTeamKills')}</option><option value="team_deaths">${t('metricTeamDeaths')}</option><option value="team_assists">${t('metricTeamAssists')}</option><option value="enemy_kills">${t('metricEnemyKills')}</option><option value="enemy_deaths">${t('metricEnemyDeaths')}</option><option value="enemy_assists">${t('metricEnemyAssists')}</option><option value="total_kills">${t('metricTotalKills')}</option><option value="total_deaths">${t('metricTotalDeaths')}</option><option value="total_assists">${t('metricTotalAssists')}</option></select></label>` : ''}
         ${def.ranges.includes('min') ? `<label data-field-label="min">${t('targetFrom')}<input data-field="min" type="number" min="0" max="999"></label>` : ''}
         ${def.ranges.includes('max') ? `<label data-field-label="max">${t('targetTo')}<input data-field="max" type="number" min="0" max="999"></label>` : ''}
         ${def.ranges.includes('minMinute') ? `<label data-field-label="minMinute">${t('minuteFrom')}<input data-field="minMinute" type="number" min="1" max="180"></label>` : ''}
@@ -730,6 +805,8 @@ function applyPredictionTypeLanguage() {
     setLabelText(card.querySelector('[data-field="enabled"]').closest('label'), t('enabled'));
     const fieldLabels = {
       weight: 'weight',
+      condition: 'condition',
+      metric: 'metric',
       min: 'targetFrom',
       max: 'targetTo',
       minMinute: 'minuteFrom',
@@ -741,8 +818,28 @@ function applyPredictionTypeLanguage() {
     for (const [field, key] of Object.entries(fieldLabels)) {
       setLabelText(card.querySelector(`[data-field-label="${field}"]`), t(key));
     }
+    setOptionText(card.querySelector('[data-field="condition"]'), 'game_duration_at_least', t('conditionGameDuration'));
+    setOptionText(card.querySelector('[data-field="condition"]'), 'metric_reaches_target', t('conditionReachTarget'));
+    setOptionText(card.querySelector('[data-field="condition"]'), 'metric_by_minute', t('conditionByMinute'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'clock_minutes', t('metricClockMinutes'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'kills', t('metricKills'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'deaths', t('metricDeaths'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'assists', t('metricAssists'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'last_hits', t('metricLastHits'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'denies', t('metricDenies'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'level', t('metricLevel'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'team_kills', t('metricTeamKills'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'team_deaths', t('metricTeamDeaths'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'team_assists', t('metricTeamAssists'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'enemy_kills', t('metricEnemyKills'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'enemy_deaths', t('metricEnemyDeaths'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'enemy_assists', t('metricEnemyAssists'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'total_kills', t('metricTotalKills'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'total_deaths', t('metricTotalDeaths'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'total_assists', t('metricTotalAssists'));
     const previewLabel = card.querySelector('[data-preview-label]');
     if (previewLabel) previewLabel.textContent = t('preview');
+    updateCustomConditionFieldVisibility(card);
   }
 }
 
@@ -753,11 +850,14 @@ function renderPredictionTypes(types) {
     if (!card) continue;
     setTypeField(card, 'enabled', config.enabled !== false);
     setTypeField(card, 'weight', config.weight ?? 1);
+    setTypeField(card, 'condition', config.condition || 'game_duration_at_least');
+    setTypeField(card, 'metric', config.metric || 'clock_minutes');
     setTypeField(card, 'min', config.min ?? 0);
     setTypeField(card, 'max', config.max ?? config.min ?? 0);
     setTypeField(card, 'minMinute', config.minMinute ?? 10);
     setTypeField(card, 'maxMinute', config.maxMinute ?? config.minMinute ?? 10);
     setTypeField(card, 'titleTemplate', config.titleTemplate || '');
+    updateCustomConditionFieldVisibility(card);
     setTypeField(card, 'yesTitle', config.yesTitle || 'Да');
     setTypeField(card, 'noTitle', config.noTitle || 'Нет');
   }
@@ -777,6 +877,8 @@ function collectPredictionTypes() {
     types[def.type] = {
       enabled: getTypeField(card, 'enabled'),
       weight: Number(getTypeField(card, 'weight')),
+      condition: String(getTypeField(card, 'condition') || ''),
+      metric: String(getTypeField(card, 'metric') || ''),
       titleTemplate: String(getTypeField(card, 'titleTemplate')).trim(),
       yesTitle: String(getTypeField(card, 'yesTitle')).trim(),
       noTitle: String(getTypeField(card, 'noTitle')).trim()
@@ -823,6 +925,8 @@ function renderPredictionTypeVisibility() {
 
 function typeConfigFromCard(card) {
   return {
+    condition: String(getTypeField(card, 'condition') || 'game_duration_at_least'),
+    metric: String(getTypeField(card, 'metric') || 'clock_minutes'),
     titleTemplate: String(getTypeField(card, 'titleTemplate') || '').trim(),
     yesTitle: String(getTypeField(card, 'yesTitle') || '').trim(),
     noTitle: String(getTypeField(card, 'noTitle') || '').trim(),
@@ -833,6 +937,23 @@ function typeConfigFromCard(card) {
   };
 }
 
+function updateCustomConditionFieldVisibility(card) {
+  if (!card || card.dataset.type !== 'custom_condition') return;
+  const condition = String(getTypeField(card, 'condition') || 'game_duration_at_least');
+  const metricWrap = card.querySelector('[data-field-label="metric"]');
+  const minWrap = card.querySelector('[data-field-label="min"]');
+  const maxWrap = card.querySelector('[data-field-label="max"]');
+  const minMinuteWrap = card.querySelector('[data-field-label="minMinute"]');
+  const maxMinuteWrap = card.querySelector('[data-field-label="maxMinute"]');
+  const isDuration = condition === 'game_duration_at_least';
+  const usesMinute = condition === 'game_duration_at_least' || condition === 'metric_by_minute';
+  if (metricWrap) metricWrap.hidden = isDuration;
+  if (minWrap) minWrap.hidden = isDuration;
+  if (maxWrap) maxWrap.hidden = isDuration;
+  if (minMinuteWrap) minMinuteWrap.hidden = !usesMinute;
+  if (maxMinuteWrap) maxMinuteWrap.hidden = !usesMinute;
+}
+
 function fillTemplate(template, typeConfig) {
   const gsi = snapshot?.state?.gsi || {};
   const target = midpoint(typeConfig.min, typeConfig.max) || 8;
@@ -841,12 +962,22 @@ function fillTemplate(template, typeConfig) {
     hero: gsi.heroName || 'Pudge',
     target,
     minute,
-    kills: 3,
-    deaths: 1,
-    assists: 7,
-    last_hits: 68,
-    denies: 6,
-    level: 11
+    clock_minutes: Number.isFinite(gsi.clockTime) ? Math.max(0, Math.floor(gsi.clockTime / 60)) : 12,
+    kills: Number.isFinite(gsi.kills) ? gsi.kills : 3,
+    deaths: Number.isFinite(gsi.deaths) ? gsi.deaths : 1,
+    assists: Number.isFinite(gsi.assists) ? gsi.assists : 7,
+    last_hits: Number.isFinite(gsi.lastHits) ? gsi.lastHits : 68,
+    denies: Number.isFinite(gsi.denies) ? gsi.denies : 6,
+    level: Number.isFinite(gsi.level) ? gsi.level : 11,
+    team_kills: Number.isFinite(gsi.teamKills) ? gsi.teamKills : 18,
+    team_deaths: Number.isFinite(gsi.teamDeaths) ? gsi.teamDeaths : 11,
+    team_assists: Number.isFinite(gsi.teamAssists) ? gsi.teamAssists : 24,
+    enemy_kills: Number.isFinite(gsi.enemyKills) ? gsi.enemyKills : 14,
+    enemy_deaths: Number.isFinite(gsi.enemyDeaths) ? gsi.enemyDeaths : 16,
+    enemy_assists: Number.isFinite(gsi.enemyAssists) ? gsi.enemyAssists : 21,
+    total_kills: Number.isFinite(gsi.totalKills) ? gsi.totalKills : 32,
+    total_deaths: Number.isFinite(gsi.totalDeaths) ? gsi.totalDeaths : 27,
+    total_assists: Number.isFinite(gsi.totalAssists) ? gsi.totalAssists : 45
   };
 
   return Object.entries(values).reduce((text, [key, value]) => {
@@ -976,6 +1107,15 @@ els.predictionTypeForm.addEventListener('submit', async (event) => {
 document.addEventListener('focusin', (event) => rememberTemplateInput(event.target));
 document.addEventListener('input', (event) => {
   if (event.target.closest?.('#predictionForm, #predictionTypeForm, #predictionTypes')) {
+    const card = event.target.closest('.prediction-type');
+    if (card) updateCustomConditionFieldVisibility(card);
+    renderPredictionTypePreviews();
+  }
+});
+document.addEventListener('change', (event) => {
+  if (event.target.closest?.('#predictionForm, #predictionTypeForm, #predictionTypes')) {
+    const card = event.target.closest('.prediction-type');
+    if (card) updateCustomConditionFieldVisibility(card);
     renderPredictionTypePreviews();
   }
 });

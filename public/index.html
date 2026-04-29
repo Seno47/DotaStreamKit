@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>DotaStreamKit</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260429">
-    <link rel="stylesheet" href="/styles.css?v=20260429-prediction-language">
+    <link rel="stylesheet" href="/styles.css?v=20260429-custom-predictions">
   </head>
   <body>
     <main class="shell">
@@ -113,7 +113,11 @@
 
         <article class="panel wide">
           <h2>Ставка за баллы канала</h2>
-          <section class="variable-guide" aria-label="Переменные шаблонов">
+          <details class="variable-guide" open>
+            <summary class="variable-summary">
+              <span>Переменные шаблонов</span>
+              <small>Нажми, чтобы свернуть или развернуть</small>
+            </summary>
             <div class="section-head">
               <div>
                 <h3>Переменные шаблонов</h3>
@@ -124,14 +128,24 @@
               <button type="button" class="variable-chip" data-var="{hero}"><code>{hero}</code><span>герой стримера</span></button>
               <button type="button" class="variable-chip" data-var="{target}"><code>{target}</code><span>случайная цель из диапазона</span></button>
               <button type="button" class="variable-chip" data-var="{minute}"><code>{minute}</code><span>выбранная минута</span></button>
+              <button type="button" class="variable-chip" data-var="{clock_minutes}"><code>{clock_minutes}</code><span>текущая минута игры</span></button>
               <button type="button" class="variable-chip" data-var="{kills}"><code>{kills}</code><span>текущие киллы</span></button>
               <button type="button" class="variable-chip" data-var="{deaths}"><code>{deaths}</code><span>текущие смерти</span></button>
               <button type="button" class="variable-chip" data-var="{assists}"><code>{assists}</code><span>текущие ассисты</span></button>
               <button type="button" class="variable-chip" data-var="{last_hits}"><code>{last_hits}</code><span>ластхиты</span></button>
               <button type="button" class="variable-chip" data-var="{denies}"><code>{denies}</code><span>добивания</span></button>
               <button type="button" class="variable-chip" data-var="{level}"><code>{level}</code><span>уровень героя</span></button>
+              <button type="button" class="variable-chip" data-var="{team_kills}"><code>{team_kills}</code><span>киллы команды стримера</span></button>
+              <button type="button" class="variable-chip" data-var="{team_deaths}"><code>{team_deaths}</code><span>смерти команды стримера</span></button>
+              <button type="button" class="variable-chip" data-var="{team_assists}"><code>{team_assists}</code><span>ассисты команды стримера</span></button>
+              <button type="button" class="variable-chip" data-var="{enemy_kills}"><code>{enemy_kills}</code><span>киллы команды противника</span></button>
+              <button type="button" class="variable-chip" data-var="{enemy_deaths}"><code>{enemy_deaths}</code><span>смерти команды противника</span></button>
+              <button type="button" class="variable-chip" data-var="{enemy_assists}"><code>{enemy_assists}</code><span>ассисты команды противника</span></button>
+              <button type="button" class="variable-chip" data-var="{total_kills}"><code>{total_kills}</code><span>киллы обеих команд</span></button>
+              <button type="button" class="variable-chip" data-var="{total_deaths}"><code>{total_deaths}</code><span>смерти обеих команд</span></button>
+              <button type="button" class="variable-chip" data-var="{total_assists}"><code>{total_assists}</code><span>ассисты обеих команд</span></button>
             </div>
-          </section>
+          </details>
           <form id="predictionForm" class="prediction-grid">
             <label>Заголовок<input id="predictionTitle" maxlength="45"></label>
             <label>Окно, сек<input id="predictionWindow" type="number" min="30" max="1800"></label>
@@ -184,6 +198,6 @@
         </article>
       </section>
     </main>
-    <script src="/app.js?v=20260429-prediction-language"></script>
+    <script src="/app.js?v=20260429-custom-predictions"></script>
   </body>
 </html>
