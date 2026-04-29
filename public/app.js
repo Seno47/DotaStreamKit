@@ -195,6 +195,8 @@ const translations = {
     descLastHits: 'Случайная цель по ластхитам и минута проверки.',
     typeCustom: 'Свой прогноз',
     descCustom: 'Пользовательское условие по времени игры или выбранной метрике.',
+    deleteTemplate: 'Удалить шаблон',
+    confirmDeleteTemplate: 'Удалить пользовательский шаблон?',
     customBuilderTitle: 'Конструктор своего прогноза',
     customBuilderHelp: 'Собери условие, задай текст прогноза и сохрани шаблон. После сохранения он появится в выборе типов.',
     customName: 'Название шаблона',
@@ -369,6 +371,8 @@ const translations = {
     descLastHits: 'Random last-hit target and check minute.',
     typeCustom: 'Custom prediction',
     descCustom: 'Custom condition based on game time or a selected metric.',
+    deleteTemplate: 'Delete template',
+    confirmDeleteTemplate: 'Delete this custom template?',
     customBuilderTitle: 'Custom prediction builder',
     customBuilderHelp: 'Build a condition, set the prediction text, and save the template. It will appear in the type selector.',
     customName: 'Template name',
@@ -856,7 +860,10 @@ function buildPredictionTypeControls() {
           <h3 data-type-title></h3>
           <p data-type-description></p>
         </div>
-        <label class="check"><input data-field="enabled" type="checkbox"> ${t('enabled')}</label>
+        <div class="prediction-type-actions">
+          <button type="button" class="danger-icon" data-delete-template title="${t('deleteTemplate')}" ${def.savedCustom ? '' : 'hidden'}>x</button>
+          <label class="check"><input data-field="enabled" type="checkbox"> ${t('enabled')}</label>
+        </div>
       </div>
       <div class="prediction-preview">
         <span data-preview-label>${t('preview')}</span>
@@ -906,6 +913,11 @@ function applyPredictionTypeLanguage() {
     card.querySelector('[data-type-title]').textContent = def.label || t(def.labelKey);
     card.querySelector('[data-type-description]').textContent = t(def.descriptionKey);
     setLabelText(card.querySelector('[data-field="enabled"]').closest('label'), t('enabled'));
+    const deleteButton = card.querySelector('[data-delete-template]');
+    if (deleteButton) {
+      deleteButton.title = t('deleteTemplate');
+      deleteButton.setAttribute('aria-label', t('deleteTemplate'));
+    }
     const fieldLabels = {
       weight: 'weight',
       condition: 'condition',
@@ -1017,6 +1029,14 @@ function collectCustomPredictionTemplates() {
       noTitle: String(getTypeField(card, 'noTitle') || '').trim()
     };
   });
+}
+
+function removeCustomTemplate(type) {
+  if (!confirm(t('confirmDeleteTemplate'))) return;
+  const config = predictionConfigFromForm();
+  config.customTemplates = config.customTemplates.filter((template) => template.id !== type);
+  if (config.selectedType === type) config.selectedType = 'win_loss';
+  api('/api/config', { predictions: config }).catch(alert);
 }
 
 function getTypeField(card, field) {
@@ -1307,6 +1327,12 @@ document.addEventListener('change', (event) => {
     if (card) updateCustomConditionFieldVisibility(card);
     renderPredictionTypePreviews();
   }
+});
+document.addEventListener('click', (event) => {
+  const deleteButton = event.target.closest?.('[data-delete-template]');
+  if (!deleteButton) return;
+  const card = deleteButton.closest('.prediction-type');
+  if (card?.dataset.type) removeCustomTemplate(card.dataset.type);
 });
 els.selectedPredictionType.addEventListener('change', () => {
   renderPredictionTypeVisibility();

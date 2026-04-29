@@ -550,6 +550,29 @@ dd {
   margin-bottom: 10px;
 }
 
+.prediction-type-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.danger-icon {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  border-color: #5a2f35;
+  color: #ffb4bd;
+  background: #241216;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.danger-icon:hover {
+  border-color: #ff6676;
+}
+
 .prediction-type-header p {
   margin-top: 4px;
   color: #9aa5b5;
