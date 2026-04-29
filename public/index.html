@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DotaStreamKit</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="top">
+        <div>
+          <h1>DotaStreamKit</h1>
+          <p>Локальная защита стрима и автоматизация Twitch Predictions.</p>
+        </div>
+        <div class="status-row">
+          <span id="gsiStatus" class="pill">Dota GSI</span>
+          <span id="twitchStatus" class="pill">Twitch</span>
+        </div>
+      </header>
+
+      <section class="grid">
+        <article class="panel">
+          <h2>Защита</h2>
+          <div class="control-row">
+            <label><input type="checkbox" id="autoDraft"> Авто скрывать draft</label>
+            <label><input type="checkbox" id="autoMinimap"> Авто скрывать миникарту</label>
+            <label>Размер миникарты<select id="minimapSize"><option value="normal">Обычная</option><option value="large">Большая</option></select></label>
+            <label>Сторона<select id="minimapSide"><option value="left">Слева</option><option value="right">Справа</option></select></label>
+            <label>Фон миникарты<select id="minimapStyle"><option value="realistic">Реалистичный</option><option value="simple">Простой</option><option value="empty">Пустой</option></select></label>
+          </div>
+          <div class="button-row">
+            <button id="manualDraft">Draft</button>
+            <button id="manualMinimap">Миникарта</button>
+            <button id="manualTopBar">Верхняя панель</button>
+          </div>
+          <dl class="facts">
+            <div><dt>Игра</dt><dd id="gameState">-</dd></div>
+            <div><dt>Экран</dt><dd id="gameScreen">-</dd></div>
+            <div><dt>Герой</dt><dd id="heroState">-</dd></div>
+            <div><dt>Время</dt><dd id="clockTime">-</dd></div>
+            <div><dt>Матч</dt><dd id="matchId">-</dd></div>
+          </dl>
+          <p class="muted">OBS Browser Source: <code>http://localhost:37273/overlay.html</code></p>
+        </article>
+
+        <article class="panel">
+          <h2>Twitch</h2>
+          <div class="stack">
+            <label>Client ID<input id="clientId" autocomplete="off"></label>
+            <label>Client Secret<input id="clientSecret" type="password" autocomplete="off" placeholder="не менять, если уже сохранен"></label>
+          </div>
+          <div class="button-row">
+            <a class="button" href="/auth/twitch">Подключить Twitch</a>
+            <button id="logoutTwitch">Отключить</button>
+          </div>
+          <p class="muted">Redirect URI в Twitch app: <code>http://localhost:37273/auth/twitch/callback</code></p>
+        </article>
+
+        <article class="panel wide">
+          <h2>Ставка за баллы канала</h2>
+          <form id="predictionForm" class="prediction-grid">
+            <label>Заголовок<input id="predictionTitle" maxlength="45"></label>
+            <label>Окно, сек<input id="predictionWindow" type="number" min="30" max="1800"></label>
+            <label>Исход 1<input id="winTitle" maxlength="25"></label>
+            <label>Исход 2<input id="loseTitle" maxlength="25"></label>
+            <label class="check"><input type="checkbox" id="autoCreate"> Создавать автоматически</label>
+            <label class="check"><input type="checkbox" id="autoResolve"> Закрывать автоматически</label>
+            <label class="check"><input type="checkbox" id="autoCancelInvalidGame"> Отменять незасчитанную игру</label>
+            <button type="submit">Сохранить настройки</button>
+          </form>
+          <div class="button-row">
+            <button id="createPrediction">Создать</button>
+            <button id="lockPrediction">Закрыть прием</button>
+            <button id="cancelPrediction">Отменить</button>
+            <button id="resolveWin">Победа</button>
+            <button id="resolveLose">Поражение</button>
+          </div>
+          <div id="activePrediction" class="active-box">Нет активной ставки.</div>
+        </article>
+
+        <article class="panel">
+          <h2>Dota GSI</h2>
+          <div class="stack">
+            <label>Папка Dota 2<input id="dotaPath" autocomplete="off" placeholder="C:\SteamLibrary\steamapps\common\dota 2 beta"></label>
+          </div>
+          <div class="button-row">
+            <button id="detectDota">Найти Dota</button>
+            <button id="installGsi">Установить GSI</button>
+          </div>
+          <p class="muted">GSI встроен в Dota 2. DotaStreamKit устанавливает только маленький cfg-файл, который отправляет состояние игры на локальный сервер.</p>
+        </article>
+
+        <article class="panel">
+          <h2>Картинки draft HUD</h2>
+          <div class="stack">
+            <label>Полный draft-скрин<input id="draftScreenshotAsset" type="file" accept="image/png,image/jpeg,image/webp"></label>
+          </div>
+          <p id="assetStatus" class="muted">Слоты еще не нарезаны.</p>
+        </article>
+
+        <article class="panel wide">
+          <h2>Журнал</h2>
+          <div id="events" class="events"></div>
+        </article>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>

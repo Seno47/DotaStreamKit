@@ -1,0 +1,60 @@
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+#minimapMask,
+.draftMaskPart,
+.topBarSlot {
+  display: none;
+  position: fixed;
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-position: center top;
+}
+
+#minimapMask.visible,
+.draftMaskPart.visible,
+.topBarSlot.visible {
+  display: block;
+}
+
+#minimapMask {
+  left: 8px;
+  bottom: 8px;
+  width: 264px;
+  height: 264px;
+  background: transparent;
+  overflow: hidden;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.minimapMapLayer {
+  position: absolute;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.minimapVisionImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  image-rendering: auto;
+  pointer-events: none;
+}
+
+.minimapMapLayer.rightSide .minimapVisionImage {
+  transform: scaleX(-1);
+}
+
+#draftScreenMask {
+  background-color: transparent;
+}
