@@ -63,10 +63,11 @@ function render(data) {
   const { config, state } = data;
   els.gsiStatus.textContent = state.gsi.connected ? 'Dota GSI online' : 'Dota GSI offline';
   els.gsiStatus.className = `pill ${state.gsi.connected ? 'ok' : 'bad'}`;
+  const liveSuffix = state.twitch.isLive === true ? ' / live' : state.twitch.isLive === false ? ' / offline' : '';
   els.twitchStatus.textContent = state.twitch.authenticated
     ? state.twitch.needsReconnect
       ? `Twitch: ${state.twitch.broadcasterLogin} / reconnect`
-      : `Twitch: ${state.twitch.broadcasterLogin}`
+      : `Twitch: ${state.twitch.broadcasterLogin}${liveSuffix}`
     : state.twitch.needsReconnect
       ? 'Twitch reconnect'
       : 'Twitch disconnected';

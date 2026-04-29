@@ -88,6 +88,7 @@ const defaultConfig = {
 const runtime = {
   clients: new Set(),
   oauthStates: new Set(),
+  twitchStreamStatus: { checkedAt: 0, isLive: null, streamId: null, gameName: null, title: null },
   config: structuredClone(defaultConfig),
   state: {
     startedAt: new Date().toISOString(),
@@ -732,6 +733,7 @@ function hydrateTwitchStatus() {
   const token = runtime.state.twitchToken;
   const scopes = normalizeScopes(token?.scopes || []);
   const missingScopes = token?.accessToken ? twitchScopes.filter((scope) => !scopes.includes(scope)) : [];
+  const streamStatus = runtime.twitchStreamStatus || {};
   runtime.state.twitch = {
     authenticated: Boolean(token?.accessToken),
     broadcasterId: token?.broadcasterId || null,
@@ -739,7 +741,12 @@ function hydrateTwitchStatus() {
     tokenExpiresAt: token?.expiresAt || null,
     scopes,
     missingScopes,
-    needsReconnect: missingScopes.length > 0
+    needsReconnect: missingScopes.length > 0,
+    isLive: streamStatus.isLive,
+    streamId: streamStatus.streamId || null,
+    streamGameName: streamStatus.gameName || null,
+    streamTitle: streamStatus.title || null,
+    streamCheckedAt: streamStatus.checkedAt ? new Date(streamStatus.checkedAt).toISOString() : null
   };
 }
 
@@ -977,16 +984,17 @@ async function maybeAutomatePrediction(previous, gsi) {
   const settings = runtime.config.predictions;
   if (!runtime.state.twitchToken?.accessToken) return;
 
-  const oldMatch = previous.matchId;
-  const newMatch = gsi.matchId;
   syncActivePredictionMatchId(gsi);
-  const enteringDraft = !/HERO_SELECTION/i.test(String(previous.gameState || '')) && /HERO_SELECTION/i.test(String(gsi.gameState || ''));
-  const newMatchStarted = newMatch && newMatch !== oldMatch;
-  if (settings.autoCreate && !runtime.state.activePrediction && (enteringDraft || newMatchStarted)) {
-    try {
-      await createPredictionFromSettings();
-    } catch (error) {
-      logEvent('twitch', `Auto prediction failed: ${error.message}`);
+  if (settings.autoCreate && !runtime.state.activePrediction && shouldAutoCreatePredictionAfterPick(previous, gsi)) {
+    const isLive = await isBroadcasterLive();
+    if (!isLive) {
+      logEvent('twitch', 'Auto prediction skipped: Twitch stream is offline');
+    } else {
+      try {
+        await createPredictionFromSettings();
+      } catch (error) {
+        logEvent('twitch', `Auto prediction failed: ${error.message}`);
+      }
     }
   }
 
@@ -1022,6 +1030,12 @@ async function maybeAutomatePrediction(previous, gsi) {
       logEvent('twitch', `Auto resolve failed: ${error.message}`);
     }
   }
+}
+
+function shouldAutoCreatePredictionAfterPick(previous, gsi) {
+  if (!gsi.playerHeroPicked || previous.playerHeroPicked) return false;
+  const state = String(gsi.gameState || '');
+  return /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME/i.test(state);
 }
 
 function syncActivePredictionMatchId(gsi) {
@@ -1321,6 +1335,31 @@ async function twitchSendChatMessage(message) {
     throw new Error(item.drop_reason?.message || 'Twitch did not send the chat message');
   }
   return result;
+}
+
+async function isBroadcasterLive(force = false) {
+  const broadcaster = runtime.state.twitchToken?.broadcasterId;
+  if (!broadcaster) return false;
+
+  const now = Date.now();
+  const cached = runtime.twitchStreamStatus;
+  if (!force && cached.checkedAt && now - cached.checkedAt < 60000 && typeof cached.isLive === 'boolean') {
+    return cached.isLive;
+  }
+
+  const result = await twitchRequest(`/streams?user_id=${encodeURIComponent(broadcaster)}&first=1`);
+  const stream = (result.data || []).find((item) => String(item.user_id) === String(broadcaster) && item.type === 'live') || null;
+  runtime.twitchStreamStatus = {
+    checkedAt: now,
+    isLive: Boolean(stream),
+    streamId: stream?.id || null,
+    gameName: stream?.game_name || null,
+    title: stream?.title || null
+  };
+  hydrateTwitchStatus();
+  await persistState();
+  broadcast();
+  return runtime.twitchStreamStatus.isLive;
 }
 
 async function createPrediction(req, res) {
