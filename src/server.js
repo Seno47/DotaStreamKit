@@ -1033,9 +1033,10 @@ async function maybeAutomatePrediction(previous, gsi) {
 }
 
 function shouldAutoCreatePredictionAfterPick(previous, gsi) {
-  if (!gsi.playerHeroPicked || previous.playerHeroPicked) return false;
+  if (!gsi.playerHeroPicked || !gsi.ownPickPhaseEnded) return false;
+  if (previous.playerHeroPicked && previous.ownPickPhaseEnded) return false;
   const state = String(gsi.gameState || '');
-  return /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME/i.test(state);
+  return /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS/i.test(state);
 }
 
 function syncActivePredictionMatchId(gsi) {
