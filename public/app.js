@@ -76,6 +76,7 @@ const translations = {
     sitePrefix: 'Сайт: xyranet.pro',
     botPrefix: 'Бот: @XyraNet_bot',
     developer: 'Разработчик',
+    supportDeveloper: 'Поддержать',
     subtitle: 'Локальная защита стрима и автоматизация Twitch Predictions.',
     protection: 'Защита',
     autoDraft: 'Авто скрывать draft',
@@ -255,6 +256,7 @@ const translations = {
     sitePrefix: 'Site: xyranet.pro',
     botPrefix: 'Bot: @XyraNet_bot',
     developer: 'Developer',
+    supportDeveloper: 'Support',
     subtitle: 'Local stream protection and Twitch Predictions automation.',
     protection: 'Protection',
     autoDraft: 'Auto hide draft',
@@ -483,7 +485,8 @@ function applyLanguage(config) {
 
   setText('[data-i18n="languageLabel"]', 'languageLabel');
   setText('.sponsor-label', 'sponsor');
-  setText('.developer-link span', 'developer');
+  setText('.developer-link:not(.support-link) span', 'developer');
+  setText('.support-link span', 'supportDeveloper');
   const sponsorLinkSpans = document.querySelectorAll('.sponsor-links span');
   if (sponsorLinkSpans[0]) sponsorLinkSpans[0].textContent = t('sitePrefix');
   if (sponsorLinkSpans[1]) sponsorLinkSpans[1].textContent = t('botPrefix');

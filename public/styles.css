@@ -212,6 +212,7 @@ label input[type='checkbox']:focus-visible {
 .developer-strip {
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
   margin-bottom: 18px;
 }
 
@@ -228,6 +229,17 @@ label input[type='checkbox']:focus-visible {
   opacity: 1;
 }
 
+.support-link {
+  color: #ffd7a1;
+  border-color: #6b4f2b;
+  background: #211912;
+}
+
+.support-link:hover {
+  border-color: #b98238;
+  background: #302114;
+}
+
 .link-icon {
   width: 18px;
   height: 18px;
@@ -239,6 +251,11 @@ label input[type='checkbox']:focus-visible {
 }
 
 .telegram-icon {
+  fill: currentColor;
+  stroke: none;
+}
+
+.support-icon {
   fill: currentColor;
   stroke: none;
 }
