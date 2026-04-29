@@ -1,6 +1,7 @@
 const els = {
   gsiStatus: document.querySelector('#gsiStatus'),
   twitchStatus: document.querySelector('#twitchStatus'),
+  languageSelect: document.querySelector('#languageSelect'),
   autoDraft: document.querySelector('#autoDraft'),
   autoMinimap: document.querySelector('#autoMinimap'),
   autoQueue: document.querySelector('#autoQueue'),
@@ -59,13 +60,289 @@ const els = {
 let snapshot = null;
 let lastTemplateInput = null;
 
+const translations = {
+  ru: {
+    languageLabel: 'Язык',
+    sponsor: 'Спонсор',
+    sitePrefix: 'Сайт: xyranet.pro',
+    botPrefix: 'Бот: @XyraNet_bot',
+    developer: 'Разработчик',
+    subtitle: 'Локальная защита стрима и автоматизация Twitch Predictions.',
+    protection: 'Защита',
+    autoDraft: 'Авто скрывать draft',
+    autoMinimap: 'Авто скрывать миникарту',
+    autoQueue: 'Авто скрывать поиск',
+    minimapSize: 'Размер миникарты',
+    normal: 'Обычная',
+    large: 'Большая',
+    side: 'Сторона',
+    left: 'Слева',
+    right: 'Справа',
+    minimapStyle: 'Фон миникарты',
+    realistic: 'Реалистичный',
+    simple: 'Простой',
+    empty: 'Пустой',
+    queueMode: 'Скрытие поиска',
+    partial: 'Только области поиска',
+    full: 'Фуллскрин',
+    minimap: 'Миникарта',
+    topBar: 'Верхняя панель',
+    queue: 'Поиск',
+    game: 'Игра',
+    screen: 'Экран',
+    hero: 'Герой',
+    time: 'Время',
+    match: 'Матч',
+    twitchPanel: 'Twitch',
+    deploymentMode: 'Режим запуска',
+    local: 'Локально',
+    server: 'Сервер',
+    publicUrl: 'Public URL сервера',
+    clientId: 'Client ID',
+    clientSecret: 'Client Secret',
+    clientSecretPlaceholder: 'не менять, если уже сохранен',
+    redirectUri: 'Redirect URI в Twitch app:',
+    channelMode: 'Канал для прогнозов',
+    personalAccount: 'Личный Twitch аккаунт',
+    separateAccount: 'Отдельный аккаунт / канал стримера по нику',
+    streamerLogin: 'Ник стримера',
+    connectTwitch: 'Подключить Twitch',
+    disconnect: 'Отключить',
+    bindChannel: 'Привязать канал',
+    predictions: 'Ставка за баллы канала',
+    variablesTitle: 'Переменные шаблонов',
+    variablesHelp: 'Нажми на переменную, чтобы вставить ее в активное поле заголовка.',
+    varHero: 'герой стримера',
+    varTarget: 'случайная цель из диапазона',
+    varMinute: 'выбранная минута',
+    varKills: 'текущие киллы',
+    varDeaths: 'текущие смерти',
+    varAssists: 'текущие ассисты',
+    varLastHits: 'ластхиты',
+    varDenies: 'добивания',
+    varLevel: 'уровень героя',
+    title: 'Заголовок',
+    windowSec: 'Окно, сек',
+    outcome1: 'Исход 1',
+    outcome2: 'Исход 2',
+    autoCreate: 'Создавать автоматически',
+    autoResolve: 'Закрывать автоматически',
+    autoCancelInvalidGame: 'Отменять незасчитанную игру',
+    typeMode: 'Режим типов',
+    selectedMode: 'Один выбранный',
+    randomMode: 'Случайный из включённых',
+    selectedType: 'Выбранный тип',
+    saveSettings: 'Сохранить настройки',
+    create: 'Создать',
+    lock: 'Закрыть прием',
+    cancel: 'Отменить',
+    resolveYes: 'Исход Да',
+    resolveNo: 'Исход Нет',
+    noActivePrediction: 'Нет активной ставки.',
+    dotaGsi: 'Dota GSI',
+    dotaFolder: 'Папка Dota 2',
+    findDota: 'Найти Dota',
+    installGsi: 'Установить GSI',
+    gsiHelp: 'GSI встроен в Dota 2. DotaStreamKit устанавливает только маленький cfg-файл, который отправляет состояние игры на локальный сервер.',
+    assetsTitle: 'Картинки draft HUD',
+    draftImage: 'Полный draft-скрин',
+    queueImage: 'Скрин меню для скрытия поиска',
+    slotsNotReady: 'Слоты еще не нарезаны.',
+    journal: 'Журнал',
+    enabled: 'Включен',
+    preview: 'Превью',
+    yes: 'Да',
+    no: 'Нет',
+    weight: 'Шанс выбора',
+    targetFrom: 'Цель от',
+    targetTo: 'Цель до',
+    minuteFrom: 'Минута от',
+    minuteTo: 'Минута до',
+    yesOutcome: 'Исход Да',
+    noOutcome: 'Исход Нет',
+    typeWinLoss: 'Победа/поражение',
+    descWinLoss: 'Базовый прогноз на исход игры.',
+    typeKills: 'Киллы стримера',
+    descKills: 'Случайная цель по убийствам из диапазона.',
+    typeDeaths: 'Смерти стримера',
+    descDeaths: 'Случайная цель по смертям из диапазона.',
+    typeAssists: 'Ассисты стримера',
+    descAssists: 'Случайная цель по ассистам из диапазона.',
+    typeNoDeath: 'Не умереть до минуты',
+    descNoDeath: 'Случайная минута, до которой герой должен выжить.',
+    typeLastHits: 'Ластхиты к минуте',
+    descLastHits: 'Случайная цель по ластхитам и минута проверки.',
+    gameScreenMenu: 'меню Dota / reconnect',
+    gameScreenGame: 'игровой экран',
+    picked: 'выбран',
+    topbarOnly: 'только верхняя панель',
+    twitchReconnect: 'Twitch: переподключить',
+    twitchDisconnected: 'Twitch отключен',
+    channelNotSelected: 'Канал прогнозов не выбран.',
+    channelStatusUnknown: 'статус не проверен',
+    checkedAt: 'проверено',
+    separateOauth: 'отдельный от OAuth аккаунта',
+    neededImage: 'Нужен PNG, JPEG или WebP',
+    noActivePredictionAlert: 'Нет активной ставки',
+    noOutcomeAlert: 'Не найден исход для закрытия',
+    dotaFound: 'Dota найдена:',
+    gsiInstalled: 'GSI установлен:',
+    restartDota: 'Перезапусти Dota 2, если она уже была открыта.',
+    channelFound: 'Канал привязан:',
+    readFileFailed: 'Не удалось прочитать файл',
+    notAvailable: 'нет',
+    assetSlots: 'Слоты',
+    assetDraft: 'Draft',
+    assetQueue: 'Поиск',
+    assetMinimap: 'Миникарта'
+  },
+  en: {
+    languageLabel: 'Language',
+    sponsor: 'Sponsor',
+    sitePrefix: 'Site: xyranet.pro',
+    botPrefix: 'Bot: @XyraNet_bot',
+    developer: 'Developer',
+    subtitle: 'Local stream protection and Twitch Predictions automation.',
+    protection: 'Protection',
+    autoDraft: 'Auto hide draft',
+    autoMinimap: 'Auto hide minimap',
+    autoQueue: 'Auto hide queue/search',
+    minimapSize: 'Minimap size',
+    normal: 'Normal',
+    large: 'Large',
+    side: 'Side',
+    left: 'Left',
+    right: 'Right',
+    minimapStyle: 'Minimap background',
+    realistic: 'Realistic',
+    simple: 'Simple',
+    empty: 'Empty',
+    queueMode: 'Queue masking',
+    partial: 'Queue areas only',
+    full: 'Fullscreen',
+    minimap: 'Minimap',
+    topBar: 'Top bar',
+    queue: 'Queue',
+    game: 'Game',
+    screen: 'Screen',
+    hero: 'Hero',
+    time: 'Time',
+    match: 'Match',
+    twitchPanel: 'Twitch',
+    deploymentMode: 'Run mode',
+    local: 'Local',
+    server: 'Server',
+    publicUrl: 'Server public URL',
+    clientId: 'Client ID',
+    clientSecret: 'Client Secret',
+    clientSecretPlaceholder: 'leave empty if already saved',
+    redirectUri: 'Redirect URI in Twitch app:',
+    channelMode: 'Prediction channel',
+    personalAccount: 'Personal Twitch account',
+    separateAccount: 'Separate account / streamer channel by login',
+    streamerLogin: 'Streamer login',
+    connectTwitch: 'Connect Twitch',
+    disconnect: 'Disconnect',
+    bindChannel: 'Bind channel',
+    predictions: 'Channel Points prediction',
+    variablesTitle: 'Template variables',
+    variablesHelp: 'Click a variable to insert it into the active title field.',
+    varHero: 'streamer hero',
+    varTarget: 'random target from range',
+    varMinute: 'selected minute',
+    varKills: 'current kills',
+    varDeaths: 'current deaths',
+    varAssists: 'current assists',
+    varLastHits: 'last hits',
+    varDenies: 'denies',
+    varLevel: 'hero level',
+    title: 'Title',
+    windowSec: 'Window, sec',
+    outcome1: 'Outcome 1',
+    outcome2: 'Outcome 2',
+    autoCreate: 'Create automatically',
+    autoResolve: 'Resolve automatically',
+    autoCancelInvalidGame: 'Cancel invalid game',
+    typeMode: 'Type mode',
+    selectedMode: 'One selected',
+    randomMode: 'Random from enabled',
+    selectedType: 'Selected type',
+    saveSettings: 'Save settings',
+    create: 'Create',
+    lock: 'Lock entries',
+    cancel: 'Cancel',
+    resolveYes: 'Resolve Yes',
+    resolveNo: 'Resolve No',
+    noActivePrediction: 'No active prediction.',
+    dotaGsi: 'Dota GSI',
+    dotaFolder: 'Dota 2 folder',
+    findDota: 'Find Dota',
+    installGsi: 'Install GSI',
+    gsiHelp: 'GSI is built into Dota 2. DotaStreamKit installs only a small cfg file that sends game state to the local server.',
+    assetsTitle: 'Draft HUD images',
+    draftImage: 'Full draft screenshot',
+    queueImage: 'Menu screenshot for queue masking',
+    slotsNotReady: 'Slots are not generated yet.',
+    journal: 'Log',
+    enabled: 'Enabled',
+    preview: 'Preview',
+    yes: 'Yes',
+    no: 'No',
+    weight: 'Selection chance',
+    targetFrom: 'Target from',
+    targetTo: 'Target to',
+    minuteFrom: 'Minute from',
+    minuteTo: 'Minute to',
+    yesOutcome: 'Yes outcome',
+    noOutcome: 'No outcome',
+    typeWinLoss: 'Win/loss',
+    descWinLoss: 'Basic prediction for game result.',
+    typeKills: 'Streamer kills',
+    descKills: 'Random kill target from the range.',
+    typeDeaths: 'Streamer deaths',
+    descDeaths: 'Random death target from the range.',
+    typeAssists: 'Streamer assists',
+    descAssists: 'Random assist target from the range.',
+    typeNoDeath: 'No death until minute',
+    descNoDeath: 'Random minute the hero must survive until.',
+    typeLastHits: 'Last hits by minute',
+    descLastHits: 'Random last-hit target and check minute.',
+    gameScreenMenu: 'Dota menu / reconnect',
+    gameScreenGame: 'game screen',
+    picked: 'picked',
+    topbarOnly: 'topbar only',
+    twitchReconnect: 'Twitch reconnect',
+    twitchDisconnected: 'Twitch disconnected',
+    channelNotSelected: 'Prediction channel is not selected.',
+    channelStatusUnknown: 'status not checked',
+    checkedAt: 'checked',
+    separateOauth: 'separate from OAuth account',
+    neededImage: 'PNG, JPEG or WebP is required',
+    noActivePredictionAlert: 'No active prediction',
+    noOutcomeAlert: 'No outcome found for resolving',
+    dotaFound: 'Dota found:',
+    gsiInstalled: 'GSI installed:',
+    restartDota: 'Restart Dota 2 if it is already open.',
+    channelFound: 'Channel bound:',
+    readFileFailed: 'Failed to read file',
+    notAvailable: 'none',
+    assetSlots: 'Slots',
+    assetDraft: 'Draft',
+    assetQueue: 'Queue',
+    assetMinimap: 'Minimap'
+  }
+};
+
+let currentLang = resolveLanguage('auto');
+let currentLanguageSetting = 'auto';
+
 const predictionTypeDefs = [
-  { type: 'win_loss', label: 'Победа/поражение', description: 'Базовый прогноз на исход игры.', ranges: [] },
-  { type: 'streamer_kills', label: 'Киллы стримера', description: 'Случайная цель по убийствам из диапазона.', ranges: ['min', 'max'] },
-  { type: 'streamer_deaths', label: 'Смерти стримера', description: 'Случайная цель по смертям из диапазона.', ranges: ['min', 'max'] },
-  { type: 'streamer_assists', label: 'Ассисты стримера', description: 'Случайная цель по ассистам из диапазона.', ranges: ['min', 'max'] },
-  { type: 'no_death_until', label: 'Не умереть до минуты', description: 'Случайная минута, до которой герой должен выжить.', ranges: ['minMinute', 'maxMinute'] },
-  { type: 'last_hits_by_minute', label: 'Ластхиты к минуте', description: 'Случайная цель по ластхитам и минута проверки.', ranges: ['min', 'max', 'minMinute', 'maxMinute'] }
+  { type: 'win_loss', labelKey: 'typeWinLoss', descriptionKey: 'descWinLoss', ranges: [] },
+  { type: 'streamer_kills', labelKey: 'typeKills', descriptionKey: 'descKills', ranges: ['min', 'max'] },
+  { type: 'streamer_deaths', labelKey: 'typeDeaths', descriptionKey: 'descDeaths', ranges: ['min', 'max'] },
+  { type: 'streamer_assists', labelKey: 'typeAssists', descriptionKey: 'descAssists', ranges: ['min', 'max'] },
+  { type: 'no_death_until', labelKey: 'typeNoDeath', descriptionKey: 'descNoDeath', ranges: ['minMinute', 'maxMinute'] },
+  { type: 'last_hits_by_minute', labelKey: 'typeLastHits', descriptionKey: 'descLastHits', ranges: ['min', 'max', 'minMinute', 'maxMinute'] }
 ];
 
 buildPredictionTypeControls();
@@ -88,8 +365,144 @@ async function api(path, body = null, method = 'POST') {
   return json;
 }
 
+function t(key) {
+  return translations[currentLang]?.[key] || translations.ru[key] || key;
+}
+
+function resolveLanguage(setting) {
+  if (setting === 'ru' || setting === 'en') return setting;
+  const browserLanguages = navigator.languages?.length ? navigator.languages : [navigator.language || 'ru'];
+  return browserLanguages.some((language) => String(language).toLowerCase().startsWith('ru')) ? 'ru' : 'en';
+}
+
+function applyLanguage(config) {
+  currentLanguageSetting = config.ui?.language || 'auto';
+  currentLang = resolveLanguage(currentLanguageSetting);
+  document.documentElement.lang = currentLang;
+  if (els.languageSelect) els.languageSelect.value = currentLanguageSetting;
+
+  setText('[data-i18n="languageLabel"]', 'languageLabel');
+  setText('.sponsor-label', 'sponsor');
+  setText('.developer-link span', 'developer');
+  const sponsorLinkSpans = document.querySelectorAll('.sponsor-links span');
+  if (sponsorLinkSpans[0]) sponsorLinkSpans[0].textContent = t('sitePrefix');
+  if (sponsorLinkSpans[1]) sponsorLinkSpans[1].textContent = t('botPrefix');
+  setText('.top p', 'subtitle');
+
+  setText(els.autoDraft.closest('article').querySelector('h2'), 'protection');
+  setLabelText(els.autoDraft.closest('label'), t('autoDraft'));
+  setLabelText(els.autoMinimap.closest('label'), t('autoMinimap'));
+  setLabelText(els.autoQueue.closest('label'), t('autoQueue'));
+  setLabelText(els.minimapSize.closest('label'), t('minimapSize'));
+  setOptionText(els.minimapSize, 'normal', t('normal'));
+  setOptionText(els.minimapSize, 'large', t('large'));
+  setLabelText(els.minimapSide.closest('label'), t('side'));
+  setOptionText(els.minimapSide, 'left', t('left'));
+  setOptionText(els.minimapSide, 'right', t('right'));
+  setLabelText(els.minimapStyle.closest('label'), t('minimapStyle'));
+  setOptionText(els.minimapStyle, 'realistic', t('realistic'));
+  setOptionText(els.minimapStyle, 'simple', t('simple'));
+  setOptionText(els.minimapStyle, 'empty', t('empty'));
+  setLabelText(els.queueMode.closest('label'), t('queueMode'));
+  setOptionText(els.queueMode, 'partial', t('partial'));
+  setOptionText(els.queueMode, 'full', t('full'));
+  els.manualMinimap.textContent = t('minimap');
+  els.manualTopBar.textContent = t('topBar');
+  els.manualQueue.textContent = t('queue');
+  const factLabels = els.autoDraft.closest('article').querySelectorAll('dt');
+  [t('game'), t('screen'), t('hero'), t('time'), t('match')].forEach((label, index) => {
+    if (factLabels[index]) factLabels[index].textContent = label;
+  });
+
+  setText(els.deploymentMode.closest('article').querySelector('h2'), 'twitchPanel');
+  setLabelText(els.deploymentMode.closest('label'), t('deploymentMode'));
+  setOptionText(els.deploymentMode, 'local', t('local'));
+  setOptionText(els.deploymentMode, 'server', t('server'));
+  setLabelText(els.publicBaseUrl.closest('label'), t('publicUrl'));
+  setLabelText(els.clientId.closest('label'), t('clientId'));
+  setLabelText(els.clientSecret.closest('label'), t('clientSecret'));
+  els.clientSecret.placeholder = t('clientSecretPlaceholder');
+  setLabelText(els.twitchChannelMode.closest('label'), t('channelMode'));
+  setOptionText(els.twitchChannelMode, 'personal', t('personalAccount'));
+  setOptionText(els.twitchChannelMode, 'separate', t('separateAccount'));
+  setLabelText(els.targetChannelLogin.closest('label'), t('streamerLogin'));
+  document.querySelector('a[href="/auth/twitch"]').textContent = t('connectTwitch');
+  els.logoutTwitch.textContent = t('disconnect');
+  els.resolveTwitchChannel.textContent = t('bindChannel');
+  setPrefixText(els.effectiveRedirectUri.parentElement, t('redirectUri'));
+
+  setText(els.predictionForm.closest('article').querySelector('h2'), 'predictions');
+  setText('.variable-guide h3', 'variablesTitle');
+  setText('.variable-guide p', 'variablesHelp');
+  const variableKeys = ['varHero', 'varTarget', 'varMinute', 'varKills', 'varDeaths', 'varAssists', 'varLastHits', 'varDenies', 'varLevel'];
+  document.querySelectorAll('.variable-chip span').forEach((span, index) => {
+    span.textContent = t(variableKeys[index]);
+  });
+  setLabelText(els.predictionTitle.closest('label'), t('title'));
+  setLabelText(els.predictionWindow.closest('label'), t('windowSec'));
+  setLabelText(els.winTitle.closest('label'), t('outcome1'));
+  setLabelText(els.loseTitle.closest('label'), t('outcome2'));
+  setLabelText(els.autoCreate.closest('label'), t('autoCreate'));
+  setLabelText(els.autoResolve.closest('label'), t('autoResolve'));
+  setLabelText(els.autoCancelInvalidGame.closest('label'), t('autoCancelInvalidGame'));
+  setLabelText(els.predictionSelectionMode.closest('label'), t('typeMode'));
+  setOptionText(els.predictionSelectionMode, 'selected', t('selectedMode'));
+  setOptionText(els.predictionSelectionMode, 'random', t('randomMode'));
+  setLabelText(els.selectedPredictionTypeWrap, t('selectedType'));
+  els.predictionTypeForm.querySelector('button[type="submit"]').textContent = t('saveSettings');
+  els.createPrediction.textContent = t('create');
+  els.lockPrediction.textContent = t('lock');
+  els.cancelPrediction.textContent = t('cancel');
+  els.resolveWin.textContent = t('resolveYes');
+  els.resolveLose.textContent = t('resolveNo');
+
+  setText(els.dotaPath.closest('article').querySelector('h2'), 'dotaGsi');
+  setLabelText(els.dotaPath.closest('label'), t('dotaFolder'));
+  els.detectDota.textContent = t('findDota');
+  els.installGsi.textContent = t('installGsi');
+  els.installGsi.closest('article').querySelector('.muted').textContent = t('gsiHelp');
+
+  setText(els.draftScreenshotAsset.closest('article').querySelector('h2'), 'assetsTitle');
+  setLabelText(els.draftScreenshotAsset.closest('label'), t('draftImage'));
+  setLabelText(els.queueScreenshotAsset.closest('label'), t('queueImage'));
+  setText(els.events.closest('article').querySelector('h2'), 'journal');
+
+  applyPredictionTypeLanguage();
+}
+
+function setText(target, key) {
+  const el = typeof target === 'string' ? document.querySelector(target) : target;
+  if (el) el.textContent = t(key);
+}
+
+function setLabelText(label, text) {
+  if (!label) return;
+  for (const node of Array.from(label.childNodes)) {
+    if (node.nodeType === Node.TEXT_NODE) node.remove();
+  }
+  const control = label.querySelector('input, select');
+  const textNode = document.createTextNode(control === label.firstElementChild ? ` ${text}` : text);
+  if (!control) label.prepend(textNode);
+  else if (control === label.firstElementChild) control.after(textNode);
+  else label.insertBefore(textNode, control);
+}
+
+function setOptionText(select, value, text) {
+  const option = select?.querySelector(`option[value="${value}"]`);
+  if (option) option.textContent = text;
+}
+
+function setPrefixText(container, text) {
+  if (!container) return;
+  for (const node of Array.from(container.childNodes)) {
+    if (node.nodeType === Node.TEXT_NODE) node.remove();
+  }
+  container.prepend(document.createTextNode(`${text} `));
+}
+
 function render(data) {
   const { config, state } = data;
+  applyLanguage(config);
   els.gsiStatus.textContent = state.gsi.connected ? 'Dota GSI online' : 'Dota GSI offline';
   els.gsiStatus.className = `pill ${state.gsi.connected ? 'ok' : 'bad'}`;
   const liveSuffix = state.twitch.isLive === true ? ' / live' : state.twitch.isLive === false ? ' / offline' : '';
@@ -99,8 +512,8 @@ function render(data) {
       ? `Twitch: ${state.twitch.broadcasterLogin} / reconnect`
       : `Twitch: ${predictionChannel}${liveSuffix}`
     : state.twitch.needsReconnect
-      ? 'Twitch reconnect'
-      : 'Twitch disconnected';
+      ? t('twitchReconnect')
+      : t('twitchDisconnected');
   els.twitchStatus.className = `pill ${state.twitch.authenticated && !state.twitch.needsReconnect ? 'ok' : 'bad'}`;
 
   els.autoDraft.checked = config.protection.autoDraft;
@@ -116,8 +529,8 @@ function render(data) {
   toggleButton(els.manualQueue, config.protection.manualQueue || state.protection.queue);
 
   els.gameState.textContent = state.gsi.gameState || '-';
-  els.gameScreen.textContent = state.gsi.leftGameView ? 'меню Dota / reconnect' : state.gsi.inGameScreen ? 'игровой экран' : '-';
-  els.heroState.textContent = state.gsi.playerHeroPicked ? `${state.gsi.heroName || state.gsi.heroId || 'выбран'}${state.gsi.ownPickPhaseEnded ? ' / topbar only' : ''}` : '-';
+  els.gameScreen.textContent = state.gsi.leftGameView ? t('gameScreenMenu') : state.gsi.inGameScreen ? t('gameScreenGame') : '-';
+  els.heroState.textContent = state.gsi.playerHeroPicked ? `${state.gsi.heroName || state.gsi.heroId || t('picked')}${state.gsi.ownPickPhaseEnded ? ` / ${t('topbarOnly')}` : ''}` : '-';
   els.clockTime.textContent = state.gsi.clockTime ?? '-';
   els.matchId.textContent = state.gsi.matchId || '-';
 
@@ -129,11 +542,11 @@ function render(data) {
     els.targetChannelLogin.value = config.twitch.targetChannelLogin || config.twitch.targetBroadcasterLogin || '';
   }
   els.effectiveRedirectUri.textContent = state.twitch.effectiveRedirectUri || config.twitch.redirectUri || '';
-  const channelLive = state.twitch.isLive === true ? ' / live' : state.twitch.isLive === false ? ' / offline' : ' / статус не проверен';
-  const checkedAt = state.twitch.streamCheckedAt ? ` / проверено ${new Date(state.twitch.streamCheckedAt).toLocaleTimeString()}` : '';
+  const channelLive = state.twitch.isLive === true ? ' / live' : state.twitch.isLive === false ? ' / offline' : ` / ${t('channelStatusUnknown')}`;
+  const checkedAt = state.twitch.streamCheckedAt ? ` / ${t('checkedAt')} ${new Date(state.twitch.streamCheckedAt).toLocaleTimeString()}` : '';
   els.targetChannelStatus.textContent = state.twitch.effectiveBroadcasterId
-    ? `Канал прогнозов: ${state.twitch.effectiveBroadcasterLogin || '-'} (${state.twitch.effectiveBroadcasterId})${channelLive}${checkedAt}${state.twitch.targetMatchesToken === false ? ' / отдельный от OAuth аккаунта' : ''}`
-    : 'Канал прогнозов не выбран.';
+    ? `${t('channelMode')}: ${state.twitch.effectiveBroadcasterLogin || '-'} (${state.twitch.effectiveBroadcasterId})${channelLive}${checkedAt}${state.twitch.targetMatchesToken === false ? ` / ${t('separateOauth')}` : ''}`
+    : t('channelNotSelected');
   updateConditionalVisibility(config);
   if (document.activeElement !== els.dotaPath) {
     els.dotaPath.value = config.dota?.installPath || '';
@@ -176,7 +589,7 @@ function setInputValue(input, value) {
 
 function renderPrediction(prediction) {
   if (!prediction) {
-    els.activePrediction.textContent = 'Нет активной ставки.';
+    els.activePrediction.textContent = t('noActivePrediction');
     return;
   }
   const outcomes = prediction.outcomes.map((item) => `${item.title}: ${item.channelPoints || 0}`).join(' | ');
@@ -188,7 +601,7 @@ function buildPredictionTypeControls() {
   for (const def of predictionTypeDefs) {
     const option = document.createElement('option');
     option.value = def.type;
-    option.textContent = def.label;
+    option.textContent = t(def.labelKey);
     els.selectedPredictionType.append(option);
 
     const card = document.createElement('section');
@@ -197,28 +610,56 @@ function buildPredictionTypeControls() {
     card.innerHTML = `
       <div class="prediction-type-header">
         <div>
-          <h3>${def.label}</h3>
-          <p>${def.description}</p>
+          <h3 data-type-title></h3>
+          <p data-type-description></p>
         </div>
-        <label class="check"><input data-field="enabled" type="checkbox"> Включен</label>
+        <label class="check"><input data-field="enabled" type="checkbox"> ${t('enabled')}</label>
       </div>
       <div class="prediction-preview">
-        <span>Превью</span>
+        <span data-preview-label>${t('preview')}</span>
         <strong data-preview-title>-</strong>
-        <small><b data-preview-yes>Да</b> / <b data-preview-no>Нет</b></small>
+        <small><b data-preview-yes>${t('yes')}</b> / <b data-preview-no>${t('no')}</b></small>
       </div>
       <div class="prediction-type-grid">
-        <label>Шанс выбора<input data-field="weight" type="number" min="1" max="100"></label>
-        ${def.ranges.includes('min') ? '<label>Цель от<input data-field="min" type="number" min="0" max="999"></label>' : ''}
-        ${def.ranges.includes('max') ? '<label>Цель до<input data-field="max" type="number" min="0" max="999"></label>' : ''}
-        ${def.ranges.includes('minMinute') ? '<label>Минута от<input data-field="minMinute" type="number" min="1" max="180"></label>' : ''}
-        ${def.ranges.includes('maxMinute') ? '<label>Минута до<input data-field="maxMinute" type="number" min="1" max="180"></label>' : ''}
-        <label class="full">Заголовок<input data-field="titleTemplate" maxlength="120"></label>
-        <label>Исход Да<input data-field="yesTitle" maxlength="25"></label>
-        <label>Исход Нет<input data-field="noTitle" maxlength="25"></label>
+        <label data-field-label="weight">${t('weight')}<input data-field="weight" type="number" min="1" max="100"></label>
+        ${def.ranges.includes('min') ? `<label data-field-label="min">${t('targetFrom')}<input data-field="min" type="number" min="0" max="999"></label>` : ''}
+        ${def.ranges.includes('max') ? `<label data-field-label="max">${t('targetTo')}<input data-field="max" type="number" min="0" max="999"></label>` : ''}
+        ${def.ranges.includes('minMinute') ? `<label data-field-label="minMinute">${t('minuteFrom')}<input data-field="minMinute" type="number" min="1" max="180"></label>` : ''}
+        ${def.ranges.includes('maxMinute') ? `<label data-field-label="maxMinute">${t('minuteTo')}<input data-field="maxMinute" type="number" min="1" max="180"></label>` : ''}
+        <label class="full" data-field-label="titleTemplate">${t('title')}<input data-field="titleTemplate" maxlength="120"></label>
+        <label data-field-label="yesTitle">${t('yesOutcome')}<input data-field="yesTitle" maxlength="25"></label>
+        <label data-field-label="noTitle">${t('noOutcome')}<input data-field="noTitle" maxlength="25"></label>
       </div>
     `;
     els.predictionTypes.append(card);
+  }
+  applyPredictionTypeLanguage();
+}
+
+function applyPredictionTypeLanguage() {
+  for (const def of predictionTypeDefs) {
+    const option = els.selectedPredictionType.querySelector(`option[value="${def.type}"]`);
+    if (option) option.textContent = t(def.labelKey);
+    const card = els.predictionTypes.querySelector(`[data-type="${def.type}"]`);
+    if (!card) continue;
+    card.querySelector('[data-type-title]').textContent = t(def.labelKey);
+    card.querySelector('[data-type-description]').textContent = t(def.descriptionKey);
+    setLabelText(card.querySelector('[data-field="enabled"]').closest('label'), t('enabled'));
+    const fieldLabels = {
+      weight: 'weight',
+      min: 'targetFrom',
+      max: 'targetTo',
+      minMinute: 'minuteFrom',
+      maxMinute: 'minuteTo',
+      titleTemplate: 'title',
+      yesTitle: 'yesOutcome',
+      noTitle: 'noOutcome'
+    };
+    for (const [field, key] of Object.entries(fieldLabels)) {
+      setLabelText(card.querySelector(`[data-field-label="${field}"]`), t(key));
+    }
+    const previewLabel = card.querySelector('[data-preview-label]');
+    if (previewLabel) previewLabel.textContent = t('preview');
   }
 }
 
@@ -277,8 +718,8 @@ function renderPredictionTypePreviews() {
     if (!card) continue;
     const typeConfig = typeConfigFromCard(card);
     const template = typeConfig.titleTemplate || els.predictionTitle.value || '{hero}: {target}+?';
-    const yesTitle = typeConfig.yesTitle || els.winTitle.value || 'Да';
-    const noTitle = typeConfig.noTitle || els.loseTitle.value || 'Нет';
+    const yesTitle = typeConfig.yesTitle || els.winTitle.value || t('yes');
+    const noTitle = typeConfig.noTitle || els.loseTitle.value || t('no');
     const title = card.querySelector('[data-preview-title]');
     const yes = card.querySelector('[data-preview-yes]');
     const no = card.querySelector('[data-preview-no]');
@@ -394,6 +835,21 @@ els.clientSecret.addEventListener('blur', () => {
   els.clientSecret.value = '';
 });
 els.dotaPath.addEventListener('change', () => saveDotaConfig().catch(alert));
+els.languageSelect.addEventListener('change', () => {
+  currentLanguageSetting = els.languageSelect.value;
+  currentLang = resolveLanguage(currentLanguageSetting);
+  applyLanguage({ ui: { language: currentLanguageSetting } });
+  renderPredictionTypePreviews();
+  saveUiConfig().catch(alert);
+});
+
+async function saveUiConfig() {
+  await api('/api/config', {
+    ui: {
+      language: els.languageSelect.value
+    }
+  });
+}
 
 async function saveTwitchAppConfig() {
   await api('/api/config', {
@@ -423,7 +879,7 @@ els.resolveTwitchChannel.addEventListener('click', () => api('/api/twitch/resolv
   login: els.targetChannelLogin.value.trim()
 }).then((result) => {
   els.targetChannelLogin.value = result.user.login;
-  alert(`Канал найден: ${result.user.displayName} (${result.user.id})`);
+  alert(`${t('channelFound')} ${result.user.displayName} (${result.user.id})`);
 }).catch(alert));
 
 els.predictionForm.addEventListener('submit', async (event) => {
@@ -489,7 +945,7 @@ els.installGsi.addEventListener('click', () => api('/api/install-gsi', {
   dotaPath: els.dotaPath.value.trim()
 }).then((result) => {
   els.dotaPath.value = result.dotaPath || els.dotaPath.value;
-  alert(`GSI установлен:\n${result.cfgPath}\n\nПерезапусти Dota 2, если она уже была открыта.`);
+  alert(`${t('gsiInstalled')}\n${result.cfgPath}\n\n${t('restartDota')}`);
 }).catch(alert));
 els.draftScreenshotAsset.addEventListener('change', () => uploadAsset('draft-screenshot.png', els.draftScreenshotAsset.files[0]).catch(alert));
 els.queueScreenshotAsset.addEventListener('change', () => uploadAsset('queue-screenshot.png', els.queueScreenshotAsset.files[0]).catch(alert));
@@ -497,12 +953,12 @@ els.queueScreenshotAsset.addEventListener('change', () => uploadAsset('queue-scr
 async function detectDota() {
   const result = await api('/api/dota/detect', null, 'GET');
   els.dotaPath.value = result.dotaPath || '';
-  alert(`Dota найдена:\n${result.dotaPath}`);
+  alert(`${t('dotaFound')}\n${result.dotaPath}`);
 }
 
 function withPrediction(fn) {
   const prediction = snapshot?.state?.activePrediction;
-  if (!prediction) return alert('Нет активной ставки');
+  if (!prediction) return alert(t('noActivePredictionAlert'));
   return fn(prediction);
 }
 
@@ -510,7 +966,7 @@ function resolveKind(kind) {
   return withPrediction((prediction) => {
     const wanted = kind === 'win' ? 'yes' : kind === 'lose' ? 'no' : kind;
     const outcome = prediction.outcomes.find((item) => item.kind === wanted || item.kind === kind);
-    if (!outcome) return alert('Не найден исход для закрытия');
+    if (!outcome) return alert(t('noOutcomeAlert'));
     return api(`/api/twitch/predictions/${prediction.id}/resolve`, { winningOutcomeId: outcome.id }).catch(alert);
   });
 }
@@ -528,17 +984,17 @@ async function refreshAssets() {
   const minimap = formatAssetStatus(status['fake-minimap-vision-realistic.png']);
   const queue = formatAssetStatus(status['queue-screenshot.png']);
   const slotBytes = slots.reduce((sum, item) => sum + item.bytes, 0);
-  els.assetStatus.textContent = `Слоты: ${slots.length}/10, ${Math.round(slotBytes / 1024)} KB | Draft: ${full} | Поиск: ${queue} | Миникарта: ${minimap}`;
+  els.assetStatus.textContent = `${t('assetSlots')}: ${slots.length}/10, ${Math.round(slotBytes / 1024)} KB | ${t('assetDraft')}: ${full} | ${t('assetQueue')}: ${queue} | ${t('assetMinimap')}: ${minimap}`;
 }
 
 function formatAssetStatus(asset) {
-  if (!asset?.exists) return 'нет';
+  if (!asset?.exists) return t('notAvailable');
   return `${asset.kilobytes || Math.round(asset.bytes / 1024)} KB`;
 }
 
 async function uploadAsset(name, file) {
   if (!file) return;
-  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) throw new Error('Нужен PNG, JPEG или WebP');
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) throw new Error(t('neededImage'));
   const dataUrl = await readFileAsDataUrl(file);
   await api('/api/assets', { name, dataUrl });
   assetRefresh = 0;
@@ -549,7 +1005,7 @@ function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(reader.error || new Error('Не удалось прочитать файл'));
+    reader.onerror = () => reject(reader.error || new Error(t('readFileFailed')));
     reader.readAsDataURL(file);
   });
 }

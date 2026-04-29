@@ -297,6 +297,20 @@ h2 {
   align-items: center;
 }
 
+.language-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #9aa5b5;
+}
+
+.language-picker select {
+  width: auto;
+  min-width: 88px;
+  margin-top: 0;
+  padding: 8px 10px;
+}
+
 .control-row,
 .button-row {
   margin-bottom: 16px;

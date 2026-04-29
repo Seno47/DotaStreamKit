@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>DotaStreamKit</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260429">
-    <link rel="stylesheet" href="/styles.css?v=20260429-type-preview">
+    <link rel="stylesheet" href="/styles.css?v=20260429-i18n">
   </head>
   <body>
     <main class="shell">
@@ -58,6 +58,7 @@
           <p>Локальная защита стрима и автоматизация Twitch Predictions.</p>
         </div>
         <div class="status-row">
+          <label class="language-picker"><span data-i18n="languageLabel">Язык</span><select id="languageSelect"><option value="auto">auto</option><option value="ru">ru</option><option value="en">en</option></select></label>
           <span id="gsiStatus" class="pill">Dota GSI</span>
           <span id="twitchStatus" class="pill">Twitch</span>
         </div>
@@ -183,6 +184,6 @@
         </article>
       </section>
     </main>
-    <script src="/app.js?v=20260429-type-preview"></script>
+    <script src="/app.js?v=20260429-i18n"></script>
   </body>
 </html>

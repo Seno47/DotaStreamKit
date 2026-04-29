@@ -25,6 +25,9 @@ const twitchId = 'https://id.twitch.tv/oauth2';
 const twitchScopes = ['channel:manage:predictions', 'user:write:chat'];
 
 const defaultConfig = {
+  ui: {
+    language: 'auto'
+  },
   deployment: {
     mode: 'local',
     publicBaseUrl: ''
@@ -239,6 +242,11 @@ async function persistConfig() {
 
 async function migrateConfig(config) {
   let changed = false;
+  const beforeUi = JSON.stringify(config.ui || {});
+  config.ui = merge(structuredClone(defaultConfig.ui), config.ui || {});
+  normalizeUiConfig(config.ui);
+  if (JSON.stringify(config.ui) !== beforeUi) changed = true;
+
   const beforeDeployment = JSON.stringify(config.deployment || {});
   config.deployment = merge(structuredClone(defaultConfig.deployment), config.deployment || {});
   normalizeDeploymentConfig(config.deployment);
@@ -954,6 +962,7 @@ async function updateConfig(req, res) {
     next.twitch.clientSecret = runtime.config.twitch.clientSecret;
   }
   normalizeDeploymentConfig(next.deployment);
+  normalizeUiConfig(next.ui);
   normalizeTwitchConfig(next.twitch);
   next.predictions.windowSeconds = clampInt(next.predictions.windowSeconds, 30, 1800);
   next.predictions.autoLockAtGameSeconds = clampInt(next.predictions.autoLockAtGameSeconds, 0, 3600);
@@ -1350,6 +1359,10 @@ function normalizeTeam(value) {
 function normalizeDeploymentConfig(config) {
   if (!['local', 'server'].includes(config.mode)) config.mode = 'local';
   config.publicBaseUrl = normalizeBaseUrl(config.publicBaseUrl);
+}
+
+function normalizeUiConfig(config) {
+  if (!['auto', 'ru', 'en'].includes(config.language)) config.language = 'auto';
 }
 
 function normalizeTwitchConfig(config) {
