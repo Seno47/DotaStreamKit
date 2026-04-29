@@ -14,8 +14,15 @@ const els = {
   heroState: document.querySelector('#heroState'),
   clockTime: document.querySelector('#clockTime'),
   matchId: document.querySelector('#matchId'),
+  deploymentMode: document.querySelector('#deploymentMode'),
+  publicBaseUrl: document.querySelector('#publicBaseUrl'),
   clientId: document.querySelector('#clientId'),
   clientSecret: document.querySelector('#clientSecret'),
+  twitchChannelMode: document.querySelector('#twitchChannelMode'),
+  targetChannelLogin: document.querySelector('#targetChannelLogin'),
+  resolveTwitchChannel: document.querySelector('#resolveTwitchChannel'),
+  effectiveRedirectUri: document.querySelector('#effectiveRedirectUri'),
+  targetChannelStatus: document.querySelector('#targetChannelStatus'),
   logoutTwitch: document.querySelector('#logoutTwitch'),
   predictionForm: document.querySelector('#predictionForm'),
   predictionTitle: document.querySelector('#predictionTitle'),
@@ -102,7 +109,17 @@ function render(data) {
   els.clockTime.textContent = state.gsi.clockTime ?? '-';
   els.matchId.textContent = state.gsi.matchId || '-';
 
+  els.deploymentMode.value = config.deployment?.mode || 'local';
+  els.publicBaseUrl.value = config.deployment?.publicBaseUrl || '';
   els.clientId.value = config.twitch.clientId || '';
+  els.twitchChannelMode.value = config.twitch.channelMode || 'personal';
+  if (document.activeElement !== els.targetChannelLogin) {
+    els.targetChannelLogin.value = config.twitch.targetChannelLogin || config.twitch.targetBroadcasterLogin || '';
+  }
+  els.effectiveRedirectUri.textContent = state.twitch.effectiveRedirectUri || config.twitch.redirectUri || '';
+  els.targetChannelStatus.textContent = state.twitch.effectiveBroadcasterId
+    ? `Канал прогнозов: ${state.twitch.effectiveBroadcasterLogin || '-'} (${state.twitch.effectiveBroadcasterId})${state.twitch.targetMatchesToken === false ? ' / отдельный от OAuth аккаунта' : ''}`
+    : 'Канал прогнозов не выбран.';
   if (document.activeElement !== els.dotaPath) {
     els.dotaPath.value = config.dota?.installPath || '';
   }
@@ -237,6 +254,10 @@ els.manualTopBar.addEventListener('click', () => saveProtection({ manualTopBar: 
 
 els.clientId.addEventListener('change', () => saveTwitchAppConfig().catch(alert));
 els.clientSecret.addEventListener('change', () => saveTwitchAppConfig().catch(alert));
+els.deploymentMode.addEventListener('change', () => saveTwitchAppConfig().catch(alert));
+els.publicBaseUrl.addEventListener('change', () => saveTwitchAppConfig().catch(alert));
+els.twitchChannelMode.addEventListener('change', () => saveTwitchAppConfig().catch(alert));
+els.targetChannelLogin.addEventListener('change', () => saveTwitchAppConfig().catch(alert));
 els.clientSecret.addEventListener('blur', () => {
   els.clientSecret.value = '';
 });
@@ -244,9 +265,15 @@ els.dotaPath.addEventListener('change', () => saveDotaConfig().catch(alert));
 
 async function saveTwitchAppConfig() {
   await api('/api/config', {
+    deployment: {
+      mode: els.deploymentMode.value,
+      publicBaseUrl: els.publicBaseUrl.value.trim()
+    },
     twitch: {
       clientId: els.clientId.value.trim(),
-      clientSecret: els.clientSecret.value.trim() || '********'
+      clientSecret: els.clientSecret.value.trim() || '********',
+      channelMode: els.twitchChannelMode.value,
+      targetChannelLogin: els.targetChannelLogin.value.trim()
     }
   });
 }
@@ -260,6 +287,12 @@ async function saveDotaConfig() {
 }
 
 els.logoutTwitch.addEventListener('click', () => api('/api/twitch/logout').catch(alert));
+els.resolveTwitchChannel.addEventListener('click', () => api('/api/twitch/resolve-channel', {
+  login: els.targetChannelLogin.value.trim()
+}).then((result) => {
+  els.targetChannelLogin.value = result.user.login;
+  alert(`Канал найден: ${result.user.displayName} (${result.user.id})`);
+}).catch(alert));
 
 els.predictionForm.addEventListener('submit', async (event) => {
   event.preventDefault();

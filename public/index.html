@@ -47,14 +47,20 @@
         <article class="panel">
           <h2>Twitch</h2>
           <div class="stack">
+            <label>Режим запуска<select id="deploymentMode"><option value="local">Локально</option><option value="server">Сервер</option></select></label>
+            <label>Public URL сервера<input id="publicBaseUrl" autocomplete="off" placeholder="https://example.com"></label>
             <label>Client ID<input id="clientId" autocomplete="off"></label>
             <label>Client Secret<input id="clientSecret" type="password" autocomplete="off" placeholder="не менять, если уже сохранен"></label>
+            <label>Канал для прогнозов<select id="twitchChannelMode"><option value="personal">Личный Twitch аккаунт</option><option value="separate">Отдельный аккаунт / канал стримера по нику</option></select></label>
+            <label>Ник стримера<input id="targetChannelLogin" autocomplete="off" placeholder="senodoto"></label>
           </div>
           <div class="button-row">
             <a class="button" href="/auth/twitch">Подключить Twitch</a>
             <button id="logoutTwitch">Отключить</button>
+            <button id="resolveTwitchChannel">Найти канал</button>
           </div>
-          <p class="muted">Redirect URI в Twitch app: <code>http://localhost:37273/auth/twitch/callback</code></p>
+          <p class="muted">Redirect URI в Twitch app: <code id="effectiveRedirectUri">http://localhost:37273/auth/twitch/callback</code></p>
+          <p class="muted" id="targetChannelStatus">Канал прогнозов не выбран.</p>
         </article>
 
         <article class="panel wide">

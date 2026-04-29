@@ -24,10 +24,18 @@ const twitchId = 'https://id.twitch.tv/oauth2';
 const twitchScopes = ['channel:manage:predictions', 'user:write:chat'];
 
 const defaultConfig = {
+  deployment: {
+    mode: 'local',
+    publicBaseUrl: ''
+  },
   twitch: {
     clientId: '',
     clientSecret: '',
-    redirectUri: `http://localhost:${port}/auth/twitch/callback`
+    redirectUri: `http://localhost:${port}/auth/twitch/callback`,
+    channelMode: 'personal',
+    targetChannelLogin: '',
+    targetBroadcasterId: '',
+    targetBroadcasterLogin: ''
   },
   dota: {
     installPath: '',
@@ -142,6 +150,7 @@ const server = createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/auth/twitch') return startTwitchAuth(url, res);
     if (req.method === 'GET' && url.pathname === '/auth/twitch/callback') return await finishTwitchAuth(url, res);
     if (req.method === 'POST' && url.pathname === '/api/twitch/logout') return await twitchLogout(res);
+    if (req.method === 'POST' && url.pathname === '/api/twitch/resolve-channel') return await resolveTwitchChannelApi(req, res);
     if (req.method === 'POST' && url.pathname === '/api/twitch/chat') return await sendChatMessage(req, res);
     if (req.method === 'POST' && url.pathname === '/api/twitch/predictions') return await createPrediction(req, res);
     if (req.method === 'GET' && url.pathname === '/api/twitch/predictions') return await getPredictions(res);
@@ -169,10 +178,12 @@ server.on('error', (error) => {
   throw error;
 });
 
-server.listen(port, '127.0.0.1', () => {
-  logEvent('system', `DotaStreamKit started on http://localhost:${port}`);
-  console.log(`DotaStreamKit: http://localhost:${port}`);
-  console.log(`OBS overlay:   http://localhost:${port}/overlay.html`);
+const listenHost = runtime.config.deployment?.mode === 'server' ? '0.0.0.0' : '127.0.0.1';
+server.listen(port, listenHost, () => {
+  const dashboardUrl = effectiveBaseUrl();
+  logEvent('system', `DotaStreamKit started on ${dashboardUrl}`);
+  console.log(`DotaStreamKit: ${dashboardUrl}`);
+  console.log(`OBS overlay:   ${dashboardUrl}/overlay.html`);
 });
 
 setInterval(() => {
@@ -222,6 +233,16 @@ async function persistConfig() {
 
 async function migrateConfig(config) {
   let changed = false;
+  const beforeDeployment = JSON.stringify(config.deployment || {});
+  config.deployment = merge(structuredClone(defaultConfig.deployment), config.deployment || {});
+  normalizeDeploymentConfig(config.deployment);
+  if (JSON.stringify(config.deployment) !== beforeDeployment) changed = true;
+
+  const beforeTwitch = JSON.stringify(config.twitch || {});
+  config.twitch = merge(structuredClone(defaultConfig.twitch), config.twitch || {});
+  normalizeTwitchConfig(config.twitch);
+  if (JSON.stringify(config.twitch) !== beforeTwitch) changed = true;
+
   const beforePredictions = JSON.stringify(config.predictions || {});
   config.predictions = merge(structuredClone(defaultConfig.predictions), config.predictions || {});
   normalizePredictionSettings(config.predictions);
@@ -755,10 +776,18 @@ function hydrateTwitchStatus() {
   const scopes = normalizeScopes(token?.scopes || []);
   const missingScopes = token?.accessToken ? twitchScopes.filter((scope) => !scopes.includes(scope)) : [];
   const streamStatus = runtime.twitchStreamStatus || {};
+  const target = twitchTargetChannel();
   runtime.state.twitch = {
     authenticated: Boolean(token?.accessToken),
     broadcasterId: token?.broadcasterId || null,
     broadcasterLogin: token?.broadcasterLogin || null,
+    channelMode: runtime.config.twitch.channelMode,
+    targetBroadcasterId: runtime.config.twitch.targetBroadcasterId || null,
+    targetBroadcasterLogin: runtime.config.twitch.targetBroadcasterLogin || runtime.config.twitch.targetChannelLogin || null,
+    effectiveBroadcasterId: target.broadcasterId || null,
+    effectiveBroadcasterLogin: target.broadcasterLogin || null,
+    targetMatchesToken: target.broadcasterId && token?.broadcasterId ? String(target.broadcasterId) === String(token.broadcasterId) : null,
+    effectiveRedirectUri: effectiveRedirectUri(),
     tokenExpiresAt: token?.expiresAt || null,
     scopes,
     missingScopes,
@@ -848,11 +877,18 @@ async function updateConfig(req, res) {
   if (body.twitch?.clientSecret === '********') {
     next.twitch.clientSecret = runtime.config.twitch.clientSecret;
   }
+  normalizeDeploymentConfig(next.deployment);
+  normalizeTwitchConfig(next.twitch);
   next.predictions.windowSeconds = clampInt(next.predictions.windowSeconds, 30, 1800);
   next.predictions.autoLockAtGameSeconds = clampInt(next.predictions.autoLockAtGameSeconds, 0, 3600);
   next.predictions.autoCancelDisconnectSeconds = clampInt(next.predictions.autoCancelDisconnectSeconds, 300, 1800);
   normalizePredictionSettings(next.predictions);
   runtime.config = next;
+  if (body.twitch?.channelMode || body.twitch?.targetChannelLogin) {
+    runtime.twitchStreamStatus = { checkedAt: 0, isLive: null, streamId: null, gameName: null, title: null };
+    await resolveConfiguredTwitchChannel();
+  }
+  hydrateTwitchStatus();
   runtime.state.protection = computeProtection(runtime.config, runtime.state.gsi);
   await persistConfig();
   await persistState();
@@ -1230,6 +1266,52 @@ function normalizeTeam(value) {
   return null;
 }
 
+function normalizeDeploymentConfig(config) {
+  if (!['local', 'server'].includes(config.mode)) config.mode = 'local';
+  config.publicBaseUrl = normalizeBaseUrl(config.publicBaseUrl);
+}
+
+function normalizeTwitchConfig(config) {
+  if (!['personal', 'separate'].includes(config.channelMode)) config.channelMode = 'personal';
+  config.targetChannelLogin = String(config.targetChannelLogin || '').trim().replace(/^@/, '').toLowerCase();
+  config.targetBroadcasterId = String(config.targetBroadcasterId || '').trim();
+  config.targetBroadcasterLogin = String(config.targetBroadcasterLogin || '').trim().replace(/^@/, '').toLowerCase();
+}
+
+function normalizeBaseUrl(value) {
+  const raw = String(value || '').trim().replace(/\/+$/, '');
+  if (!raw) return '';
+  return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+}
+
+function effectiveBaseUrl() {
+  if (runtime.config.deployment?.mode === 'server' && runtime.config.deployment.publicBaseUrl) {
+    return runtime.config.deployment.publicBaseUrl;
+  }
+  return `http://localhost:${port}`;
+}
+
+function effectiveRedirectUri() {
+  if (runtime.config.deployment?.mode === 'server' && runtime.config.deployment.publicBaseUrl) {
+    return `${runtime.config.deployment.publicBaseUrl}/auth/twitch/callback`;
+  }
+  return runtime.config.twitch.redirectUri || `http://localhost:${port}/auth/twitch/callback`;
+}
+
+function twitchTargetChannel() {
+  const token = runtime.state.twitchToken || {};
+  if (runtime.config.twitch.channelMode === 'separate') {
+    return {
+      broadcasterId: runtime.config.twitch.targetBroadcasterId || null,
+      broadcasterLogin: runtime.config.twitch.targetBroadcasterLogin || runtime.config.twitch.targetChannelLogin || null
+    };
+  }
+  return {
+    broadcasterId: token.broadcasterId || null,
+    broadcasterLogin: token.broadcasterLogin || null
+  };
+}
+
 function normalizePredictionSettings(settings) {
   if (!['selected', 'random'].includes(settings.selectionMode)) settings.selectionMode = 'selected';
   settings.types = merge(structuredClone(defaultConfig.predictions.types), settings.types || {});
@@ -1282,7 +1364,7 @@ async function startTwitchAuth(url, res) {
   runtime.oauthStates.add(state);
   const params = new URLSearchParams({
     client_id: runtime.config.twitch.clientId,
-    redirect_uri: runtime.config.twitch.redirectUri,
+    redirect_uri: effectiveRedirectUri(),
     response_type: 'code',
     scope: twitchScopes.join(' '),
     state
@@ -1305,7 +1387,7 @@ async function finishTwitchAuth(url, res) {
     client_secret: runtime.config.twitch.clientSecret,
     code,
     grant_type: 'authorization_code',
-    redirect_uri: runtime.config.twitch.redirectUri
+    redirect_uri: effectiveRedirectUri()
   });
   const response = await fetch(`${twitchId}/token`, { method: 'POST', body: params });
   const token = await parseTwitchResponse(response);
@@ -1324,6 +1406,12 @@ async function saveToken(token) {
     broadcasterLogin: validation.login,
     scopes: normalizeScopes(token.scope || validation.scopes || [])
   };
+  if (runtime.config.twitch.channelMode === 'personal') {
+    runtime.config.twitch.targetBroadcasterId = validation.user_id;
+    runtime.config.twitch.targetBroadcasterLogin = validation.login;
+    runtime.config.twitch.targetChannelLogin = validation.login;
+    await persistConfig();
+  }
   hydrateTwitchStatus();
   await persistTwitchTokenBackup();
   await persistState();
@@ -1369,6 +1457,17 @@ function requireTwitchScopes(scopes) {
   if (missing.length > 0) {
     throw new Error(`Twitch token is missing scope(s): ${missing.join(', ')}. Reconnect Twitch from the dashboard.`);
   }
+}
+
+function requireTwitchTargetBroadcaster() {
+  if (!runtime.state.twitchToken?.accessToken) {
+    throw new Error('Twitch is not authenticated. Connect Twitch from the dashboard.');
+  }
+  const target = twitchTargetChannel();
+  if (!target.broadcasterId) {
+    throw new Error('Target Twitch channel is not resolved. Save or resolve the streamer login first.');
+  }
+  return target.broadcasterId;
 }
 
 async function twitchRequest(path, options = {}) {
@@ -1418,13 +1517,14 @@ async function sendChatMessage(req, res) {
 
 async function twitchSendChatMessage(message) {
   requireTwitchScopes(['user:write:chat']);
-  const broadcaster = runtime.state.twitchToken?.broadcasterId;
+  const broadcaster = requireTwitchTargetBroadcaster();
+  const sender = runtime.state.twitchToken?.broadcasterId;
   if (!broadcaster) throw new Error('Twitch is not authenticated');
   const result = await twitchRequest('/chat/messages', {
     method: 'POST',
     body: JSON.stringify({
       broadcaster_id: broadcaster,
-      sender_id: broadcaster,
+      sender_id: sender,
       message
     })
   });
@@ -1435,8 +1535,56 @@ async function twitchSendChatMessage(message) {
   return result;
 }
 
+async function resolveTwitchChannelApi(req, res) {
+  const body = await readBody(req);
+  const login = String(body.login || runtime.config.twitch.targetChannelLogin || '').trim().replace(/^@/, '').toLowerCase();
+  if (!login) return sendJson(res, { error: 'Streamer login is required' }, 400);
+  const user = await resolveTwitchUserByLogin(login);
+  runtime.config.twitch.channelMode = 'separate';
+  runtime.config.twitch.targetChannelLogin = user.login;
+  runtime.config.twitch.targetBroadcasterLogin = user.login;
+  runtime.config.twitch.targetBroadcasterId = user.id;
+  runtime.twitchStreamStatus = { checkedAt: 0, isLive: null, streamId: null, gameName: null, title: null };
+  await persistConfig();
+  hydrateTwitchStatus();
+  await persistState();
+  logEvent('twitch', `Target channel resolved: ${user.login} (${user.id})`);
+  sendJson(res, { ok: true, user });
+}
+
+async function resolveConfiguredTwitchChannel() {
+  if (runtime.config.twitch.channelMode === 'personal') {
+    const token = runtime.state.twitchToken;
+    if (token?.broadcasterId) {
+      runtime.config.twitch.targetChannelLogin = token.broadcasterLogin || '';
+      runtime.config.twitch.targetBroadcasterLogin = token.broadcasterLogin || '';
+      runtime.config.twitch.targetBroadcasterId = token.broadcasterId || '';
+    }
+    return;
+  }
+  if (!runtime.config.twitch.targetChannelLogin || !runtime.state.twitchToken?.accessToken) return;
+  try {
+    const user = await resolveTwitchUserByLogin(runtime.config.twitch.targetChannelLogin);
+    runtime.config.twitch.targetChannelLogin = user.login;
+    runtime.config.twitch.targetBroadcasterLogin = user.login;
+    runtime.config.twitch.targetBroadcasterId = user.id;
+    logEvent('twitch', `Target channel resolved: ${user.login} (${user.id})`);
+  } catch (error) {
+    logEvent('twitch', `Target channel resolve failed: ${error.message}`);
+  }
+}
+
+async function resolveTwitchUserByLogin(login) {
+  const normalized = String(login || '').trim().replace(/^@/, '').toLowerCase();
+  if (!normalized) throw new Error('Streamer login is required');
+  const result = await twitchRequest(`/users?login=${encodeURIComponent(normalized)}`);
+  const user = result.data?.[0];
+  if (!user?.id) throw new Error(`Twitch user not found: ${normalized}`);
+  return { id: user.id, login: user.login, displayName: user.display_name || user.login };
+}
+
 async function isBroadcasterLive(force = false) {
-  const broadcaster = runtime.state.twitchToken?.broadcasterId;
+  const broadcaster = twitchTargetChannel().broadcasterId;
   if (!broadcaster) return false;
 
   const now = Date.now();
@@ -1475,7 +1623,7 @@ async function createPredictionFromSettings(overrides = {}) {
   if (runtime.state.activePrediction && ['ACTIVE', 'LOCKED'].includes(runtime.state.activePrediction.status)) {
     throw new Error('A prediction is already active or locked');
   }
-  const broadcaster = runtime.state.twitchToken?.broadcasterId;
+  const broadcaster = requireTwitchTargetBroadcaster();
   if (!broadcaster) throw new Error('Twitch is not authenticated. Connect Twitch from the dashboard.');
   const draft = buildPredictionDraft(overrides);
   const predictionWindow = clampInt(overrides.windowSeconds ?? runtime.config.predictions.windowSeconds, 30, 1800);
@@ -1594,7 +1742,7 @@ function randomRange(min, max) {
 }
 
 async function getPredictions(res) {
-  const broadcaster = runtime.state.twitchToken?.broadcasterId;
+  const broadcaster = requireTwitchTargetBroadcaster();
   if (!broadcaster) throw new Error('Twitch is not authenticated');
   const result = await twitchRequest(`/predictions?broadcaster_id=${encodeURIComponent(broadcaster)}`);
   sendJson(res, result);
@@ -1609,7 +1757,7 @@ async function endPrediction(req, res, id, action) {
 }
 
 async function twitchEndPrediction(id, status, winningOutcomeId = null) {
-  const broadcaster = runtime.state.twitchToken?.broadcasterId;
+  const broadcaster = requireTwitchTargetBroadcaster();
   if (!broadcaster) throw new Error('Twitch is not authenticated');
   const params = new URLSearchParams({ broadcaster_id: broadcaster, id, status });
   if (status === 'RESOLVED') {
