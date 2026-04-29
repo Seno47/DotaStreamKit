@@ -41,7 +41,7 @@ if (!(Test-Path $nodeArchive)) {
 if (Test-Path $nodeExtractDir) {
   Remove-Item -LiteralPath $nodeExtractDir -Recurse -Force
 }
-tar -xJf $nodeArchive -C $cache
+tar -xJf $nodeArchive -C $cache "node-v$NodeVersion-linux-x64/bin/node"
 if (!(Test-Path $nodeExtractDir)) {
   throw "Node runtime extraction failed: $nodeExtractDir"
 }

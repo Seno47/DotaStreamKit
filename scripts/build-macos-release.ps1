@@ -49,7 +49,7 @@ foreach ($configuration in $Configurations) {
   if (Test-Path $nodeExtractDir) {
     Remove-Item -LiteralPath $nodeExtractDir -Recurse -Force
   }
-  tar -xzf $nodeArchive -C $cache
+  tar -xzf $nodeArchive -C $cache "node-v$NodeVersion-$configuration/bin/node"
   if (!(Test-Path $nodeExtractDir)) {
     throw "Node runtime extraction failed: $nodeExtractDir"
   }
