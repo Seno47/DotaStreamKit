@@ -1,99 +1,629 @@
 # DotaStreamKit
 
-Локальный агент для стримера: скрывает чувствительные части Dota 2 через OBS overlay и управляет Twitch Channel Points Predictions без внешнего сервера.
+Local desktop tool for Dota 2 streamers: stream protection overlays for OBS plus Twitch Channel Points Predictions automation.
 
-## Support
+Русская версия ниже. English version is after it.
 
-Если DotaStreamKit оказался полезен, можно поддержать разработку:
+## Навигация
 
-- Telegram-канал разработчика: https://t.me/ivagakura_projects
-- GitHub проекта: https://github.com/Seno47/DotaStreamKit
-- Способы поддержки и платёжные ссылки лучше держать здесь, в README, чтобы их можно было быстро менять без обновления программы.
+- [Русский](#русский)
+  - [Что умеет DotaStreamKit](#что-умеет-dotastreamkit)
+  - [Быстрый старт через релиз](#быстрый-старт-через-релиз)
+  - [Настройка Twitch](#настройка-twitch)
+  - [Настройка Dota GSI](#настройка-dota-gsi)
+  - [Настройка OBS](#настройка-obs)
+  - [Защита стрима](#защита-стрима)
+  - [Прогнозы за баллы канала](#прогнозы-за-баллы-канала)
+  - [Частые проблемы](#частые-проблемы)
+  - [Support](#support)
+- [English](#english)
+  - [What DotaStreamKit Does](#what-dotastreamkit-does)
+  - [Quick Start With a Release](#quick-start-with-a-release)
+  - [Twitch Setup](#twitch-setup)
+  - [Dota GSI Setup](#dota-gsi-setup)
+  - [OBS Setup](#obs-setup)
+  - [Stream Protection](#stream-protection)
+  - [Channel Points Predictions](#channel-points-predictions)
+  - [Troubleshooting](#troubleshooting)
+  - [Developer Support](#developer-support)
+- [Development](#development)
 
-Пока прямые реквизиты не опубликованы. Добавь сюда актуальные ссылки, например Boosty, DonationAlerts, T-Bank или крипто-адреса, когда они будут готовы.
+## Русский
 
-## Запуск
+### Что умеет DotaStreamKit
 
-```powershell
-npm start
+DotaStreamKit запускается локально на компьютере стримера и отдаёт панель управления в браузере:
+
+```text
+http://localhost:37273
 ```
 
-## Windows release
+OBS-оверлей для стрима:
 
-Для стримеров без установленного Node.js можно собрать portable Windows-архив:
-
-```powershell
-npm run build:win
+```text
+http://localhost:37273/overlay.html
 ```
 
-Архив `dist/DotaStreamKit-win-x64.zip` содержит `DotaStreamKit.exe`, portable `node.exe`, приложение и зависимости. После распаковки достаточно запустить `DotaStreamKit.exe`.
+Основные возможности:
 
-Панель: `http://localhost:37273`  
-OBS Browser Source: `http://localhost:37273/overlay.html?v=27`
+- скрытие стадии драфта и верхней панели с пиками;
+- скрытие миникарты fake-vision маской, чтобы не палить варды;
+- скрытие меню поиска игры через загруженный или встроенный скрин меню;
+- автоматическое создание Twitch Predictions после пика героя стримером;
+- автоматическое закрытие, отмена и ручное управление прогнозами;
+- поддержка личного Twitch-аккаунта или отдельного аккаунта-модератора;
+- локальная установка Dota Game State Integration.
 
-В панели защиты выбери размер миникарты, сторону (`Слева`/`Справа`) и фон миникарты: `Реалистичный`, `Простой` или `Пустой`. Для правой миникарты overlay зеркалит fake-vision слой и позицию от правого края экрана.
+Серверный режим в интерфейсе есть, но эта инструкция пока описывает только локальное использование. Для публичного сервера проект ещё не считается готовым сценарием.
 
-В OBS добавь Browser Source с размером твоего canvas, например `1920x1080`, `2560x1440` или `3840x2160`, и поставь его поверх захвата Dota 2. Если OBS показывает старую маску после обновления, нажми `Refresh cache of current page` или увеличь версию в URL, например `?v=7`.
+### Быстрый старт через релиз
 
-Для маски draft можно загрузить в панели один полный draft-скрин. Если стример ничего не загрузил, используется встроенный шаблон из `public/default-assets/draft-screenshot.png`. Сервер приведет скрин к reference-размеру `1920x1080`, нарежет верхнюю панель на 10 маленьких PNG-слотов, а основную draft-маску покажет скрином ниже заголовка `Выберите героя`. Область чата снизу справа остается прозрачной.
+1. Открой страницу релизов:
 
-Для миникарты всегда используется встроенная/сгенерированная PNG-маска DotaStreamKit. Пользовательская загрузка миникарты не поддерживается. Базовые ассеты лежат в `public/default-assets`, runtime-копии и оптимизированные PNG создаются в `data/assets`.
+   ```text
+   https://github.com/Seno47/DotaStreamKit/releases
+   ```
 
-```powershell
-npm run extract:dota-assets -- -DotaPath "C:\SteamLibrary\steamapps\common\dota 2 beta"
+2. Скачай архив для Windows, например `DotaStreamKit-win-x64.zip`.
+3. Распакуй архив в удобную папку.
+4. Запусти `DotaStreamKit.exe`.
+5. Открой панель:
+
+   ```text
+   http://localhost:37273
+   ```
+
+Если Windows SmartScreen предупреждает о неизвестном приложении, это нормально для unsigned portable-сборки. Запускай только архив, скачанный из релизов этого репозитория.
+
+### Настройка Twitch
+
+DotaStreamKit нужен Twitch app, чтобы получить `Client ID` и `Client Secret` для OAuth.
+
+1. Открой Twitch Developer Console:
+
+   ```text
+   https://dev.twitch.tv/console
+   ```
+
+2. Войди в Twitch-аккаунт. У аккаунта должна быть подтверждена почта и включена 2FA.
+3. Перейди во вкладку `Applications`.
+4. Нажми `Register Your Application` / `Зарегистрировать приложение` / `Подать заявку`.
+5. Заполни поля:
+
+   | Поле Twitch | Что указать |
+   | --- | --- |
+   | `Name` | Любое уникальное имя, например `DotaStreamKit Local` |
+   | `OAuth Redirect URLs` | `http://localhost:37273/auth/twitch/callback` |
+   | `Category` | Любая подходящая категория, например `Application Integration`, `Website Integration` или `Other` |
+
+6. После ввода redirect URL нажми `Add`, если Twitch показывает отдельную кнопку добавления URL.
+7. Пройди captcha и нажми `Create`.
+8. Открой созданное приложение через `Manage`.
+9. Скопируй `Client ID` в поле `Client ID` в DotaStreamKit.
+10. Нажми `New Secret`, скопируй секрет и вставь его в `Client Secret` в DotaStreamKit.
+11. В DotaStreamKit нажми `Подключить Twitch`.
+12. Twitch откроет страницу разрешений. Подтверди доступ.
+
+Запрашиваемые права:
+
+- `channel:manage:predictions` - создавать, закрывать, отменять и завершать прогнозы;
+- `user:write:chat` - отправка сообщений в чат, если эта функция используется.
+
+Важно:
+
+- `Client Secret` нельзя публиковать и нельзя показывать зрителям.
+- Если Twitch показывает `reconnect`, нажми `Подключить Twitch` ещё раз и подтверди новые права.
+- Для управления прогнозами чужого канала OAuth-аккаунт должен иметь права управлять Predictions этого канала.
+
+#### Личный аккаунт или отдельный модератор
+
+В блоке Twitch есть поле `Канал для прогнозов`.
+
+- `Личный Twitch аккаунт` - прогнозы создаются на канале аккаунта, через который ты авторизовался.
+- `Отдельный аккаунт / канал стримера по нику` - авторизуется отдельный аккаунт, а канал для прогнозов выбирается по нику стримера. Программа сохраняет broadcaster ID, поэтому смена ника стримера не должна ломать привязку.
+
+### Настройка Dota GSI
+
+GSI - это встроенный механизм Dota 2. Это не сторонняя программа.
+
+DotaStreamKit устанавливает только cfg-файл:
+
+```text
+gamestate_integration_dotastreamkit.cfg
 ```
 
-## Dota 2 Game State Integration
+Он говорит Dota 2 отправлять состояние игры на локальный адрес:
 
-GSI - это встроенный механизм Dota 2, не сторонняя программа. DotaStreamKit устанавливает только файл `gamestate_integration_dotastreamkit.cfg`, который говорит игре отправлять состояние на `http://127.0.0.1:37273/gsi/dota2`.
+```text
+http://127.0.0.1:37273/gsi/dota2
+```
 
-В панели нажми `Найти Dota`, затем `Установить GSI` и перезапусти Dota 2. Если авто-поиск не сработал, вставь путь к папке Dota 2 вручную, например:
+Как настроить:
+
+1. В панели DotaStreamKit нажми `Найти Dota`.
+2. Если путь найден правильно, нажми `Установить GSI`.
+3. Перезапусти Dota 2.
+4. Вверху панели должен появиться статус `Dota GSI online`, когда Dota начнёт отправлять состояние.
+
+Если авто-поиск Dota не сработал, укажи путь вручную. Пример:
 
 ```text
 C:\SteamLibrary\steamapps\common\dota 2 beta
 ```
 
-Ручной PowerShell-способ все еще доступен:
+Ручная установка через PowerShell всё ещё доступна:
 
 ```powershell
 npm run install:gsi -- -DotaCfgDir "D:\SteamLibrary\steamapps\common\dota 2 beta\game\dota\cfg\gamestate_integration"
 ```
 
-## Twitch Predictions
+### Настройка OBS
 
-1. Создай Twitch app в Developer Console.
-2. Redirect URL: `http://localhost:37273/auth/twitch/callback`
-3. В панели введи Client ID и Client Secret.
-4. Нажми `Подключить Twitch`.
+1. В OBS добавь `Browser Source`.
+2. URL:
 
-В режиме `Локально` сервер слушает только `127.0.0.1`. В режиме `Сервер` сервер слушает `0.0.0.0`, а Redirect URI строится из `Public URL сервера`, например `https://example.com/auth/twitch/callback`. Для публичного сервера HTTPS обычно ставится через reverse proxy.
+   ```text
+   http://localhost:37273/overlay.html
+   ```
 
-Канал прогнозов может быть `Личный Twitch аккаунт` или `Отдельный аккаунт / канал стримера по нику`. Во втором режиме DotaStreamKit резолвит ник стримера через Twitch API и сохраняет broadcaster id, чтобы смена ника не ломала выбранный канал. Twitch может отклонить управление прогнозами чужого канала, если OAuth-аккаунт не имеет права управлять Predictions для этого broadcaster id.
+3. Ширина и высота должны совпадать с canvas OBS:
 
-Для создания и закрытия ставок нужен scope `channel:manage:predictions`. Для отправки сообщений в чат нужен scope `user:write:chat`. Если Twitch в панели показывает `reconnect`, нажми `Подключить Twitch` еще раз и подтверди новые права.
+   | Canvas OBS | Browser Source |
+   | --- | --- |
+   | `1920x1080` | width `1920`, height `1080` |
+   | `2560x1440` | width `2560`, height `1440` |
+   | `3840x2160` | width `3840`, height `2160` |
 
-Авто-создание прогноза срабатывает после выбора героя стримером и завершения pick-фазы, в которой он выбрал героя. Перед созданием DotaStreamKit проверяет, что Twitch-стрим сейчас online; если канал offline, автоматический прогноз не создается.
+4. Поставь Browser Source выше захвата Dota 2.
+5. Если OBS показывает старую маску после обновления, нажми `Refresh cache of current page` в свойствах Browser Source.
 
-В панели можно выбрать один конкретный тип прогноза или случайный тип из включенных. Доступные типы: победа/поражение, киллы стримера, смерти стримера, ассисты стримера, не умереть до минуты, ластхиты к минуте. У каждого типа настраиваются вес, шаблон заголовка, названия исходов и диапазоны для случайных значений. В шаблонах доступны переменные `{hero}`, `{target}`, `{minute}`, `{kills}`, `{deaths}`, `{assists}`, `{last_hits}`, `{denies}`, `{level}`.
+### Защита стрима
 
-Опция `Отменять незасчитанную игру` автоматически отменяет активный прогноз при сильных сигналах, что матч не должен считаться: Dota отдала disconnect слишком долго, матч закончился без победителя на раннем времени или начался новый match id при старом прогнозе. Для краша/перезахода используется задержка `390` секунд, чтобы обычные 5 минут на reconnect не отменяли прогноз.
+#### Draft
 
-Локальные настройки и OAuth-токены хранятся в папке `data/`. Она добавлена в `.gitignore`.
+Можно загрузить один полный draft-скрин. Программа сама нарежет нужные области:
 
-## Что уже есть
+- верхнюю панель пиков;
+- основную область выбора героев;
+- области, которые должны скрывать пики, но не закрывать чат.
 
-- локальный HTTP сервер;
-- Dota GSI endpoint `/gsi/dota2`;
-- OBS overlay для draft, миникарты и верхней панели;
-- ручные переключатели защиты;
-- авто-защита draft по фазе hero selection;
-- авто-защита миникарты во время игры;
-- Twitch OAuth через localhost;
-- создание, lock, cancel и resolve Predictions;
-- опции auto-create и auto-resolve.
+Если свой скрин не загружен, используется встроенный шаблон из проекта.
 
-## Важные ограничения
+Логика авто-скрытия:
 
-GSI не дает надежные координаты вардов на миникарте, поэтому MVP закрывает миникарту целиком. Это стабильнее и меньше зависит от патчей Dota 2.
+- до пика героя стримером скрывается draft-экран;
+- после завершения pick-фазы, в которой стример выбрал героя, остаётся скрытие верхней панели;
+- после завершения драфта и перехода к планированию маски убираются.
 
-Авто-resolve лучше включать после проверки на твоем аккаунте и реальных GSI payload. Если Dota не отдаст `win_team` или команду игрока в ожидаемом виде, ставка останется открытой для ручного закрытия.
+#### Миникарта
+
+Миникарта закрывается встроенной fake-vision маской. Пользовательская загрузка миникарты не используется.
+
+Настройки:
+
+- размер миникарты: обычная или большая;
+- сторона: слева или справа;
+- фон миникарты: реалистичный, простой или пустой.
+
+Маска старается оставить героев, крипов и другие иконки видимыми, но скрыть информацию о настоящих вардах.
+
+#### Поиск игры
+
+Для скрытия поиска можно загрузить скрин меню Dota. Если скрин не загружен, используется встроенный ассет.
+
+Режимы:
+
+- `Только поиск` - авто-скрытие включается только если Dota/GSI даёт явный сигнал поиска или matchmaking.
+- `Меню + поиск` - авто-скрытие включается в меню Dota и во время поиска.
+- кнопка `Поиск` вручную - принудительно держит маску включённой, пока ты сам её не выключишь.
+
+Если Dota закрыта полностью, авто-скрытие поиска выключается. Если Dota запущена, но первый матч ещё не был сыгран и GSI молчит, режим `Меню + поиск` всё равно может включить маску по процессу `dota2.exe`.
+
+### Прогнозы за баллы канала
+
+DotaStreamKit может автоматически создавать прогноз после того, как:
+
+- GSI увидел пик героя стримером;
+- завершилась pick-фаза, в которой стример выбрал героя;
+- Twitch-канал находится online.
+
+Доступны встроенные типы прогнозов:
+
+- победа / поражение;
+- киллы стримера;
+- смерти стримера;
+- ассисты стримера;
+- не умереть до выбранной минуты;
+- last hits к выбранной минуте.
+
+У каждого типа можно настроить:
+
+- вес для случайного выбора;
+- шаблон заголовка;
+- названия исходов;
+- диапазоны случайных значений.
+
+Также есть конструктор пользовательских прогнозов с переменными:
+
+```text
+{hero}
+{target}
+{minute}
+{kills}
+{deaths}
+{assists}
+{last_hits}
+{denies}
+{level}
+{team_kills}
+{enemy_kills}
+{total_kills}
+```
+
+Опция `Отменять незасчитанную игру` отменяет активный прогноз при сильных сигналах, что матч не должен засчитываться: долгий disconnect, новый match id при старом прогнозе, ранний post-game без победителя. Для краша/перезахода используется задержка, чтобы обычные 5 минут reconnect не отменяли прогноз сразу.
+
+### Частые проблемы
+
+#### Порт занят: `EADDRINUSE 127.0.0.1:37273`
+
+Уже запущена другая копия DotaStreamKit.
+
+Решение:
+
+```powershell
+npm run stop
+npm start
+```
+
+В релизной сборке просто закрой старое окно/процесс DotaStreamKit и запусти заново.
+
+#### Twitch подключён, но статус `disconnected` или `reconnect`
+
+1. Проверь `Client ID` и `Client Secret`.
+2. Нажми `Подключить Twitch`.
+3. Подтверди разрешения.
+4. Если менял scopes или secret в Twitch Developer Console, подключение нужно обновить.
+
+#### Прогноз не создаётся автоматически
+
+Проверь:
+
+- Twitch подключён;
+- канал online;
+- включено `Создавать автоматически`;
+- GSI online;
+- герой уже пикнут, и pick-фаза стримера завершилась;
+- нет активного прогноза, который ещё не закрыт.
+
+#### OBS не обновляет картинку
+
+В свойствах Browser Source нажми `Refresh cache of current page`.
+
+#### Авто-скрытие поиска не нужно прямо сейчас
+
+Выключи `Авто скрывать поиск` или выключи ручную кнопку `Поиск`, если она активна.
+
+### Support
+
+Если DotaStreamKit оказался полезен, можно поддержать разработку:
+
+- Telegram-канал разработчика: https://t.me/ivagakura_projects
+- GitHub проекта: https://github.com/Seno47/DotaStreamKit
+- T-Bank: https://www.tinkoff.ru/rm/r_rjNFcYKfDe.jmzXvHFVxI/35eKu35373
+- TRON / TRC20: `TGZZQaMAvqVF7ae8C6Gfr8MxkTz3j1xqsg`
+- TON: `UQCpse9_qEK4xCAeYKI1xJc9pCqroEu6IYffnjnw4iEfBbrG`
+- BTC: `1KcxKVuU6T5SHbzT5nN8hCgJRe1MWjqTS9`
+- ERC20: `0x8fcbf61653aaba7326cc33ee1dda62949757592b`
+- BEP20: `0x8fcbf61653aaba7326cc33ee1dda62949757592b`
+
+Проверяй сеть перед переводом. Для ERC20 и BEP20 адрес одинаковый, но сеть перевода должна быть выбрана правильно.
+
+## English
+
+### What DotaStreamKit Does
+
+DotaStreamKit runs locally on the streamer's PC and opens a dashboard in the browser:
+
+```text
+http://localhost:37273
+```
+
+OBS overlay URL:
+
+```text
+http://localhost:37273/overlay.html
+```
+
+Main features:
+
+- hides Dota 2 draft screen and top pick bar;
+- hides minimap ward information with a fake-vision overlay;
+- hides queue/search menu areas using a menu screenshot;
+- creates Twitch Channel Points Predictions after the streamer picks a hero;
+- supports manual prediction controls and automatic lock/resolve/cancel flows;
+- supports personal Twitch account mode and separate moderator account mode;
+- installs Dota Game State Integration locally.
+
+The dashboard contains a server mode, but this README intentionally covers only local usage for now. Public server deployment is not documented as a stable path yet.
+
+### Quick Start With a Release
+
+1. Open the releases page:
+
+   ```text
+   https://github.com/Seno47/DotaStreamKit/releases
+   ```
+
+2. Download the Windows archive, for example `DotaStreamKit-win-x64.zip`.
+3. Extract it.
+4. Run `DotaStreamKit.exe`.
+5. Open:
+
+   ```text
+   http://localhost:37273
+   ```
+
+If Windows SmartScreen warns you about an unknown app, that is expected for an unsigned portable build. Only run archives downloaded from this repository's releases.
+
+### Twitch Setup
+
+DotaStreamKit needs a Twitch app to get a `Client ID` and `Client Secret`.
+
+1. Open Twitch Developer Console:
+
+   ```text
+   https://dev.twitch.tv/console
+   ```
+
+2. Log in. Your Twitch account needs a verified email and 2FA enabled.
+3. Open `Applications`.
+4. Click `Register Your Application`.
+5. Fill the fields:
+
+   | Twitch Field | Value |
+   | --- | --- |
+   | `Name` | Any unique name, for example `DotaStreamKit Local` |
+   | `OAuth Redirect URLs` | `http://localhost:37273/auth/twitch/callback` |
+   | `Category` | Any suitable category, for example `Application Integration`, `Website Integration`, or `Other` |
+
+6. Click `Add` after entering the redirect URL if Twitch shows a separate add button.
+7. Complete captcha and click `Create`.
+8. Open the created app with `Manage`.
+9. Copy `Client ID` into DotaStreamKit.
+10. Click `New Secret`, copy it, and paste it into `Client Secret`.
+11. Click `Connect Twitch` in DotaStreamKit.
+12. Approve Twitch permissions.
+
+Required scopes:
+
+- `channel:manage:predictions` - create, lock, cancel, and resolve predictions;
+- `user:write:chat` - send chat messages if enabled.
+
+Important:
+
+- Do not publish your `Client Secret`.
+- If the dashboard shows `reconnect`, click `Connect Twitch` again and approve the updated permissions.
+- To manage predictions on another channel, the OAuth account must have permission to manage Predictions for that broadcaster.
+
+### Dota GSI Setup
+
+GSI is a built-in Dota 2 feature, not a third-party program.
+
+DotaStreamKit installs only this config file:
+
+```text
+gamestate_integration_dotastreamkit.cfg
+```
+
+It tells Dota 2 to send game state to:
+
+```text
+http://127.0.0.1:37273/gsi/dota2
+```
+
+Setup:
+
+1. In DotaStreamKit, click `Find Dota`.
+2. If the path is correct, click `Install GSI`.
+3. Restart Dota 2.
+4. The dashboard should show `Dota GSI online` when Dota starts sending state.
+
+If auto-detection fails, set the Dota 2 folder manually. Example:
+
+```text
+C:\SteamLibrary\steamapps\common\dota 2 beta
+```
+
+### OBS Setup
+
+1. Add an OBS `Browser Source`.
+2. URL:
+
+   ```text
+   http://localhost:37273/overlay.html
+   ```
+
+3. Match the Browser Source size to your OBS canvas:
+
+   | OBS Canvas | Browser Source |
+   | --- | --- |
+   | `1920x1080` | width `1920`, height `1080` |
+   | `2560x1440` | width `2560`, height `1440` |
+   | `3840x2160` | width `3840`, height `2160` |
+
+4. Place the Browser Source above your Dota 2 capture.
+5. If OBS keeps an old overlay after an update, click `Refresh cache of current page`.
+
+### Stream Protection
+
+#### Draft
+
+You can upload one full draft screenshot. The app slices the needed areas automatically.
+
+If no custom screenshot is uploaded, DotaStreamKit uses the bundled default asset.
+
+Auto behavior:
+
+- hide draft while the streamer is still in their pick phase;
+- after the streamer's pick phase ends, hide only the top pick bar;
+- remove draft/top masks after draft ends and strategy/planning starts.
+
+#### Minimap
+
+The minimap uses the built-in fake-vision overlay. Custom minimap uploads are not supported.
+
+Settings:
+
+- normal or large minimap;
+- left or right minimap;
+- realistic, simple, or empty minimap background.
+
+The overlay tries to keep heroes, creeps, and map icons visible while hiding real ward information.
+
+#### Queue / Search
+
+You can upload a Dota menu screenshot for queue/search masking. If none is uploaded, the bundled asset is used.
+
+Modes:
+
+- `Search only` - auto-mask only when Dota/GSI provides an explicit queue/search/matchmaking signal.
+- `Menu + search` - auto-mask in Dota menu and during search.
+- manual `Queue` button - force the mask to stay on until you turn it off.
+
+If Dota is closed, automatic queue masking turns off. If Dota is running but GSI has not sent data yet, `Menu + search` can still enable the mask by checking the local `dota2.exe` process.
+
+### Channel Points Predictions
+
+DotaStreamKit can auto-create a prediction after:
+
+- GSI sees the streamer's picked hero;
+- the pick phase where the streamer picked that hero has ended;
+- the Twitch channel is online.
+
+Built-in prediction types:
+
+- win / loss;
+- streamer kills;
+- streamer deaths;
+- streamer assists;
+- no death until selected minute;
+- last hits by selected minute.
+
+Each type can configure:
+
+- random selection weight;
+- title template;
+- outcome names;
+- random value ranges.
+
+Custom templates can use variables such as:
+
+```text
+{hero}
+{target}
+{minute}
+{kills}
+{deaths}
+{assists}
+{last_hits}
+{denies}
+{level}
+{team_kills}
+{enemy_kills}
+{total_kills}
+```
+
+The `Cancel invalid game` option cancels active predictions on strong signals that a match should not count: long disconnect, a new match id while an old prediction is active, or early post-game without a winner. Crash/reconnect handling uses a delay so a normal reconnect window does not cancel instantly.
+
+### Troubleshooting
+
+#### Port is busy: `EADDRINUSE 127.0.0.1:37273`
+
+Another DotaStreamKit copy is already running.
+
+For development builds:
+
+```powershell
+npm run stop
+npm start
+```
+
+For release builds, close the old DotaStreamKit process and start it again.
+
+#### Twitch shows `disconnected` or `reconnect`
+
+1. Check `Client ID` and `Client Secret`.
+2. Click `Connect Twitch`.
+3. Approve permissions.
+4. If you changed scopes or generated a new secret, reconnect Twitch.
+
+#### Auto prediction is not created
+
+Check that:
+
+- Twitch is connected;
+- the channel is live;
+- `Auto create` is enabled;
+- GSI is online;
+- the hero was picked and the streamer's pick phase ended;
+- there is no active prediction already open.
+
+#### OBS shows an old overlay
+
+Click `Refresh cache of current page` in Browser Source properties.
+
+#### Queue/search mask is stuck
+
+Check whether the manual `Queue` button is enabled. Manual mode intentionally keeps the mask visible.
+
+### Developer Support
+
+If DotaStreamKit helps you, you can support development:
+
+- Developer Telegram channel: https://t.me/ivagakura_projects
+- GitHub repository: https://github.com/Seno47/DotaStreamKit
+- T-Bank: https://www.tinkoff.ru/rm/r_rjNFcYKfDe.jmzXvHFVxI/35eKu35373
+- TRON / TRC20: `TGZZQaMAvqVF7ae8C6Gfr8MxkTz3j1xqsg`
+- TON: `UQCpse9_qEK4xCAeYKI1xJc9pCqroEu6IYffnjnw4iEfBbrG`
+- BTC: `1KcxKVuU6T5SHbzT5nN8hCgJRe1MWjqTS9`
+- ERC20: `0x8fcbf61653aaba7326cc33ee1dda62949757592b`
+- BEP20: `0x8fcbf61653aaba7326cc33ee1dda62949757592b`
+
+Double-check the network before sending crypto. ERC20 and BEP20 use the same address here, but the selected transfer network still matters.
+
+## Development
+
+For contributors or local development without the release archive:
+
+```powershell
+npm install
+npm start
+```
+
+Useful commands:
+
+```powershell
+npm run check
+npm run stop
+npm run build:win
+```
+
+Build a portable Windows archive:
+
+```powershell
+npm run build:win
+```
+
+The archive is written to:
+
+```text
+dist/DotaStreamKit-win-x64.zip
+```
+
+Local data, config, OAuth tokens, uploaded screenshots, and generated assets are stored in `data/`. This folder is ignored by Git.
+
+## Official References
+
+- Twitch Developer Console: https://dev.twitch.tv/console
+- Twitch app registration docs: https://dev.twitch.tv/docs/authentication/register-app
+- Twitch OAuth token docs: https://dev.twitch.tv/docs/authentication/getting-tokens-oauth
