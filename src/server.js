@@ -285,7 +285,9 @@ async function migrateConfig(config) {
     changed = true;
   }
 
-  if (!config.protection.referenceSize) {
+  const referenceWidth = Number(config.protection.referenceSize?.width);
+  const referenceHeight = Number(config.protection.referenceSize?.height);
+  if (!Number.isFinite(referenceWidth) || referenceWidth <= 0 || !Number.isFinite(referenceHeight) || referenceHeight <= 0) {
     config.protection.referenceSize = structuredClone(defaultConfig.protection.referenceSize);
     changed = true;
   }

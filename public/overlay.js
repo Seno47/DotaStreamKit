@@ -11,9 +11,9 @@ let minimapVisionImageEl = null;
 const stream = new EventSource('/api/events');
 stream.onmessage = (event) => {
   const { config, state } = JSON.parse(event.data);
-  const reference = config.protection.referenceSize || { width: 1920, height: 1080 };
+  const reference = normalizeReference(config.protection.referenceSize);
   const draftParts = config.protection.draftMaskParts || [];
-  const queueParts = queueMaskParts(config.protection);
+  const queueParts = queueMaskParts(config.protection, reference);
   const slots = config.protection.topBarSlots || [];
   ensureQueueParts(queueParts.length);
   ensureDraftParts(draftParts.length);
@@ -25,10 +25,18 @@ stream.onmessage = (event) => {
   setVisible(minimapMask, state.protection.minimap);
 };
 
-function queueMaskParts(protection) {
+function queueMaskParts(protection, reference) {
   if ((protection.queueMode || 'partial') !== 'full') return protection.queueMaskParts || [];
-  const reference = protection.referenceSize || { width: 1920, height: 1080 };
   return [{ left: 0, top: 0, width: reference.width, height: reference.height }];
+}
+
+function normalizeReference(reference) {
+  const width = Number(reference?.width);
+  const height = Number(reference?.height);
+  if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
+    return { width: 1920, height: 1080 };
+  }
+  return { width, height };
 }
 
 function ensureQueueParts(count) {
