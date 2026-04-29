@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="72%">
+      <stop offset="0" stop-color="#181d22"/>
+      <stop offset="0.62" stop-color="#0f1317"/>
+      <stop offset="1" stop-color="#040506"/>
+    </radialGradient>
+    <linearGradient id="red" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#ff262b"/>
+      <stop offset="0.55" stop-color="#e20d13"/>
+      <stop offset="1" stop-color="#a9070b"/>
+    </linearGradient>
+    <linearGradient id="redLight" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#ff4548"/>
+      <stop offset="1" stop-color="#c20a0e"/>
+    </linearGradient>
+    <filter id="shadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="9" stdDeviation="10" flood-color="#000" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="108" fill="url(#bg)"/>
+
+  <g filter="url(#shadow)">
+    <path fill="url(#red)" d="M256 43 308 107 362 88 432 122 401 164 405 306 386 347 408 370 256 471 104 370 126 347 107 306 111 164 80 122 150 88 204 107 256 43Zm0 41-34 42 34 54 34-54-34-42Zm-116 43-33 17 24 32-4 126 18 39-13 13 124 82 124-82-13-13 18-39-4-126 24-32-33-17-51 18-65 74-65-74-51-18Z"/>
+
+    <path fill="url(#red)" d="M139 150h151l83 71v78l-71 69H149l22-66V201l-32-51Zm65 50 117 101 24-23v-32l-61-52H183l21 6Zm14 90v38h70l24-23-94-81v66Z"/>
+
+    <path fill="#090d11" opacity="0.78" d="M205 190h84l74 63v44l-59 57H170l19-58v-72l-36-34h52Zm29 49v66h53l28-27-81-39Z"/>
+    <path fill="url(#redLight)" d="M190 190h102l67 57v47l-61 59H171l19-57V190Zm37 49v67h57l29-28-86-39Z"/>
+    <path fill="#090d11" d="m135 170 129 110-35-58H125l10-52Z"/>
+
+    <path fill="none" stroke="url(#redLight)" stroke-linecap="round" stroke-width="18" d="M205 392c28-28 74-28 102 0"/>
+    <path fill="none" stroke="url(#redLight)" stroke-linecap="round" stroke-width="18" d="M225 418c17-17 45-17 62 0"/>
+    <circle cx="256" cy="444" r="16" fill="url(#redLight)"/>
+  </g>
+</svg>

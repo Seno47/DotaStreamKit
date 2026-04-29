@@ -675,7 +675,9 @@ async function serveStatic(pathname, res) {
     '.png': 'image/png',
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
-    '.webp': 'image/webp'
+    '.webp': 'image/webp',
+    '.svg': 'image/svg+xml',
+    '.ico': 'image/x-icon'
   };
   res.writeHead(200, {
     'content-type': types[extname(filePath)] || 'application/octet-stream',
