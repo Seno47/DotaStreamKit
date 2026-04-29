@@ -93,8 +93,8 @@ const translations = {
     empty: 'Пустой',
     queueMode: 'Скрытие поиска',
     queueAutoMode: 'Режим автопоиска',
-    queueAutoSearch: 'Только меню / поиск',
-    queueAutoAlways: 'Всегда, пока включено',
+    queueAutoSearch: 'Только поиск',
+    queueAutoMenuSearch: 'Меню + поиск',
     partial: 'Только области поиска',
     full: 'Фуллскрин',
     minimap: 'Миникарта',
@@ -272,8 +272,8 @@ const translations = {
     empty: 'Empty',
     queueMode: 'Queue masking',
     queueAutoMode: 'Queue auto mode',
-    queueAutoSearch: 'Menu / search only',
-    queueAutoAlways: 'Always while enabled',
+    queueAutoSearch: 'Search only',
+    queueAutoMenuSearch: 'Menu + search',
     partial: 'Queue areas only',
     full: 'Fullscreen',
     minimap: 'Minimap',
@@ -505,7 +505,7 @@ function applyLanguage(config) {
   setOptionText(els.minimapStyle, 'empty', t('empty'));
   setLabelText(els.queueAutoMode.closest('label'), t('queueAutoMode'));
   setOptionText(els.queueAutoMode, 'search', t('queueAutoSearch'));
-  setOptionText(els.queueAutoMode, 'always', t('queueAutoAlways'));
+  setOptionText(els.queueAutoMode, 'menu_search', t('queueAutoMenuSearch'));
   setLabelText(els.queueMode.closest('label'), t('queueMode'));
   setOptionText(els.queueMode, 'partial', t('partial'));
   setOptionText(els.queueMode, 'full', t('full'));
@@ -686,7 +686,7 @@ function render(data) {
   els.minimapSize.value = config.protection.minimapSize || 'normal';
   els.minimapSide.value = config.protection.minimapSide || 'left';
   els.minimapStyle.value = config.protection.minimapStyle || 'realistic';
-  els.queueAutoMode.value = config.protection.queueAutoMode || 'search';
+  els.queueAutoMode.value = config.protection.queueAutoMode || 'menu_search';
   els.queueMode.value = config.protection.queueMode || 'partial';
   toggleButton(els.manualDraft, config.protection.manualDraft || state.protection.draft);
   toggleButton(els.manualMinimap, config.protection.manualMinimap || state.protection.minimap);

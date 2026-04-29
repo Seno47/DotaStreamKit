@@ -27,6 +27,7 @@ const queueAutoOnDelayMs = 0;
 const queueAutoOffDelayMs = 2500;
 const queueAutoStaleKeepMs = 10 * 60 * 1000;
 const inGameStatePattern = /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS|POST_GAME/i;
+const queueSearchPattern = /queue|search|matchmaking|match_making|find.?match|finding.?match|game.?search|party.?search/i;
 const customPredictionConditions = ['game_duration_at_least', 'metric_reaches_target', 'metric_by_minute'];
 const customPredictionMetrics = [
   'clock_minutes',
@@ -79,7 +80,7 @@ const defaultConfig = {
     manualTopBar: false,
     manualQueue: false,
     queueMode: 'partial',
-    queueAutoMode: 'search',
+    queueAutoMode: 'menu_search',
     referenceSize: { width: 1920, height: 1080 },
     minimapSize: 'normal',
     minimapSide: 'left',
@@ -176,6 +177,7 @@ const runtime = {
       playerHeroPicked: false,
       draftActiveTeam: null,
       ownPickPhaseEnded: false,
+      queueSearchSignal: false,
       inGameScreen: false,
       leftGameView: false
     },
@@ -227,6 +229,7 @@ runtime.state.gsi = {
   playerHeroPicked: false,
   draftActiveTeam: null,
   ownPickPhaseEnded: false,
+  queueSearchSignal: false,
   inGameScreen: false,
   leftGameView: false
 };
@@ -439,7 +442,14 @@ async function migrateConfig(config) {
     config.protection.queueMode = defaultConfig.protection.queueMode;
     changed = true;
   }
-  if (!['search', 'always'].includes(config.protection.queueAutoMode)) {
+  if (config.protection.queueAutoModeVersion !== 2) {
+    if (['search', 'always'].includes(config.protection.queueAutoMode)) {
+      config.protection.queueAutoMode = 'menu_search';
+    }
+    config.protection.queueAutoModeVersion = 2;
+    changed = true;
+  }
+  if (!['search', 'menu_search'].includes(config.protection.queueAutoMode)) {
     config.protection.queueAutoMode = defaultConfig.protection.queueAutoMode;
     changed = true;
   }
@@ -1090,8 +1100,9 @@ async function updateProtection(req, res) {
   if (['partial', 'full'].includes(body.queueMode)) {
     runtime.config.protection.queueMode = body.queueMode;
   }
-  if (['search', 'always'].includes(body.queueAutoMode)) {
+  if (['search', 'menu_search'].includes(body.queueAutoMode)) {
     runtime.config.protection.queueAutoMode = body.queueAutoMode;
+    runtime.config.protection.queueAutoModeVersion = 2;
   }
   if (['normal', 'large'].includes(body.minimapSize)) {
     runtime.config.protection.minimapSize = body.minimapSize;
@@ -1133,6 +1144,7 @@ async function handleGsi(req, res) {
   const draftActiveTeam = inferDraftActiveTeam(draft);
   const ownPickPhaseEnded = inferOwnPickPhaseEnded({ gameState, playerHeroPicked, draftActiveTeam, playerTeam });
   const activeMatchId = inferActiveMatchId(previous, gameState, matchId);
+  const queueSearchSignal = inferQueueSearchSignal(payload);
   const inGameScreen = inferInGameScreen(gameState, playerActivity);
   const leftGameView = inferLeftGameView({
     connected: true,
@@ -1163,6 +1175,7 @@ async function handleGsi(req, res) {
     playerHeroPicked,
     draftActiveTeam,
     ownPickPhaseEnded,
+    queueSearchSignal,
     inGameScreen,
     leftGameView
   };
@@ -1195,10 +1208,6 @@ function stableQueueAutoState(config, gsi) {
   if (!config.protection.autoQueue) {
     resetQueueAuto(false);
     return false;
-  }
-  if (config.protection.queueAutoMode === 'always') {
-    resetQueueAuto(true);
-    return true;
   }
 
   const desired = inferQueueSearchScreen(gsi);
@@ -1233,6 +1242,8 @@ function sameProtection(left, right) {
 function inferQueueSearchScreen(gsi) {
   const state = String(gsi.gameState || '');
   if (inGameStatePattern.test(state)) return false;
+  if (gsi.queueSearchSignal) return true;
+  if (runtime.config.protection.queueAutoMode === 'search') return false;
 
   const lastSeenAt = Date.parse(gsi.lastSeenAt || '');
   const hasSeenGsi = Number.isFinite(lastSeenAt);
@@ -1242,6 +1253,32 @@ function inferQueueSearchScreen(gsi) {
   if (gsi.leftGameView) return true;
   if (gsi.connected) return !gsi.inGameScreen;
   return runtime.queueAuto.active || runtime.queueAuto.desired;
+}
+
+function inferQueueSearchSignal(payload) {
+  const candidates = [
+    payload?.map?.game_state,
+    payload?.map?.state,
+    payload?.map?.activity,
+    payload?.player?.activity,
+    payload?.provider?.game_state,
+    payload?.provider?.activity,
+    payload?.matchmaking?.state,
+    payload?.matchmaking?.status,
+    payload?.queue?.state,
+    payload?.queue?.status,
+    payload?.lobby?.state,
+    payload?.lobby?.status
+  ];
+  if (candidates.some((value) => queueSearchPattern.test(String(value || '')))) return true;
+  return objectHasQueueSearchSignal(payload, 0);
+}
+
+function objectHasQueueSearchSignal(value, depth) {
+  if (!value || depth > 3) return false;
+  if (typeof value !== 'object') return queueSearchPattern.test(String(value));
+  if (Array.isArray(value)) return value.some((item) => objectHasQueueSearchSignal(item, depth + 1));
+  return Object.entries(value).some(([key, item]) => queueSearchPattern.test(key) || objectHasQueueSearchSignal(item, depth + 1));
 }
 
 function inferPlayerHeroPicked(previous, gameState, hero) {
