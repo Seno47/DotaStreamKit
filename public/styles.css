@@ -113,6 +113,9 @@ label input[type='checkbox'] {
 
 .sponsor-links a,
 .developer-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 34px;
   height: 34px;
   padding: 0 9px;
@@ -120,6 +123,18 @@ label input[type='checkbox'] {
   border-radius: 8px;
   background: #111821;
   transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.sponsor-links a {
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sponsor-links a:first-child {
+  color: #dff7fb;
+  border-color: #4d8796;
+  background: #14242b;
 }
 
 .sponsor-name:hover {
