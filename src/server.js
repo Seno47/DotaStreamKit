@@ -23,6 +23,10 @@ const port = Number(process.env.PORT || 37273);
 const twitchApi = 'https://api.twitch.tv/helix';
 const twitchId = 'https://id.twitch.tv/oauth2';
 const twitchScopes = ['channel:manage:predictions', 'user:write:chat'];
+const queueAutoOnDelayMs = 0;
+const queueAutoOffDelayMs = 2500;
+const queueAutoStaleKeepMs = 10 * 60 * 1000;
+const inGameStatePattern = /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS|POST_GAME/i;
 const customPredictionConditions = ['game_duration_at_least', 'metric_reaches_target', 'metric_by_minute'];
 const customPredictionMetrics = [
   'clock_minutes',
@@ -75,6 +79,7 @@ const defaultConfig = {
     manualTopBar: false,
     manualQueue: false,
     queueMode: 'partial',
+    queueAutoMode: 'search',
     referenceSize: { width: 1920, height: 1080 },
     minimapSize: 'normal',
     minimapSide: 'left',
@@ -136,6 +141,7 @@ const defaultConfig = {
 const runtime = {
   clients: new Set(),
   oauthStates: new Set(),
+  queueAuto: { active: false, desired: false, desiredSince: 0 },
   twitchStreamStatus: { broadcasterId: null, checkedAt: 0, isLive: null, streamId: null, gameName: null, title: null },
   config: structuredClone(defaultConfig),
   state: {
@@ -286,9 +292,12 @@ setInterval(() => {
   if (!connected) {
     maybeCancelPredictionForGsiTimeout().catch((error) => logEvent('twitch', `Auto cancel failed: ${error.message}`));
   }
-  if (runtime.state.gsi.connected !== connected) {
-    runtime.state.gsi.connected = connected;
-    runtime.state.protection = computeProtection(runtime.config, runtime.state.gsi);
+  const connectionChanged = runtime.state.gsi.connected !== connected;
+  runtime.state.gsi.connected = connected;
+  const protection = computeProtection(runtime.config, runtime.state.gsi);
+  const protectionChanged = !sameProtection(runtime.state.protection, protection);
+  if (connectionChanged || protectionChanged) {
+    runtime.state.protection = protection;
     persistState();
     broadcast();
   }
@@ -428,6 +437,10 @@ async function migrateConfig(config) {
   }
   if (!['partial', 'full'].includes(config.protection.queueMode)) {
     config.protection.queueMode = defaultConfig.protection.queueMode;
+    changed = true;
+  }
+  if (!['search', 'always'].includes(config.protection.queueAutoMode)) {
+    config.protection.queueAutoMode = defaultConfig.protection.queueAutoMode;
     changed = true;
   }
   if (!Number.isFinite(Number(config.protection.queueProfileRight)) || Number(config.protection.queueProfileRight) < 0) {
@@ -1077,6 +1090,9 @@ async function updateProtection(req, res) {
   if (['partial', 'full'].includes(body.queueMode)) {
     runtime.config.protection.queueMode = body.queueMode;
   }
+  if (['search', 'always'].includes(body.queueAutoMode)) {
+    runtime.config.protection.queueAutoMode = body.queueAutoMode;
+  }
   if (['normal', 'large'].includes(body.minimapSize)) {
     runtime.config.protection.minimapSize = body.minimapSize;
   }
@@ -1166,13 +1182,66 @@ function computeProtection(config, gsi) {
   const draftByState = heroSelection && !gsi.ownPickPhaseEnded;
   const topBarByState = heroSelection && gsi.ownPickPhaseEnded;
   const gameByState = connected && !gsi.leftGameView && /PRE_GAME|GAME_IN_PROGRESS/i.test(gameState);
-  const queueByState = connected && !gsi.inGameScreen && !/HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS|POST_GAME/i.test(gameState);
+  const queueByState = stableQueueAutoState(config, gsi);
   return {
     draft: Boolean(config.protection.manualDraft || (config.protection.autoDraft && draftByState)),
     minimap: Boolean(config.protection.manualMinimap || (config.protection.autoMinimap && gameByState)),
     topBar: Boolean(config.protection.manualTopBar || (config.protection.autoDraft && topBarByState)),
     queue: Boolean(config.protection.manualQueue || (config.protection.autoQueue && queueByState))
   };
+}
+
+function stableQueueAutoState(config, gsi) {
+  if (!config.protection.autoQueue) {
+    resetQueueAuto(false);
+    return false;
+  }
+  if (config.protection.queueAutoMode === 'always') {
+    resetQueueAuto(true);
+    return true;
+  }
+
+  const desired = inferQueueSearchScreen(gsi);
+  const now = Date.now();
+  if (runtime.queueAuto.desired !== desired) {
+    runtime.queueAuto.desired = desired;
+    runtime.queueAuto.desiredSince = now;
+  }
+
+  const delay = desired ? queueAutoOnDelayMs : queueAutoOffDelayMs;
+  if (now - runtime.queueAuto.desiredSince >= delay) {
+    runtime.queueAuto.active = desired;
+  }
+  return runtime.queueAuto.active;
+}
+
+function resetQueueAuto(active) {
+  runtime.queueAuto.active = active;
+  runtime.queueAuto.desired = active;
+  runtime.queueAuto.desiredSince = Date.now();
+}
+
+function sameProtection(left, right) {
+  return Boolean(left)
+    && Boolean(right)
+    && left.draft === right.draft
+    && left.minimap === right.minimap
+    && left.topBar === right.topBar
+    && left.queue === right.queue;
+}
+
+function inferQueueSearchScreen(gsi) {
+  const state = String(gsi.gameState || '');
+  if (inGameStatePattern.test(state)) return false;
+
+  const lastSeenAt = Date.parse(gsi.lastSeenAt || '');
+  const hasSeenGsi = Number.isFinite(lastSeenAt);
+  if (!hasSeenGsi) return false;
+  if (Date.now() - lastSeenAt > queueAutoStaleKeepMs) return false;
+
+  if (gsi.leftGameView) return true;
+  if (gsi.connected) return !gsi.inGameScreen;
+  return runtime.queueAuto.active || runtime.queueAuto.desired;
 }
 
 function inferPlayerHeroPicked(previous, gameState, hero) {
@@ -1212,7 +1281,7 @@ function inferInGameScreen(gameState, playerActivity) {
   const activity = String(playerActivity || '').toLowerCase();
   if (/DISCONNECT|POST_GAME/i.test(state)) return false;
   if (activity && !['playing', 'spectating'].includes(activity)) return false;
-  return /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS/i.test(state);
+  return inGameStatePattern.test(state) && !/POST_GAME/i.test(state);
 }
 
 function collectTeamStats(payload, playerTeam) {
@@ -1285,7 +1354,7 @@ function inferLeftGameView({ connected, activeMatchId, gameState, playerActivity
   if (/POST_GAME/i.test(state)) return false;
   if (/DISCONNECT/i.test(state)) return true;
   if (activity && !['playing', 'spectating'].includes(activity)) return true;
-  if (!/HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS/i.test(state)) return true;
+  if (!inGameStatePattern.test(state)) return true;
   if (/GAME_IN_PROGRESS|PRE_GAME/i.test(state) && activity === 'playing' && !hasLivePayload) return true;
   return false;
 }

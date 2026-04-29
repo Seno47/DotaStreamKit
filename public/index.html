@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>DotaStreamKit</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260429">
-    <link rel="stylesheet" href="/styles.css?v=20260429-selected-manual">
+    <link rel="stylesheet" href="/styles.css?v=20260429-queue-stable">
   </head>
   <body>
     <main class="shell">
@@ -71,6 +71,7 @@
             <label class="check"><input type="checkbox" id="autoDraft"> Авто скрывать draft</label>
             <label class="check"><input type="checkbox" id="autoMinimap"> Авто скрывать миникарту</label>
             <label class="check"><input type="checkbox" id="autoQueue"> Авто скрывать поиск</label>
+            <label>Режим автопоиска<select id="queueAutoMode"><option value="search">Только меню / поиск</option><option value="always">Всегда, пока включено</option></select></label>
             <label>Размер миникарты<select id="minimapSize"><option value="normal">Обычная</option><option value="large">Большая</option></select></label>
             <label>Сторона<select id="minimapSide"><option value="left">Слева</option><option value="right">Справа</option></select></label>
             <label>Фон миникарты<select id="minimapStyle"><option value="realistic">Реалистичный</option><option value="simple">Простой</option><option value="empty">Пустой</option></select></label>
@@ -215,6 +216,6 @@
         </article>
       </section>
     </main>
-    <script src="/app.js?v=20260429-selected-manual"></script>
+    <script src="/app.js?v=20260429-queue-stable"></script>
   </body>
 </html>

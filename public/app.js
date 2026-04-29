@@ -5,6 +5,7 @@ const els = {
   autoDraft: document.querySelector('#autoDraft'),
   autoMinimap: document.querySelector('#autoMinimap'),
   autoQueue: document.querySelector('#autoQueue'),
+  queueAutoMode: document.querySelector('#queueAutoMode'),
   minimapSize: document.querySelector('#minimapSize'),
   minimapSide: document.querySelector('#minimapSide'),
   minimapStyle: document.querySelector('#minimapStyle'),
@@ -91,6 +92,9 @@ const translations = {
     simple: 'Простой',
     empty: 'Пустой',
     queueMode: 'Скрытие поиска',
+    queueAutoMode: 'Режим автопоиска',
+    queueAutoSearch: 'Только меню / поиск',
+    queueAutoAlways: 'Всегда, пока включено',
     partial: 'Только области поиска',
     full: 'Фуллскрин',
     minimap: 'Миникарта',
@@ -267,6 +271,9 @@ const translations = {
     simple: 'Simple',
     empty: 'Empty',
     queueMode: 'Queue masking',
+    queueAutoMode: 'Queue auto mode',
+    queueAutoSearch: 'Menu / search only',
+    queueAutoAlways: 'Always while enabled',
     partial: 'Queue areas only',
     full: 'Fullscreen',
     minimap: 'Minimap',
@@ -496,6 +503,9 @@ function applyLanguage(config) {
   setOptionText(els.minimapStyle, 'realistic', t('realistic'));
   setOptionText(els.minimapStyle, 'simple', t('simple'));
   setOptionText(els.minimapStyle, 'empty', t('empty'));
+  setLabelText(els.queueAutoMode.closest('label'), t('queueAutoMode'));
+  setOptionText(els.queueAutoMode, 'search', t('queueAutoSearch'));
+  setOptionText(els.queueAutoMode, 'always', t('queueAutoAlways'));
   setLabelText(els.queueMode.closest('label'), t('queueMode'));
   setOptionText(els.queueMode, 'partial', t('partial'));
   setOptionText(els.queueMode, 'full', t('full'));
@@ -676,6 +686,7 @@ function render(data) {
   els.minimapSize.value = config.protection.minimapSize || 'normal';
   els.minimapSide.value = config.protection.minimapSide || 'left';
   els.minimapStyle.value = config.protection.minimapStyle || 'realistic';
+  els.queueAutoMode.value = config.protection.queueAutoMode || 'search';
   els.queueMode.value = config.protection.queueMode || 'partial';
   toggleButton(els.manualDraft, config.protection.manualDraft || state.protection.draft);
   toggleButton(els.manualMinimap, config.protection.manualMinimap || state.protection.minimap);
@@ -1134,6 +1145,7 @@ async function saveProtection(patch) {
 els.autoDraft.addEventListener('change', () => saveProtection({ autoDraft: els.autoDraft.checked }).catch(alert));
 els.autoMinimap.addEventListener('change', () => saveProtection({ autoMinimap: els.autoMinimap.checked }).catch(alert));
 els.autoQueue.addEventListener('change', () => saveProtection({ autoQueue: els.autoQueue.checked }).catch(alert));
+els.queueAutoMode.addEventListener('change', () => saveProtection({ queueAutoMode: els.queueAutoMode.value }).catch(alert));
 els.minimapSize.addEventListener('change', () => saveProtection({ minimapSize: els.minimapSize.value }).catch(alert));
 els.minimapSide.addEventListener('change', () => saveProtection({ minimapSide: els.minimapSide.value }).catch(alert));
 els.minimapStyle.addEventListener('change', () => saveProtection({ minimapStyle: els.minimapStyle.value }).catch(alert));
