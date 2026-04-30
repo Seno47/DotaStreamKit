@@ -26,6 +26,7 @@ const twitchScopes = ['channel:manage:predictions', 'user:write:chat'];
 const queueAutoOnDelayMs = 0;
 const queueAutoOffDelayMs = 2500;
 const queueAutoStaleKeepMs = 10 * 60 * 1000;
+const autoPredictionRetryMs = 30000;
 const inGameStatePattern = /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS|POST_GAME/i;
 const queueSearchPattern = /queue|search|matchmaking|match_making|find.?match|finding.?match|game.?search|party.?search/i;
 const dotaProcessName = 'dota2.exe';
@@ -196,6 +197,8 @@ const runtime = {
     activePredictionMatchId: null,
     activePredictionMeta: null,
     predictionCancelCandidate: null,
+    lastAutoPredictionAttempt: null,
+    autoPredictionCreatedKey: null,
     events: []
   }
 };
@@ -247,6 +250,8 @@ runtime.state.dota = {
   processRunning: null,
   processCheckedAt: null
 };
+runtime.state.lastAutoPredictionAttempt = null;
+runtime.state.autoPredictionCreatedKey = null;
 await refreshDotaProcessState();
 runtime.state.protection = computeProtection(runtime.config, runtime.state.gsi);
 await restoreTwitchStatus();
@@ -1367,7 +1372,8 @@ function inferPlayerHeroPicked(previous, gameState, hero, lifecycle = {}) {
   if (/POST_GAME/i.test(String(gameState || ''))) return false;
   const hasHero = Boolean(hero?.name || hero?.localized_name || hero?.id || hero?.hero_id);
   if (/HERO_SELECTION/i.test(String(gameState || '')) && lifecycle.newDraft && !hasHero) return false;
-  return hasHero || Boolean(previous.playerHeroPicked);
+  const inheritedHero = !lifecycle.newDraft && Boolean(previous.playerHeroPicked || previous.heroName || previous.heroId);
+  return hasHero || inheritedHero;
 }
 
 function inferDraftActiveTeam(draft) {
@@ -1386,7 +1392,7 @@ function inferDraftActiveTeam(draft) {
 function inferOwnPickPhaseEnded({ previous, gameState, playerHeroPicked, draftActiveTeam, playerTeam, lifecycle = {} }) {
   const state = String(gameState || '');
   if (!/HERO_SELECTION/i.test(state)) {
-    if (/STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS/i.test(state) && previous?.playerHeroPicked && !lifecycle.newDraft) return true;
+    if (/STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS/i.test(state) && playerHeroPicked && !lifecycle.newDraft) return true;
     return false;
   }
   if (!playerHeroPicked) return false;
@@ -1539,19 +1545,20 @@ async function maybeAutomatePrediction(previous, gsi) {
     clearPredictionCancelCandidate();
   }
 
-  if (settings.autoCreate && !runtime.state.activePrediction && shouldAutoCreatePredictionAfterPick(previous, gsi)) {
-    const isLive = settings.forceStreamOnline || await isBroadcasterLive();
-    if (!isLive) {
-      logEvent('twitch', 'Auto prediction skipped: Twitch stream is offline');
-    } else {
-      try {
+  if (settings.autoCreate && !runtime.state.activePrediction && shouldAutoCreatePredictionAfterPick(previous, gsi) && shouldRetryAutoPrediction(gsi)) {
+    markAutoPredictionAttempt(gsi);
+    try {
+      const isLive = settings.forceStreamOnline || await isBroadcasterLive();
+      if (!isLive) {
+        logEvent('twitch', 'Auto prediction skipped: Twitch stream is offline');
+      } else {
         if (settings.forceStreamOnline) {
           logEvent('twitch', 'Auto prediction stream status override is enabled');
         }
-        await createPredictionFromSettings();
-      } catch (error) {
-        logEvent('twitch', `Auto prediction failed: ${error.message}`);
+        await createPredictionFromSettings({}, { automatic: true });
       }
+    } catch (error) {
+      logEvent('twitch', `Auto prediction failed: ${error.message}`);
     }
   }
 }
@@ -1644,9 +1651,36 @@ function predictionMetricValue(metric, gsi) {
 
 function shouldAutoCreatePredictionAfterPick(previous, gsi) {
   if (!gsi.playerHeroPicked || !gsi.ownPickPhaseEnded) return false;
-  if (previous.playerHeroPicked && previous.ownPickPhaseEnded && Number(previous.draftCycle || 0) === Number(gsi.draftCycle || 0)) return false;
   const state = String(gsi.gameState || '');
   return /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS/i.test(state);
+}
+
+function shouldRetryAutoPrediction(gsi) {
+  const key = autoPredictionKey(gsi);
+  if (runtime.state.autoPredictionCreatedKey === key) return false;
+  const attempt = runtime.state.lastAutoPredictionAttempt;
+  if (!attempt || attempt.key !== key) return true;
+  const attemptedAt = Date.parse(attempt.at || '');
+  return !Number.isFinite(attemptedAt) || Date.now() - attemptedAt >= autoPredictionRetryMs;
+}
+
+function markAutoPredictionAttempt(gsi) {
+  runtime.state.lastAutoPredictionAttempt = {
+    key: autoPredictionKey(gsi),
+    matchId: gsi.activeMatchId || gsi.matchId || null,
+    draftCycle: Number(gsi.draftCycle || 0),
+    at: new Date().toISOString()
+  };
+}
+
+function markAutoPredictionCreated(gsi) {
+  runtime.state.autoPredictionCreatedKey = autoPredictionKey(gsi);
+}
+
+function autoPredictionKey(gsi) {
+  const matchId = gsi.activeMatchId || gsi.matchId;
+  if (matchId) return `match:${matchId}`;
+  return `draft:${Number(gsi.draftCycle || 0)}`;
 }
 
 function syncActivePredictionMatchId(gsi) {
@@ -2215,7 +2249,7 @@ async function createPrediction(req, res) {
   sendJson(res, prediction);
 }
 
-async function createPredictionFromSettings(overrides = {}) {
+async function createPredictionFromSettings(overrides = {}, options = {}) {
   if (runtime.state.activePrediction && ['ACTIVE', 'LOCKED'].includes(runtime.state.activePrediction.status)) {
     throw new Error('A prediction is already active or locked');
   }
@@ -2236,6 +2270,7 @@ async function createPredictionFromSettings(overrides = {}) {
   runtime.state.activePrediction = normalizePrediction(item, draft.yesTitle, draft.noTitle, draft.meta);
   runtime.state.activePredictionMatchId = runtime.state.gsi.activeMatchId || runtime.state.gsi.matchId || null;
   runtime.state.predictionCancelCandidate = null;
+  if (options.automatic) markAutoPredictionCreated(runtime.state.gsi);
   await persistState();
   logEvent('twitch', `Prediction created: ${draft.title}`);
   broadcast();
