@@ -87,11 +87,11 @@ http://localhost:37273/overlay.html
    https://github.com/Seno47/DotaStreamKit/releases
    ```
 
-2. Скачай архив для своей системы:
-   - Windows: `DotaStreamKit-1.0.0-win-x64.zip`
-   - Linux Debian/Ubuntu x64: `DotaStreamKit-1.0.0-linux-x64.tar.gz`
-   - macOS Apple Silicon: `DotaStreamKit-1.0.0-darwin-arm64.tar.gz`
-   - macOS Intel: `DotaStreamKit-1.0.0-darwin-x64.tar.gz`
+2. Открой самый свежий релиз и скачай архив для своей системы:
+   - Windows: `DotaStreamKit-<version>-win-x64.zip`
+   - Linux Debian/Ubuntu x64: `DotaStreamKit-<version>-linux-x64.tar.gz`
+   - macOS Apple Silicon: `DotaStreamKit-<version>-darwin-arm64.tar.gz`
+   - macOS Intel: `DotaStreamKit-<version>-darwin-x64.tar.gz`
 3. Распакуй архив в удобную папку.
 4. Запусти:
    - Windows: `DotaStreamKit.exe`
@@ -399,11 +399,11 @@ The dashboard contains a server mode, but this README intentionally covers only 
    https://github.com/Seno47/DotaStreamKit/releases
    ```
 
-2. Download the archive for your system:
-   - Windows: `DotaStreamKit-1.0.0-win-x64.zip`
-   - Linux Debian/Ubuntu x64: `DotaStreamKit-1.0.0-linux-x64.tar.gz`
-   - macOS Apple Silicon: `DotaStreamKit-1.0.0-darwin-arm64.tar.gz`
-   - macOS Intel: `DotaStreamKit-1.0.0-darwin-x64.tar.gz`
+2. Open the latest release and download the archive for your system:
+   - Windows: `DotaStreamKit-<version>-win-x64.zip`
+   - Linux Debian/Ubuntu x64: `DotaStreamKit-<version>-linux-x64.tar.gz`
+   - macOS Apple Silicon: `DotaStreamKit-<version>-darwin-arm64.tar.gz`
+   - macOS Intel: `DotaStreamKit-<version>-darwin-x64.tar.gz`
 3. Extract it.
 4. Run:
    - Windows: `DotaStreamKit.exe`
@@ -673,10 +673,10 @@ npm run build:mac
 The archives are written to:
 
 ```text
-dist/DotaStreamKit-1.0.0-win-x64.zip
-dist/DotaStreamKit-1.0.0-linux-x64.tar.gz
-dist/DotaStreamKit-1.0.0-darwin-arm64.tar.gz
-dist/DotaStreamKit-1.0.0-darwin-x64.tar.gz
+dist/DotaStreamKit-<version>-win-x64.zip
+dist/DotaStreamKit-<version>-linux-x64.tar.gz
+dist/DotaStreamKit-<version>-darwin-arm64.tar.gz
+dist/DotaStreamKit-<version>-darwin-x64.tar.gz
 ```
 
 Local data, config, OAuth tokens, uploaded screenshots, and generated assets are stored in `data/`. This folder is ignored by Git.
