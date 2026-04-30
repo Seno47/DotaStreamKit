@@ -1480,6 +1480,43 @@ async function maybeAutomatePrediction(previous, gsi) {
   if (!runtime.state.twitchToken?.accessToken) return;
 
   syncActivePredictionMatchId(gsi);
+  const active = runtime.state.activePrediction;
+  if (active && ['ACTIVE', 'LOCKED'].includes(active.status)) {
+    if (settings.autoCancelInvalidGame) {
+      await maybeCancelPredictionForInvalidGame(previous, gsi);
+    }
+
+    const latestAfterCancel = runtime.state.activePrediction;
+    if (latestAfterCancel && ['ACTIVE', 'LOCKED'].includes(latestAfterCancel.status)) {
+      if (latestAfterCancel.status === 'ACTIVE' && settings.autoLockAtGameSeconds > 0 && gsi.clockTime >= settings.autoLockAtGameSeconds) {
+        try {
+          await twitchEndPrediction(latestAfterCancel.id, 'LOCKED');
+          logEvent('twitch', 'Prediction locked automatically');
+        } catch (error) {
+          logEvent('twitch', `Auto lock failed: ${error.message}`);
+        }
+      }
+
+      const result = inferPredictionResult(gsi);
+      if (settings.autoResolve && result) {
+        const latestActive = runtime.state.activePrediction || latestAfterCancel;
+        const outcome = latestActive.outcomes.find((item) => item.kind === result
+          || (result === 'yes' && item.kind === 'win')
+          || (result === 'no' && item.kind === 'lose'));
+        if (outcome) {
+          try {
+            await twitchEndPrediction(latestActive.id, 'RESOLVED', outcome.id);
+            logEvent('twitch', `Prediction resolved automatically: ${outcome.title}`);
+          } catch (error) {
+            logEvent('twitch', `Auto resolve failed: ${error.message}`);
+          }
+        }
+      }
+    }
+  } else {
+    clearPredictionCancelCandidate();
+  }
+
   if (settings.autoCreate && !runtime.state.activePrediction && shouldAutoCreatePredictionAfterPick(previous, gsi)) {
     const isLive = await isBroadcasterLive();
     if (!isLive) {
@@ -1490,41 +1527,6 @@ async function maybeAutomatePrediction(previous, gsi) {
       } catch (error) {
         logEvent('twitch', `Auto prediction failed: ${error.message}`);
       }
-    }
-  }
-
-  const active = runtime.state.activePrediction;
-  if (!active || !['ACTIVE', 'LOCKED'].includes(active.status)) {
-    clearPredictionCancelCandidate();
-    return;
-  }
-
-  if (settings.autoCancelInvalidGame) {
-    const canceled = await maybeCancelPredictionForInvalidGame(previous, gsi);
-    if (canceled) return;
-  }
-
-  if (active.status === 'ACTIVE' && settings.autoLockAtGameSeconds > 0 && gsi.clockTime >= settings.autoLockAtGameSeconds) {
-    try {
-      await twitchEndPrediction(active.id, 'LOCKED');
-      logEvent('twitch', 'Prediction locked automatically');
-    } catch (error) {
-      logEvent('twitch', `Auto lock failed: ${error.message}`);
-    }
-  }
-
-  const result = inferPredictionResult(gsi);
-  if (settings.autoResolve && result) {
-    const latestActive = runtime.state.activePrediction || active;
-    const outcome = latestActive.outcomes.find((item) => item.kind === result
-      || (result === 'yes' && item.kind === 'win')
-      || (result === 'no' && item.kind === 'lose'));
-    if (!outcome) return;
-    try {
-      await twitchEndPrediction(latestActive.id, 'RESOLVED', outcome.id);
-      logEvent('twitch', `Prediction resolved automatically: ${outcome.title}`);
-    } catch (error) {
-      logEvent('twitch', `Auto resolve failed: ${error.message}`);
     }
   }
 }
