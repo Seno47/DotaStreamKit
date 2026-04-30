@@ -27,6 +27,7 @@ const queueAutoOnDelayMs = 0;
 const queueAutoOffDelayMs = 2500;
 const queueAutoStaleKeepMs = 10 * 60 * 1000;
 const autoPredictionRetryMs = 30000;
+const activePredictionSyncMs = 15000;
 const inGameStatePattern = /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS|POST_GAME/i;
 const queueSearchPattern = /queue|search|matchmaking|match_making|find.?match|finding.?match|game.?search|party.?search/i;
 const dotaProcessName = 'dota2.exe';
@@ -343,6 +344,8 @@ const runtime = {
     predictionCancelCandidate: null,
     lastAutoPredictionAttempt: null,
     autoPredictionCreatedKey: null,
+    autoPredictionSuppressedKey: null,
+    activePredictionSyncedAt: null,
     events: []
   }
 };
@@ -396,6 +399,8 @@ runtime.state.dota = {
 };
 runtime.state.lastAutoPredictionAttempt = null;
 runtime.state.autoPredictionCreatedKey = null;
+runtime.state.autoPredictionSuppressedKey = null;
+runtime.state.activePredictionSyncedAt = null;
 await refreshDotaProcessState();
 runtime.state.protection = computeProtection(runtime.config, runtime.state.gsi);
 await restoreTwitchStatus();
@@ -459,6 +464,7 @@ setInterval(() => {
 
 async function refreshRuntimePresence() {
   const processChanged = await refreshDotaProcessState();
+  syncOwnedActivePredictionFromTwitch().catch((error) => logEvent('twitch', `Active prediction sync failed: ${error.message}`));
   const hasSeenGsi = Boolean(runtime.state.gsi.lastSeenAt);
   const connected = hasSeenGsi && Date.now() - Date.parse(runtime.state.gsi.lastSeenAt) < 15000;
   if (hasSeenGsi && !connected) {
@@ -1639,6 +1645,7 @@ async function maybeAutomatePrediction(previous, gsi) {
   if (!runtime.state.twitchToken?.accessToken) return;
 
   syncActivePredictionMatchId(gsi);
+  await syncOwnedActivePredictionFromTwitch();
   const active = runtime.state.activePrediction;
   if (active && ['ACTIVE', 'LOCKED'].includes(active.status)) {
     if (settings.autoCancelInvalidGame) {
@@ -1699,6 +1706,7 @@ async function maybeAutomatePrediction(previous, gsi) {
         if (settings.forceStreamOnline) {
           logEvent('twitch', 'Auto prediction stream status override is enabled');
         }
+        if (await suppressAutoPredictionWhenExternalPredictionExists(gsi)) return;
         await createPredictionFromSettings({}, { automatic: true });
       }
     } catch (error) {
@@ -1802,10 +1810,21 @@ function shouldAutoCreatePredictionAfterPick(previous, gsi) {
 function shouldRetryAutoPrediction(gsi) {
   const key = autoPredictionKey(gsi);
   if (runtime.state.autoPredictionCreatedKey === key) return false;
+  if (runtime.state.autoPredictionSuppressedKey === key) return false;
   const attempt = runtime.state.lastAutoPredictionAttempt;
   if (!attempt || attempt.key !== key) return true;
   const attemptedAt = Date.parse(attempt.at || '');
   return !Number.isFinite(attemptedAt) || Date.now() - attemptedAt >= autoPredictionRetryMs;
+}
+
+async function suppressAutoPredictionWhenExternalPredictionExists(gsi) {
+  const external = await fetchActiveTwitchPrediction();
+  if (!external || isCurrentOwnedPredictionId(external.id)) return false;
+
+  runtime.state.autoPredictionSuppressedKey = autoPredictionKey(gsi);
+  await persistState();
+  logEvent('twitch', `Auto prediction skipped: another Twitch prediction is already active (${external.title || external.id})`);
+  return true;
 }
 
 function markAutoPredictionAttempt(gsi) {
@@ -1831,6 +1850,46 @@ function syncActivePredictionMatchId(gsi) {
   if (!runtime.state.activePrediction || runtime.state.activePredictionMatchId) return;
   const matchId = gsi.activeMatchId || gsi.matchId;
   if (matchId) runtime.state.activePredictionMatchId = matchId;
+}
+
+async function syncOwnedActivePredictionFromTwitch({ force = false } = {}) {
+  const active = runtime.state.activePrediction;
+  if (!active?.id || !['ACTIVE', 'LOCKED'].includes(active.status)) return active || null;
+
+  const lastSync = Date.parse(runtime.state.activePredictionSyncedAt || '');
+  if (!force && Number.isFinite(lastSync) && Date.now() - lastSync < activePredictionSyncMs) return active;
+
+  let latest;
+  try {
+    latest = await fetchPredictionById(active.id);
+  } catch (error) {
+    logEvent('twitch', `Active prediction sync failed: ${error.message}`);
+    return active;
+  }
+
+  runtime.state.activePredictionSyncedAt = new Date().toISOString();
+  if (!latest) {
+    clearActivePredictionState();
+    await persistState();
+    broadcast();
+    logEvent('twitch', `Our prediction disappeared on Twitch: ${active.title || active.id}`);
+    return null;
+  }
+
+  const meta = runtime.state.activePredictionMeta;
+  const normalized = normalizePrediction(latest, meta?.outcomes?.yesTitle, meta?.outcomes?.noTitle, meta);
+  if (['RESOLVED', 'CANCELED'].includes(normalized.status)) {
+    clearActivePredictionState();
+    await persistState();
+    broadcast();
+    logEvent('twitch', `Our prediction was ${normalized.status.toLowerCase()} outside DotaStreamKit: ${normalized.title}`);
+    return null;
+  }
+
+  runtime.state.activePrediction = normalized;
+  await persistState();
+  broadcast();
+  return normalized;
 }
 
 async function maybeCancelPredictionForInvalidGame(previous, gsi) {
@@ -1936,18 +1995,39 @@ function clearPredictionCancelCandidate() {
 
 async function refreshActivePredictionFromTwitch(active) {
   if (!active?.id) return active;
-  const broadcaster = requireTwitchTargetBroadcaster();
-  if (!broadcaster) throw new Error('Twitch is not authenticated');
-  const params = new URLSearchParams({ broadcaster_id: broadcaster, id: active.id });
-  const result = await twitchRequest(`/predictions?${params}`);
-  const item = result.data?.[0];
+  const item = await fetchPredictionById(active.id);
   if (!item) throw new Error('Twitch did not return the active prediction');
   const meta = runtime.state.activePredictionMeta;
   const normalized = normalizePrediction(item, meta?.outcomes?.yesTitle, meta?.outcomes?.noTitle, meta);
   runtime.state.activePrediction = normalized;
+  runtime.state.activePredictionSyncedAt = new Date().toISOString();
   await persistState();
   broadcast();
   return normalized;
+}
+
+async function fetchPredictionById(id) {
+  const broadcaster = requireTwitchTargetBroadcaster();
+  if (!broadcaster) throw new Error('Twitch is not authenticated');
+  const params = new URLSearchParams({ broadcaster_id: broadcaster, id });
+  const result = await twitchRequest(`/predictions?${params}`);
+  return result.data?.[0] || null;
+}
+
+async function fetchActiveTwitchPrediction() {
+  const broadcaster = requireTwitchTargetBroadcaster();
+  if (!broadcaster) throw new Error('Twitch is not authenticated');
+  const params = new URLSearchParams({ broadcaster_id: broadcaster, first: '20' });
+  const result = await twitchRequest(`/predictions?${params}`);
+  return (result.data || []).find((item) => ['ACTIVE', 'LOCKED'].includes(item.status)) || null;
+}
+
+function clearActivePredictionState() {
+  runtime.state.activePrediction = null;
+  runtime.state.activePredictionMatchId = null;
+  runtime.state.activePredictionMeta = null;
+  runtime.state.predictionCancelCandidate = null;
+  runtime.state.activePredictionSyncedAt = null;
 }
 
 function isPredictionUncontested(prediction) {
@@ -2410,6 +2490,7 @@ async function createPrediction(req, res) {
 }
 
 async function createPredictionFromSettings(overrides = {}, options = {}) {
+  await syncOwnedActivePredictionFromTwitch({ force: true });
   if (runtime.state.activePrediction && ['ACTIVE', 'LOCKED'].includes(runtime.state.activePrediction.status)) {
     throw new Error('A prediction is already active or locked');
   }
@@ -2430,6 +2511,7 @@ async function createPredictionFromSettings(overrides = {}, options = {}) {
   runtime.state.activePrediction = normalizePrediction(item, draft.yesTitle, draft.noTitle, draft.meta);
   runtime.state.activePredictionMatchId = runtime.state.gsi.activeMatchId || runtime.state.gsi.matchId || null;
   runtime.state.predictionCancelCandidate = null;
+  runtime.state.activePredictionSyncedAt = new Date().toISOString();
   if (options.automatic) markAutoPredictionCreated(runtime.state.gsi);
   await persistState();
   logEvent('twitch', `Prediction created: ${draft.title}`);
@@ -2584,21 +2666,40 @@ async function twitchEndPrediction(id, status, winningOutcomeId = null) {
     if (!winningOutcomeId) throw new Error('winningOutcomeId is required');
     params.set('winning_outcome_id', winningOutcomeId);
   }
-  const result = await twitchRequest(`/predictions?${params}`, { method: 'PATCH' });
+  let result;
+  try {
+    result = await twitchRequest(`/predictions?${params}`, { method: 'PATCH' });
+  } catch (error) {
+    if (isCurrentOwnedPredictionId(id) && isMissingTwitchPredictionError(error)) {
+      const title = runtime.state.activePrediction?.title || id;
+      clearActivePredictionState();
+      await persistState();
+      broadcast();
+      logEvent('twitch', `Our prediction no longer exists on Twitch: ${title}`);
+    }
+    throw error;
+  }
   const item = result.data?.[0];
   if (item) {
     const meta = runtime.state.activePredictionMeta;
     runtime.state.activePrediction = normalizePrediction(item, meta?.outcomes?.yesTitle, meta?.outcomes?.noTitle, meta);
     if (['RESOLVED', 'CANCELED'].includes(item.status)) {
-      runtime.state.activePrediction = null;
-      runtime.state.activePredictionMatchId = null;
-      runtime.state.activePredictionMeta = null;
-      runtime.state.predictionCancelCandidate = null;
+      clearActivePredictionState();
+    } else {
+      runtime.state.activePredictionSyncedAt = new Date().toISOString();
     }
     await persistState();
     broadcast();
   }
   return result;
+}
+
+function isCurrentOwnedPredictionId(id) {
+  return Boolean(runtime.state.activePrediction?.id) && String(runtime.state.activePrediction.id) === String(id);
+}
+
+function isMissingTwitchPredictionError(error) {
+  return /Twitch 404|not found|does not exist/i.test(String(error?.message || ''));
 }
 
 function normalizePrediction(item, yesTitle = runtime.config.predictions.winTitle, noTitle = runtime.config.predictions.loseTitle, meta = null) {
