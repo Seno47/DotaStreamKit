@@ -179,6 +179,7 @@ const runtime = {
       playerHeroPicked: false,
       draftActiveTeam: null,
       ownPickPhaseEnded: false,
+      draftCycle: 0,
       queueSearchSignal: false,
       inGameScreen: false,
       leftGameView: false
@@ -235,6 +236,7 @@ runtime.state.gsi = {
   playerHeroPicked: false,
   draftActiveTeam: null,
   ownPickPhaseEnded: false,
+  draftCycle: 0,
   queueSearchSignal: false,
   inGameScreen: false,
   leftGameView: false
@@ -313,6 +315,14 @@ async function refreshRuntimePresence() {
   }
   const connectionChanged = runtime.state.gsi.connected !== connected;
   runtime.state.gsi.connected = connected;
+  if (connectionChanged && !connected) {
+    runtime.state.gsi.gameState = null;
+    runtime.state.gsi.playerHeroPicked = false;
+    runtime.state.gsi.draftActiveTeam = null;
+    runtime.state.gsi.ownPickPhaseEnded = false;
+    runtime.state.gsi.inGameScreen = false;
+    runtime.state.gsi.leftGameView = false;
+  }
   const protection = computeProtection(runtime.config, runtime.state.gsi);
   const protectionChanged = !sameProtection(runtime.state.protection, protection);
   if (processChanged || connectionChanged || protectionChanged) {
@@ -1167,21 +1177,22 @@ async function handleGsi(req, res) {
   const draft = payload.draft || {};
   const gameState = map.game_state || null;
   const matchId = map.matchid || map.match_id || null;
+  const lifecycle = inferGsiLifecycle(previous, gameState, matchId);
   const playerActivity = player.activity || null;
   const playerTeam = normalizeTeam(player.team_name || player.team || player.activity);
   const teamStats = collectTeamStats(payload, playerTeam);
-  const heroName = hero.name || hero.localized_name || previous.heroName || null;
-  const heroId = hero.id ?? hero.hero_id ?? previous.heroId ?? null;
+  const heroName = hero.name || hero.localized_name || (!lifecycle.newDraft ? previous.heroName : null) || null;
+  const heroId = hero.id ?? hero.hero_id ?? (!lifecycle.newDraft ? previous.heroId : null) ?? null;
   const kills = statNumber(player.kills, previous.kills);
   const deaths = statNumber(player.deaths, previous.deaths);
   const assists = statNumber(player.assists, previous.assists);
   const lastHits = statNumber(player.last_hits ?? player.lastHits, previous.lastHits);
   const denies = statNumber(player.denies, previous.denies);
   const level = statNumber(hero.level, previous.level);
-  const playerHeroPicked = inferPlayerHeroPicked(previous, gameState, hero);
+  const playerHeroPicked = inferPlayerHeroPicked(previous, gameState, hero, lifecycle);
   const draftActiveTeam = inferDraftActiveTeam(draft);
-  const ownPickPhaseEnded = inferOwnPickPhaseEnded({ gameState, playerHeroPicked, draftActiveTeam, playerTeam });
-  const activeMatchId = inferActiveMatchId(previous, gameState, matchId);
+  const ownPickPhaseEnded = inferOwnPickPhaseEnded({ previous, gameState, playerHeroPicked, draftActiveTeam, playerTeam, lifecycle });
+  const activeMatchId = inferActiveMatchId(previous, gameState, matchId, lifecycle);
   const queueSearchSignal = inferQueueSearchSignal(payload);
   const inGameScreen = inferInGameScreen(gameState, playerActivity);
   const leftGameView = inferLeftGameView({
@@ -1213,6 +1224,7 @@ async function handleGsi(req, res) {
     playerHeroPicked,
     draftActiveTeam,
     ownPickPhaseEnded,
+    draftCycle: lifecycle.draftCycle,
     queueSearchSignal,
     inGameScreen,
     leftGameView
@@ -1326,9 +1338,26 @@ function objectHasQueueSearchSignal(value, depth) {
   return Object.entries(value).some(([key, item]) => queueSearchPattern.test(key) || objectHasQueueSearchSignal(item, depth + 1));
 }
 
-function inferPlayerHeroPicked(previous, gameState, hero) {
+function inferGsiLifecycle(previous, gameState, matchId) {
+  const previousState = String(previous.gameState || '');
+  const state = String(gameState || '');
+  const heroSelection = /HERO_SELECTION/i.test(state);
+  const wasHeroSelection = /HERO_SELECTION/i.test(previousState);
+  const matchChanged = Boolean(matchId && previous.activeMatchId && String(matchId) !== String(previous.activeMatchId));
+  const returnedToDraft = heroSelection && !wasHeroSelection;
+  const newDraft = heroSelection && (returnedToDraft || matchChanged || !previous.connected);
+  return {
+    matchChanged,
+    returnedToDraft,
+    newDraft,
+    draftCycle: newDraft ? Number(previous.draftCycle || 0) + 1 : Number(previous.draftCycle || 0)
+  };
+}
+
+function inferPlayerHeroPicked(previous, gameState, hero, lifecycle = {}) {
   if (/POST_GAME/i.test(String(gameState || ''))) return false;
   const hasHero = Boolean(hero?.name || hero?.localized_name || hero?.id || hero?.hero_id);
+  if (/HERO_SELECTION/i.test(String(gameState || '')) && lifecycle.newDraft && !hasHero) return false;
   return hasHero || Boolean(previous.playerHeroPicked);
 }
 
@@ -1345,16 +1374,21 @@ function inferDraftActiveTeam(draft) {
   return null;
 }
 
-function inferOwnPickPhaseEnded({ gameState, playerHeroPicked, draftActiveTeam, playerTeam }) {
-  if (!/HERO_SELECTION/i.test(String(gameState || ''))) return false;
+function inferOwnPickPhaseEnded({ previous, gameState, playerHeroPicked, draftActiveTeam, playerTeam, lifecycle = {} }) {
+  const state = String(gameState || '');
+  if (!/HERO_SELECTION/i.test(state)) {
+    if (/STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS/i.test(state) && previous?.playerHeroPicked && !lifecycle.newDraft) return true;
+    return false;
+  }
   if (!playerHeroPicked) return false;
   if (draftActiveTeam && playerTeam) return draftActiveTeam !== playerTeam;
   return true;
 }
 
-function inferActiveMatchId(previous, gameState, matchId) {
+function inferActiveMatchId(previous, gameState, matchId, lifecycle = {}) {
   if (/POST_GAME/i.test(String(gameState || ''))) return null;
   if (matchId) return matchId;
+  if (lifecycle.newDraft) return null;
   return previous.activeMatchId || previous.matchId || null;
 }
 
@@ -1583,7 +1617,7 @@ function predictionMetricValue(metric, gsi) {
 
 function shouldAutoCreatePredictionAfterPick(previous, gsi) {
   if (!gsi.playerHeroPicked || !gsi.ownPickPhaseEnded) return false;
-  if (previous.playerHeroPicked && previous.ownPickPhaseEnded) return false;
+  if (previous.playerHeroPicked && previous.ownPickPhaseEnded && Number(previous.draftCycle || 0) === Number(gsi.draftCycle || 0)) return false;
   const state = String(gsi.gameState || '');
   return /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS/i.test(state);
 }

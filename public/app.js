@@ -691,10 +691,10 @@ function render(data) {
   els.minimapStyle.value = config.protection.minimapStyle || 'realistic';
   els.queueAutoMode.value = config.protection.queueAutoMode || 'menu_search';
   els.queueMode.value = config.protection.queueMode || 'partial';
-  toggleButton(els.manualDraft, config.protection.manualDraft || state.protection.draft);
-  toggleButton(els.manualMinimap, config.protection.manualMinimap || state.protection.minimap);
-  toggleButton(els.manualTopBar, config.protection.manualTopBar || state.protection.topBar);
-  toggleButton(els.manualQueue, config.protection.manualQueue || state.protection.queue);
+  toggleButton(els.manualDraft, config.protection.manualDraft, state.protection.draft);
+  toggleButton(els.manualMinimap, config.protection.manualMinimap, state.protection.minimap);
+  toggleButton(els.manualTopBar, config.protection.manualTopBar, state.protection.topBar);
+  toggleButton(els.manualQueue, config.protection.manualQueue, state.protection.queue);
 
   els.gameState.textContent = state.gsi.gameState || '-';
   els.gameScreen.textContent = state.gsi.leftGameView ? t('gameScreenMenu') : state.gsi.inGameScreen ? t('gameScreenGame') : '-';
@@ -745,8 +745,10 @@ function updateConditionalVisibility(config) {
   });
 }
 
-function toggleButton(button, enabled) {
-  button.classList.toggle('active', Boolean(enabled));
+function toggleButton(button, manualEnabled, effectiveEnabled) {
+  button.classList.toggle('active', Boolean(manualEnabled));
+  button.classList.toggle('auto-active', Boolean(effectiveEnabled) && !manualEnabled);
+  button.setAttribute('aria-pressed', manualEnabled ? 'true' : 'false');
 }
 
 function setInputValue(input, value) {
@@ -1153,10 +1155,18 @@ els.minimapSize.addEventListener('change', () => saveProtection({ minimapSize: e
 els.minimapSide.addEventListener('change', () => saveProtection({ minimapSide: els.minimapSide.value }).catch(alert));
 els.minimapStyle.addEventListener('change', () => saveProtection({ minimapStyle: els.minimapStyle.value }).catch(alert));
 els.queueMode.addEventListener('change', () => saveProtection({ queueMode: els.queueMode.value }).catch(alert));
-els.manualDraft.addEventListener('click', () => saveProtection({ manualDraft: !snapshot.config.protection.manualDraft }).catch(alert));
-els.manualMinimap.addEventListener('click', () => saveProtection({ manualMinimap: !snapshot.config.protection.manualMinimap }).catch(alert));
-els.manualTopBar.addEventListener('click', () => saveProtection({ manualTopBar: !snapshot.config.protection.manualTopBar }).catch(alert));
-els.manualQueue.addEventListener('click', () => saveProtection({ manualQueue: !snapshot.config.protection.manualQueue }).catch(alert));
+els.manualDraft.addEventListener('click', () => saveProtection({ manualDraft: nextManualProtectionState('manualDraft', 'draft') }).catch(alert));
+els.manualMinimap.addEventListener('click', () => saveProtection({ manualMinimap: nextManualProtectionState('manualMinimap', 'minimap') }).catch(alert));
+els.manualTopBar.addEventListener('click', () => saveProtection({ manualTopBar: nextManualProtectionState('manualTopBar', 'topBar') }).catch(alert));
+els.manualQueue.addEventListener('click', () => saveProtection({ manualQueue: nextManualProtectionState('manualQueue', 'queue') }).catch(alert));
+
+function nextManualProtectionState(configKey, stateKey) {
+  const manualEnabled = Boolean(snapshot?.config?.protection?.[configKey]);
+  const effectiveEnabled = Boolean(snapshot?.state?.protection?.[stateKey]);
+  if (manualEnabled) return false;
+  if (effectiveEnabled) return false;
+  return true;
+}
 
 els.clientId.addEventListener('change', () => saveTwitchAppConfig().catch(alert));
 els.clientSecret.addEventListener('change', () => saveTwitchAppConfig().catch(alert));
