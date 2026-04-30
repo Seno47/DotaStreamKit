@@ -72,6 +72,7 @@ const els = {
 
 let snapshot = null;
 let lastTemplateInput = null;
+let predictionConfigSaveTimer = null;
 
 const translations = {
   ru: {
@@ -1284,6 +1285,7 @@ document.addEventListener('change', (event) => {
     const card = event.target.closest('.prediction-type');
     if (card) updateCustomConditionFieldVisibility(card);
     renderPredictionTypePreviews();
+    schedulePredictionConfigSave();
   }
 });
 document.addEventListener('click', (event) => {
@@ -1295,16 +1297,20 @@ document.addEventListener('click', (event) => {
 els.selectedPredictionType.addEventListener('change', () => {
   renderPredictionTypeVisibility();
   renderPredictionTypePreviews();
+  schedulePredictionConfigSave();
 });
 els.predictionSelectionMode.addEventListener('change', () => {
   renderPredictionTypeVisibility();
   renderPredictionTypePreviews();
+  schedulePredictionConfigSave();
 });
 els.forceStreamOnline.addEventListener('change', () => {
   els.forceStreamOnlineHint.hidden = !els.forceStreamOnline.checked;
+  schedulePredictionConfigSave();
 });
 els.cancelUncontestedPrediction.addEventListener('change', () => {
   els.cancelUncontestedHint.hidden = !els.cancelUncontestedPrediction.checked;
+  schedulePredictionConfigSave();
 });
 els.customPredictionCondition.addEventListener('change', updateCustomBuilderFieldVisibility);
 els.variableChips.forEach((button) => {
@@ -1312,7 +1318,16 @@ els.variableChips.forEach((button) => {
 });
 
 async function savePredictionConfig() {
+  clearTimeout(predictionConfigSaveTimer);
+  predictionConfigSaveTimer = null;
   await api('/api/config', { predictions: predictionConfigFromForm() });
+}
+
+function schedulePredictionConfigSave() {
+  clearTimeout(predictionConfigSaveTimer);
+  predictionConfigSaveTimer = setTimeout(() => {
+    savePredictionConfig().catch((error) => console.error('Prediction config autosave failed', error));
+  }, 300);
 }
 
 function predictionConfigFromForm() {
