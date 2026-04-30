@@ -118,6 +118,7 @@ const defaultConfig = {
   },
   predictions: {
     autoCreate: false,
+    forceStreamOnline: false,
     autoLockAtGameSeconds: 60,
     autoResolve: false,
     autoCancelInvalidGame: true,
@@ -1525,11 +1526,14 @@ async function maybeAutomatePrediction(previous, gsi) {
   }
 
   if (settings.autoCreate && !runtime.state.activePrediction && shouldAutoCreatePredictionAfterPick(previous, gsi)) {
-    const isLive = await isBroadcasterLive();
+    const isLive = settings.forceStreamOnline || await isBroadcasterLive();
     if (!isLive) {
       logEvent('twitch', 'Auto prediction skipped: Twitch stream is offline');
     } else {
       try {
+        if (settings.forceStreamOnline) {
+          logEvent('twitch', 'Auto prediction stream status override is enabled');
+        }
         await createPredictionFromSettings();
       } catch (error) {
         logEvent('twitch', `Auto prediction failed: ${error.message}`);
@@ -1808,6 +1812,7 @@ function resetTwitchStreamStatus() {
 
 function normalizePredictionSettings(settings) {
   if (!['selected', 'random'].includes(settings.selectionMode)) settings.selectionMode = 'selected';
+  settings.forceStreamOnline = settings.forceStreamOnline === true;
   settings.titleTemplate = predictionTextOrDefault(settings.titleTemplate, defaultConfig.predictions.titleTemplate, 120);
   settings.winTitle = predictionTextOrDefault(settings.winTitle, defaultConfig.predictions.winTitle, 25);
   settings.loseTitle = predictionTextOrDefault(settings.loseTitle, defaultConfig.predictions.loseTitle, 25);

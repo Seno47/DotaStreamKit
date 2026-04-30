@@ -33,6 +33,8 @@ const els = {
   predictionTypeForm: document.querySelector('#predictionTypeForm'),
   predictionWindow: document.querySelector('#predictionWindow'),
   autoCreate: document.querySelector('#autoCreate'),
+  forceStreamOnline: document.querySelector('#forceStreamOnline'),
+  forceStreamOnlineHint: document.querySelector('#forceStreamOnlineHint'),
   autoResolve: document.querySelector('#autoResolve'),
   autoCancelInvalidGame: document.querySelector('#autoCancelInvalidGame'),
   predictionSelectionMode: document.querySelector('#predictionSelectionMode'),
@@ -149,6 +151,9 @@ const translations = {
     outcome1: 'Исход 1',
     outcome2: 'Исход 2',
     autoCreate: 'Создавать автоматически',
+    forceStreamOnline: 'Считать стрим онлайн для авто-прогнозов',
+    forceStreamOnlineHint: 'Если включить, бот будет создавать авто-прогнозы даже когда Twitch показывает offline. Используй только если статус канала определяется неверно.',
+    streamForcedShort: 'принудительно online',
     autoResolve: 'Закрывать автоматически',
     autoCancelInvalidGame: 'Отменять незасчитанную игру',
     typeMode: 'Режим типов',
@@ -329,6 +334,9 @@ const translations = {
     outcome1: 'Outcome 1',
     outcome2: 'Outcome 2',
     autoCreate: 'Create automatically',
+    forceStreamOnline: 'Treat stream as online for auto predictions',
+    forceStreamOnlineHint: 'When enabled, the bot creates automatic predictions even if Twitch reports the channel as offline. Use it only when Twitch status detection is wrong.',
+    streamForcedShort: 'forced online',
     autoResolve: 'Resolve automatically',
     autoCancelInvalidGame: 'Cancel invalid game',
     typeMode: 'Type mode',
@@ -546,6 +554,8 @@ function applyLanguage(config) {
   });
   setLabelText(els.predictionWindow.closest('label'), t('windowSec'));
   setLabelText(els.autoCreate.closest('label'), t('autoCreate'));
+  setLabelText(els.forceStreamOnline.closest('label'), t('forceStreamOnline'));
+  els.forceStreamOnlineHint.textContent = t('forceStreamOnlineHint');
   setLabelText(els.autoResolve.closest('label'), t('autoResolve'));
   setLabelText(els.autoCancelInvalidGame.closest('label'), t('autoCancelInvalidGame'));
   setLabelText(els.predictionSelectionMode.closest('label'), t('typeMode'));
@@ -673,11 +683,12 @@ function render(data) {
   els.gsiStatus.textContent = state.gsi.connected ? 'Dota GSI online' : 'Dota GSI offline';
   els.gsiStatus.className = `pill ${state.gsi.connected ? 'ok' : 'bad'}`;
   const liveSuffix = state.twitch.isLive === true ? ' / live' : state.twitch.isLive === false ? ' / offline' : '';
+  const forcedStreamSuffix = config.predictions?.forceStreamOnline ? ` / ${t('streamForcedShort')}` : '';
   const predictionChannel = state.twitch.effectiveBroadcasterLogin || state.twitch.broadcasterLogin || 'Twitch';
   els.twitchStatus.textContent = state.twitch.authenticated
     ? state.twitch.needsReconnect
       ? `Twitch: ${state.twitch.broadcasterLogin} / reconnect`
-      : `Twitch: ${predictionChannel}${liveSuffix}`
+      : `Twitch: ${predictionChannel}${liveSuffix}${forcedStreamSuffix}`
     : state.twitch.needsReconnect
       ? t('twitchReconnect')
       : t('twitchDisconnected');
@@ -721,6 +732,8 @@ function render(data) {
   }
   setInputValue(els.predictionWindow, config.predictions.windowSeconds);
   els.autoCreate.checked = config.predictions.autoCreate;
+  els.forceStreamOnline.checked = config.predictions.forceStreamOnline === true;
+  els.forceStreamOnlineHint.hidden = !els.forceStreamOnline.checked;
   els.autoResolve.checked = config.predictions.autoResolve;
   els.autoCancelInvalidGame.checked = config.predictions.autoCancelInvalidGame ?? true;
   els.predictionSelectionMode.value = config.predictions.selectionMode || 'selected';
@@ -1277,6 +1290,9 @@ els.predictionSelectionMode.addEventListener('change', () => {
   renderPredictionTypeVisibility();
   renderPredictionTypePreviews();
 });
+els.forceStreamOnline.addEventListener('change', () => {
+  els.forceStreamOnlineHint.hidden = !els.forceStreamOnline.checked;
+});
 els.customPredictionCondition.addEventListener('change', updateCustomBuilderFieldVisibility);
 els.variableChips.forEach((button) => {
   button.addEventListener('click', () => insertVariable(button.dataset.var));
@@ -1290,6 +1306,7 @@ function predictionConfigFromForm() {
   return {
     windowSeconds: Number(els.predictionWindow.value),
     autoCreate: els.autoCreate.checked,
+    forceStreamOnline: els.forceStreamOnline.checked,
     autoResolve: els.autoResolve.checked,
     autoCancelInvalidGame: els.autoCancelInvalidGame.checked,
     selectionMode: els.predictionSelectionMode.value,

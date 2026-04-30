@@ -403,6 +403,17 @@ dd {
   align-self: stretch;
 }
 
+.prediction-warning {
+  grid-column: 1 / -1;
+  margin: -2px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #6b4f2b;
+  border-radius: 7px;
+  background: rgba(82, 55, 20, 0.28);
+  color: #ffd7a1;
+  line-height: 1.4;
+}
+
 .check {
   display: inline-flex;
   align-items: center;
