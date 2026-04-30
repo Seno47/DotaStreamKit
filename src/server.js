@@ -97,8 +97,8 @@ const defaultConfig = {
     },
     draftMaskParts: [
       { left: 0, top: 178, width: 1920, height: 692 },
-      { left: 0, top: 870, width: 1234, height: 194 },
-      { left: 1720, top: 870, width: 200, height: 194 },
+      { left: 0, top: 870, width: 838, height: 194 },
+      { left: 1324, top: 870, width: 596, height: 194 },
       { left: 0, top: 1064, width: 1920, height: 16 }
     ],
     queueProfileRight: 398,
@@ -482,7 +482,14 @@ async function migrateConfig(config) {
     config.protection.minimapContentAreas = structuredClone(defaultConfig.protection.minimapContentAreas);
     changed = true;
   }
-  if (!Array.isArray(config.protection.draftMaskParts) || config.protection.draftMaskParts.length !== 4) {
+  const hasOldRightChatDraftCutout = Array.isArray(config.protection.draftMaskParts)
+    && config.protection.draftMaskParts.length === 4
+    && Number(config.protection.draftMaskParts[1]?.left) === 0
+    && Number(config.protection.draftMaskParts[1]?.top) === 870
+    && Number(config.protection.draftMaskParts[1]?.width) === 1234
+    && Number(config.protection.draftMaskParts[2]?.left) === 1720
+    && Number(config.protection.draftMaskParts[2]?.top) === 870;
+  if (!Array.isArray(config.protection.draftMaskParts) || config.protection.draftMaskParts.length !== 4 || hasOldRightChatDraftCutout) {
     config.protection.draftMaskParts = structuredClone(defaultConfig.protection.draftMaskParts);
     changed = true;
   }
@@ -1801,6 +1808,9 @@ function resetTwitchStreamStatus() {
 
 function normalizePredictionSettings(settings) {
   if (!['selected', 'random'].includes(settings.selectionMode)) settings.selectionMode = 'selected';
+  settings.titleTemplate = predictionTextOrDefault(settings.titleTemplate, defaultConfig.predictions.titleTemplate, 120);
+  settings.winTitle = predictionTextOrDefault(settings.winTitle, defaultConfig.predictions.winTitle, 25);
+  settings.loseTitle = predictionTextOrDefault(settings.loseTitle, defaultConfig.predictions.loseTitle, 25);
   settings.types = merge(structuredClone(defaultConfig.predictions.types), settings.types || {});
   delete settings.types.custom_condition;
   for (const type of Object.keys(settings.types)) {
@@ -1819,10 +1829,21 @@ function normalizePredictionSettings(settings) {
       config.minMinute = clampInt(config.minMinute, 1, 180);
       config.maxMinute = clampInt(config.maxMinute, config.minMinute, 180);
     }
-    config.titleTemplate = String(config.titleTemplate || defaultConfig.predictions.types[type]?.titleTemplate || '').slice(0, 120);
-    config.yesTitle = String(config.yesTitle || 'Да').slice(0, 25);
-    config.noTitle = String(config.noTitle || 'Нет').slice(0, 25);
+    const defaults = defaultConfig.predictions.types[type] || {};
+    config.titleTemplate = predictionTextOrDefault(config.titleTemplate, defaults.titleTemplate || '', 120);
+    config.yesTitle = predictionTextOrDefault(config.yesTitle, defaults.yesTitle || 'Да', 25);
+    config.noTitle = predictionTextOrDefault(config.noTitle, defaults.noTitle || 'Нет', 25);
   }
+}
+
+function predictionTextOrDefault(value, fallback, maxLength) {
+  const text = String(value || '');
+  if (!text.trim() || looksLikeCorruptedText(text)) return String(fallback || '').slice(0, maxLength);
+  return text.slice(0, maxLength);
+}
+
+function looksLikeCorruptedText(value) {
+  return /\?{2,}/.test(String(value || ''));
 }
 
 function normalizeCustomPredictionTemplates(templates) {
@@ -1844,9 +1865,9 @@ function normalizeCustomPredictionTemplates(templates) {
       maxMinute: clampInt(template.maxMinute, minMinute, 180),
       condition,
       metric,
-      titleTemplate: String(template.titleTemplate || 'Custom prediction?').slice(0, 120),
-      yesTitle: String(template.yesTitle || 'Да').slice(0, 25),
-      noTitle: String(template.noTitle || 'Нет').slice(0, 25)
+      titleTemplate: predictionTextOrDefault(template.titleTemplate, 'Custom prediction?', 120),
+      yesTitle: predictionTextOrDefault(template.yesTitle, 'Да', 25),
+      noTitle: predictionTextOrDefault(template.noTitle, 'Нет', 25)
     };
   });
 }
