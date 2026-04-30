@@ -36,6 +36,8 @@ const els = {
   forceStreamOnline: document.querySelector('#forceStreamOnline'),
   forceStreamOnlineHint: document.querySelector('#forceStreamOnlineHint'),
   autoResolve: document.querySelector('#autoResolve'),
+  cancelUncontestedPrediction: document.querySelector('#cancelUncontestedPrediction'),
+  cancelUncontestedHint: document.querySelector('#cancelUncontestedHint'),
   autoCancelInvalidGame: document.querySelector('#autoCancelInvalidGame'),
   predictionSelectionMode: document.querySelector('#predictionSelectionMode'),
   selectedPredictionType: document.querySelector('#selectedPredictionType'),
@@ -155,6 +157,8 @@ const translations = {
     forceStreamOnlineHint: 'Если включить, бот будет создавать авто-прогнозы даже когда Twitch показывает offline. Используй только если статус канала определяется неверно.',
     streamForcedShort: 'принудительно online',
     autoResolve: 'Закрывать автоматически',
+    cancelUncontestedPrediction: 'Отменять, если один исход без ставок',
+    cancelUncontestedHint: 'Если после игры хотя бы на один исход не поставили баллы канала, бот отменит прогноз вместо выбора победившего исхода.',
     autoCancelInvalidGame: 'Отменять незасчитанную игру',
     typeMode: 'Режим типов',
     selectedMode: 'Один выбранный',
@@ -338,6 +342,8 @@ const translations = {
     forceStreamOnlineHint: 'When enabled, the bot creates automatic predictions even if Twitch reports the channel as offline. Use it only when Twitch status detection is wrong.',
     streamForcedShort: 'forced online',
     autoResolve: 'Resolve automatically',
+    cancelUncontestedPrediction: 'Cancel if one outcome has no points',
+    cancelUncontestedHint: 'After the game, if at least one outcome has no Channel Points, the bot cancels the prediction instead of resolving it.',
     autoCancelInvalidGame: 'Cancel invalid game',
     typeMode: 'Type mode',
     selectedMode: 'One selected',
@@ -557,6 +563,8 @@ function applyLanguage(config) {
   setLabelText(els.forceStreamOnline.closest('label'), t('forceStreamOnline'));
   els.forceStreamOnlineHint.textContent = t('forceStreamOnlineHint');
   setLabelText(els.autoResolve.closest('label'), t('autoResolve'));
+  setLabelText(els.cancelUncontestedPrediction.closest('label'), t('cancelUncontestedPrediction'));
+  els.cancelUncontestedHint.textContent = t('cancelUncontestedHint');
   setLabelText(els.autoCancelInvalidGame.closest('label'), t('autoCancelInvalidGame'));
   setLabelText(els.predictionSelectionMode.closest('label'), t('typeMode'));
   setOptionText(els.predictionSelectionMode, 'selected', t('selectedMode'));
@@ -735,6 +743,8 @@ function render(data) {
   els.forceStreamOnline.checked = config.predictions.forceStreamOnline === true;
   els.forceStreamOnlineHint.hidden = !els.forceStreamOnline.checked;
   els.autoResolve.checked = config.predictions.autoResolve;
+  els.cancelUncontestedPrediction.checked = config.predictions.cancelUncontestedPrediction === true;
+  els.cancelUncontestedHint.hidden = !els.cancelUncontestedPrediction.checked;
   els.autoCancelInvalidGame.checked = config.predictions.autoCancelInvalidGame ?? true;
   els.predictionSelectionMode.value = config.predictions.selectionMode || 'selected';
   syncPredictionTypeDefinitions(config.predictions);
@@ -1293,6 +1303,9 @@ els.predictionSelectionMode.addEventListener('change', () => {
 els.forceStreamOnline.addEventListener('change', () => {
   els.forceStreamOnlineHint.hidden = !els.forceStreamOnline.checked;
 });
+els.cancelUncontestedPrediction.addEventListener('change', () => {
+  els.cancelUncontestedHint.hidden = !els.cancelUncontestedPrediction.checked;
+});
 els.customPredictionCondition.addEventListener('change', updateCustomBuilderFieldVisibility);
 els.variableChips.forEach((button) => {
   button.addEventListener('click', () => insertVariable(button.dataset.var));
@@ -1308,6 +1321,7 @@ function predictionConfigFromForm() {
     autoCreate: els.autoCreate.checked,
     forceStreamOnline: els.forceStreamOnline.checked,
     autoResolve: els.autoResolve.checked,
+    cancelUncontestedPrediction: els.cancelUncontestedPrediction.checked,
     autoCancelInvalidGame: els.autoCancelInvalidGame.checked,
     selectionMode: els.predictionSelectionMode.value,
     selectedType: els.selectedPredictionType.value,

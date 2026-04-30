@@ -121,6 +121,7 @@ const defaultConfig = {
     forceStreamOnline: false,
     autoLockAtGameSeconds: 60,
     autoResolve: false,
+    cancelUncontestedPrediction: false,
     autoCancelInvalidGame: true,
     autoCancelDisconnectSeconds: 390,
     titleTemplate: 'Победа в этой игре?',
@@ -1507,7 +1508,20 @@ async function maybeAutomatePrediction(previous, gsi) {
 
       const result = inferPredictionResult(gsi);
       if (settings.autoResolve && result) {
-        const latestActive = runtime.state.activePrediction || latestAfterCancel;
+        let latestActive = runtime.state.activePrediction || latestAfterCancel;
+        if (settings.cancelUncontestedPrediction) {
+          try {
+            latestActive = await refreshActivePredictionFromTwitch(latestActive);
+            if (isPredictionUncontested(latestActive)) {
+              await twitchEndPrediction(latestActive.id, 'CANCELED');
+              logEvent('twitch', 'Prediction canceled automatically: one or more outcomes have no channel points');
+              return;
+            }
+          } catch (error) {
+            logEvent('twitch', `Uncontested prediction check failed: ${error.message}`);
+            return;
+          }
+        }
         const outcome = latestActive.outcomes.find((item) => item.kind === result
           || (result === 'yes' && item.kind === 'win')
           || (result === 'no' && item.kind === 'lose'));
@@ -1742,6 +1756,27 @@ function clearPredictionCancelCandidate() {
   if (runtime.state.predictionCancelCandidate) runtime.state.predictionCancelCandidate = null;
 }
 
+async function refreshActivePredictionFromTwitch(active) {
+  if (!active?.id) return active;
+  const broadcaster = requireTwitchTargetBroadcaster();
+  if (!broadcaster) throw new Error('Twitch is not authenticated');
+  const params = new URLSearchParams({ broadcaster_id: broadcaster, id: active.id });
+  const result = await twitchRequest(`/predictions?${params}`);
+  const item = result.data?.[0];
+  if (!item) throw new Error('Twitch did not return the active prediction');
+  const meta = runtime.state.activePredictionMeta;
+  const normalized = normalizePrediction(item, meta?.outcomes?.yesTitle, meta?.outcomes?.noTitle, meta);
+  runtime.state.activePrediction = normalized;
+  await persistState();
+  broadcast();
+  return normalized;
+}
+
+function isPredictionUncontested(prediction) {
+  const outcomes = Array.isArray(prediction?.outcomes) ? prediction.outcomes : [];
+  return outcomes.length >= 2 && outcomes.some((outcome) => Number(outcome.channelPoints || 0) <= 0);
+}
+
 function inferResult(gsi) {
   if (!gsi.winTeam || !gsi.playerTeam) return null;
   if (!/POST_GAME/i.test(String(gsi.gameState || '')) && !gsi.winTeam) return null;
@@ -1813,6 +1848,7 @@ function resetTwitchStreamStatus() {
 function normalizePredictionSettings(settings) {
   if (!['selected', 'random'].includes(settings.selectionMode)) settings.selectionMode = 'selected';
   settings.forceStreamOnline = settings.forceStreamOnline === true;
+  settings.cancelUncontestedPrediction = settings.cancelUncontestedPrediction === true;
   settings.titleTemplate = predictionTextOrDefault(settings.titleTemplate, defaultConfig.predictions.titleTemplate, 120);
   settings.winTitle = predictionTextOrDefault(settings.winTitle, defaultConfig.predictions.winTitle, 25);
   settings.loseTitle = predictionTextOrDefault(settings.loseTitle, defaultConfig.predictions.loseTitle, 25);

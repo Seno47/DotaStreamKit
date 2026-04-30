@@ -157,8 +157,10 @@
             <label class="check"><input type="checkbox" id="autoCreate"> Создавать автоматически</label>
             <label class="check"><input type="checkbox" id="forceStreamOnline"> Считать стрим онлайн для авто-прогнозов</label>
             <label class="check"><input type="checkbox" id="autoResolve"> Закрывать автоматически</label>
+            <label class="check"><input type="checkbox" id="cancelUncontestedPrediction"> Отменять, если один исход без ставок</label>
             <label class="check"><input type="checkbox" id="autoCancelInvalidGame"> Отменять незасчитанную игру</label>
             <p id="forceStreamOnlineHint" class="prediction-warning" hidden>Если включить, бот будет создавать авто-прогнозы даже когда Twitch показывает offline. Используй только если статус канала определяется неверно.</p>
+            <p id="cancelUncontestedHint" class="prediction-note" hidden>Если после игры хотя бы на один исход не поставили баллы канала, бот отменит прогноз вместо выбора победившего исхода.</p>
           </form>
           <div id="predictionTypes" class="prediction-types"></div>
           <form id="predictionTypeForm" class="prediction-grid">
