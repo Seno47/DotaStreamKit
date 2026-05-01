@@ -366,6 +366,17 @@ body {
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.85));
 }
 
+#streamerStats.calibrationMedal .streamerStatsMedalWrap {
+  width: 126px;
+  height: 126px;
+  margin-bottom: -24px;
+}
+
+#streamerStats.calibrationMedal .streamerStatsMedal {
+  width: 126px;
+  height: 126px;
+}
+
 .streamerStatsPips {
   position: absolute;
   left: -18px;

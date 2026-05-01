@@ -726,6 +726,8 @@ function applyStreamerStats(reference, protection, state) {
 
   const nodes = ensureStreamerStatsNodes();
   const medal = stats.medal;
+  const calibrationMedal = String(medal?.id || '') === 'calibration';
+  streamerStatsEl.classList.toggle('calibrationMedal', calibrationMedal);
   const hideDraftSummary = shouldHideStreamerSummaryDuringDraft(state, gameState);
   if (!hideDraftSummary && settings.showStreamerRankMedal !== false && medal?.id) {
     const src = `/assets/rank-medal-${encodeURIComponent(medal.id)}.png?v=${assetVersion(state)}`;
