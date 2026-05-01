@@ -201,7 +201,15 @@ function applyMatchIntel(slots, reference, settings, state) {
   const fullGameRanks = settings.rankDisplayMode === 'full_game';
   const preGameOnlyRanks = settings.rankDisplayMode === 'pre_game_only';
   const gameClockStarted = Number.isFinite(clockTime) && clockTime >= 0;
-  const withinNotableWindow = preGameState || (!preGameOnlyRanks && gameClockStarted && (fullGameRanks || clockTime <= rankCutoff));
+  const spectatingMatch = isSpectatingMatch(state);
+  const withinNotableWindow = preGameState || (
+    !preGameOnlyRanks
+    && (
+      gameClockStarted
+        ? (fullGameRanks || clockTime <= rankCutoff)
+        : spectatingMatch
+    )
+  );
   const showNames = enabled && settings.showPlayerRanks !== false && withinNotableWindow;
   const showFlags = enabled && settings.showPlayerFlags === true && withinNotableWindow;
   const playersByAccountId = new Map((intel.players || []).filter((player) => player?.accountId).map((player) => [String(player.accountId), player]));
@@ -255,11 +263,23 @@ function resolveAegisSlot(aegis, playersByAccountId) {
 
 function isMatchIntelActive(settings, state) {
   if (settings.enabled === false || !state.gsi?.connected) return false;
+  if (state.gsi?.leftGameView) return false;
   const gameState = String(state.gsi?.gameState || '');
   if (/POST_GAME|GAME_END|DISCONNECT/i.test(gameState)) return false;
   if (/PRE_GAME/i.test(gameState)) return true;
   if (gameState) return /GAME_IN_PROGRESS/i.test(gameState);
+  if (isSpectatingMatch(state)) return true;
   return Number.isFinite(Number(state.gsi?.clockTime)) && Number(state.gsi?.clockTime) >= 0;
+}
+
+function isSpectatingMatch(state) {
+  const activity = String(state.gsi?.playerActivity || '').toLowerCase();
+  const gameState = String(state.gsi?.gameState || '');
+  const players = state.matchIntel?.players || [];
+  return activity === 'spectating'
+    && /PRE_GAME|GAME_IN_PROGRESS/i.test(gameState)
+    && Array.isArray(players)
+    && players.some((player) => player?.accountId);
 }
 
 function setImageBadge(parent, className, visible, src, text) {

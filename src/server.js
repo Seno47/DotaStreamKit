@@ -1605,7 +1605,7 @@ async function handleGsi(req, res) {
 }
 
 function buildMatchIntel(payload, gsi, players) {
-  if (!runtime.config.protection.matchIntel?.enabled || isMatchIntelFinished(gsi)) {
+  if (!runtime.config.protection.matchIntel?.enabled || isMatchIntelFinished(gsi) || gsi.leftGameView) {
     return {
       matchId: gsi.activeMatchId || gsi.matchId || null,
       players,
@@ -1744,14 +1744,16 @@ function getCachedPlayerRank(accountId) {
 async function refreshNotablePlayerRanks(players) {
   if (!shouldShowNotablePlayers()) return;
   if (isMatchIntelFinished(runtime.state.gsi)) return;
+  if (runtime.state.gsi.leftGameView) return;
   const gameState = String(runtime.state.gsi.gameState || '');
   const preGameState = /PRE_GAME/i.test(gameState);
+  const spectatingMatch = isSpectatingMatch(runtime.state.gsi, players);
   const clockTime = Number(runtime.state.gsi.clockTime);
   const rankCutoff = Number(runtime.config.protection.matchIntel.rankDisplayMinutes || 12) * 60;
   const fullGameRanks = runtime.config.protection.matchIntel.rankDisplayMode === 'full_game';
   const preGameOnlyRanks = runtime.config.protection.matchIntel.rankDisplayMode === 'pre_game_only';
   if (preGameOnlyRanks && !preGameState) return;
-  if (!preGameState && (!Number.isFinite(clockTime) || clockTime < 0)) return;
+  if (!preGameState && (!Number.isFinite(clockTime) || clockTime < 0) && !spectatingMatch) return;
   if (!preGameState && !fullGameRanks && Number.isFinite(clockTime) && clockTime > rankCutoff) return;
   const accountIds = [...new Set(players.map((player) => player.accountId).filter(Boolean).map(String))];
   if (!accountIds.length) return;
@@ -1774,6 +1776,15 @@ async function refreshNotablePlayerRanks(players) {
 
 function isMatchIntelFinished(gsi) {
   return /POST_GAME|GAME_END|DISCONNECT/i.test(String(gsi?.gameState || ''));
+}
+
+function isSpectatingMatch(gsi, players = []) {
+  const activity = String(gsi?.playerActivity || '').toLowerCase();
+  const gameState = String(gsi?.gameState || '');
+  return activity === 'spectating'
+    && /PRE_GAME|GAME_IN_PROGRESS/i.test(gameState)
+    && Array.isArray(players)
+    && players.some((player) => player?.accountId);
 }
 
 function shouldShowNotablePlayers() {
