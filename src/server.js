@@ -284,6 +284,18 @@ const defaultConfig = {
       { left: 1344, top: 0, width: 122, height: 75, asset: 'topbar-slot-7.png' },
       { left: 1468, top: 0, width: 122, height: 75, asset: 'topbar-slot-8.png' },
       { left: 1592, top: 0, width: 122, height: 75, asset: 'topbar-slot-9.png' }
+    ],
+    matchIntelSlots: [
+      { left: 548, top: 0, width: 62, height: 40 },
+      { left: 610, top: 0, width: 62, height: 40 },
+      { left: 672, top: 0, width: 62, height: 40 },
+      { left: 734, top: 0, width: 62, height: 40 },
+      { left: 796, top: 0, width: 62, height: 40 },
+      { left: 1064, top: 0, width: 62, height: 40 },
+      { left: 1126, top: 0, width: 62, height: 40 },
+      { left: 1188, top: 0, width: 62, height: 40 },
+      { left: 1250, top: 0, width: 62, height: 40 },
+      { left: 1312, top: 0, width: 62, height: 40 }
     ]
   },
   predictions: {
@@ -631,6 +643,10 @@ async function migrateConfig(config) {
     config.protection.topBarSlots = structuredClone(defaultConfig.protection.topBarSlots);
     delete config.protection.topBarBox;
     delete config.protection.topBarBoxes;
+    changed = true;
+  }
+  if (!Array.isArray(config.protection.matchIntelSlots) || config.protection.matchIntelSlots.length !== 10) {
+    config.protection.matchIntelSlots = structuredClone(defaultConfig.protection.matchIntelSlots);
     changed = true;
   }
 

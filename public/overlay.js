@@ -27,14 +27,15 @@ function renderOverlay({ config, state }) {
   const draftParts = effectiveDraftParts(config.protection.draftMaskParts || [], reference, config.protection, state);
   const queueParts = queueMaskParts(config.protection, reference);
   const slots = config.protection.topBarSlots || [];
+  const matchIntelSlots = config.protection.matchIntelSlots || slots;
   ensureQueueParts(queueParts.length);
   ensureDraftParts(draftParts.length);
   ensureTopBarSlots(slots.length);
-  ensureMatchIntelSlots(slots.length);
+  ensureMatchIntelSlots(matchIntelSlots.length);
   applyQueueParts(queueParts, reference, state);
   applyDraftParts(draftParts, reference, state);
   applyTopBarSlots(slots, reference, state);
-  applyMatchIntel(slots, reference, config.protection.matchIntel || {}, state);
+  applyMatchIntel(matchIntelSlots, reference, config.protection.matchIntel || {}, state);
   applyMinimap(config.protection, reference, state);
   setVisible(minimapMask, state.protection.minimap);
 }
