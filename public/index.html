@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>DotaStreamKit</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260429">
-    <link rel="stylesheet" href="/styles.css?v=20260429-support-link">
+    <link rel="stylesheet" href="/styles.css?v=20260501-pages">
   </head>
   <body>
     <main class="shell">
@@ -70,8 +70,17 @@
         </div>
       </header>
 
+      <nav class="page-nav" aria-label="Dashboard pages">
+        <button type="button" class="page-tab active" data-page-target="protection">Protection</button>
+        <button type="button" class="page-tab" data-page-target="intel">Match intel</button>
+        <button type="button" class="page-tab" data-page-target="predictions">Predictions</button>
+        <button type="button" class="page-tab" data-page-target="twitch">Twitch</button>
+        <button type="button" class="page-tab" data-page-target="setup">Setup</button>
+        <button type="button" class="page-tab" data-page-target="events">Log</button>
+      </nav>
+
       <section class="grid">
-        <article class="panel">
+        <article class="panel active-page" data-page="protection">
           <h2>Защита</h2>
           <div class="control-row">
             <label class="check"><input type="checkbox" id="autoDraft"> Авто скрывать draft</label>
@@ -83,22 +92,6 @@
             <label>Сторона<select id="minimapSide"><option value="left">Слева</option><option value="right">Справа</option></select></label>
             <label>Фон миникарты<select id="minimapStyle"><option value="realistic">Реалистичный</option><option value="simple">Простой</option><option value="empty">Пустой</option></select></label>
             <label>Скрытие поиска<select id="queueMode"><option value="partial">Только области поиска</option><option value="full">Фуллскрин</option></select></label>
-            <label class="check"><input type="checkbox" id="matchIntelEnabled"> Match intel overlay</label>
-            <label class="check"><input type="checkbox" id="showPlayerRanks"> Top player ranks</label>
-            <label class="check"><input type="checkbox" id="showPlayerFlags"> Player flags</label>
-            <label class="check"><input type="checkbox" id="showAegisRoshan"> Aegis / Roshan</label>
-            <label id="rankDisplayModeWrap">Rank display<select id="rankDisplayMode"><option value="minutes">First N minutes</option><option value="full_game">Full game</option></select></label>
-            <label id="rankDisplayMinutesWrap">Rank display minutes<input id="rankDisplayMinutes" type="number" min="1" max="30" step="1"></label>
-            <div class="notable-players" id="customNotablePlayersWrap">
-              <div class="notable-players-head" id="customNotablePlayersTitle">Custom notable players</div>
-              <div class="notable-player-form">
-                <label id="notablePlayerIdWrap">Dota ID<input id="notablePlayerId" inputmode="numeric" maxlength="20"></label>
-                <label id="notablePlayerNameWrap">Nickname<input id="notablePlayerName" maxlength="40"></label>
-                <label id="notablePlayerCountryWrap">Country code<input id="notablePlayerCountry" maxlength="2"></label>
-                <button id="addNotablePlayer" type="button">Add</button>
-              </div>
-              <div class="notable-player-rows" id="customNotablePlayersRows"></div>
-            </div>
           </div>
           <div class="button-row">
             <button id="manualDraft">Draft</button>
@@ -116,7 +109,37 @@
           <p class="muted">OBS Browser Source: <code>http://localhost:37273/overlay.html</code></p>
         </article>
 
-        <article class="panel">
+        <article class="panel wide" data-page="intel">
+          <h2>Match intel</h2>
+          <div class="control-row">
+            <label class="check"><input type="checkbox" id="matchIntelEnabled"> Match intel overlay</label>
+            <label class="check"><input type="checkbox" id="showPlayerRanks"> Top player ranks</label>
+            <label class="check"><input type="checkbox" id="showPlayerFlags"> Player flags</label>
+            <label class="check"><input type="checkbox" id="showAegisRoshan"> Aegis / Roshan</label>
+            <label id="rankDisplayModeWrap">Rank display<select id="rankDisplayMode"><option value="minutes">First N minutes</option><option value="full_game">Full game</option></select></label>
+            <label id="rankDisplayMinutesWrap">Rank display minutes<input id="rankDisplayMinutes" type="number" min="1" max="30" step="1"></label>
+            <div class="notable-players" id="customNotablePlayersWrap">
+              <div class="notable-players-head" id="customNotablePlayersTitle">Custom notable players</div>
+              <p class="muted" id="customNotablePlayersHint">Add Dota account ids that should always be treated as notable.</p>
+              <div class="notable-player-form">
+                <label id="notablePlayerIdWrap">Dota ID<input id="notablePlayerId" inputmode="numeric" maxlength="20"></label>
+                <label id="notablePlayerNameWrap">Nickname<input id="notablePlayerName" maxlength="40"></label>
+                <label id="notablePlayerCountryWrap">Country code<input id="notablePlayerCountry" maxlength="2"></label>
+                <button id="addNotablePlayer" type="button">Add</button>
+                <button id="cancelNotablePlayerEdit" type="button" hidden>Cancel</button>
+              </div>
+              <div class="notable-player-list-head">
+                <span id="notablePlayerListId">Dota ID</span>
+                <span id="notablePlayerListName">Nickname</span>
+                <span id="notablePlayerListCountry">Country</span>
+                <span id="notablePlayerListActions">Actions</span>
+              </div>
+              <div class="notable-player-rows" id="customNotablePlayersRows"></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel" data-page="twitch">
           <h2>Twitch</h2>
           <div class="stack">
             <label>Режим запуска<select id="deploymentMode"><option value="local">Локально</option><option value="server">Сервер</option></select></label>
@@ -135,7 +158,7 @@
           <p class="muted" id="targetChannelStatus" data-visible-for="separate-channel">Канал прогнозов не выбран.</p>
         </article>
 
-        <article class="panel wide">
+        <article class="panel wide" data-page="predictions">
           <h2>Ставка за баллы канала</h2>
           <details class="variable-guide">
             <summary class="variable-summary">
@@ -216,7 +239,7 @@
           <div id="activePrediction" class="active-box">Нет активной ставки.</div>
         </article>
 
-        <article class="panel">
+        <article class="panel" data-page="setup">
           <h2>Dota GSI</h2>
           <div class="stack">
             <label>Папка Dota 2<input id="dotaPath" autocomplete="off" placeholder="C:\SteamLibrary\steamapps\common\dota 2 beta"></label>
@@ -228,7 +251,7 @@
           <p class="muted">GSI встроен в Dota 2. DotaStreamKit устанавливает только маленький cfg-файл, который отправляет состояние игры на локальный сервер.</p>
         </article>
 
-        <article class="panel">
+        <article class="panel" data-page="setup">
           <h2>Картинки draft HUD</h2>
           <div class="stack">
             <label>Полный draft-скрин<input id="draftScreenshotAsset" type="file" accept="image/png,image/jpeg,image/webp"></label>
@@ -237,12 +260,12 @@
           <p id="assetStatus" class="muted">Слоты еще не нарезаны.</p>
         </article>
 
-        <article class="panel wide">
+        <article class="panel wide" data-page="events">
           <h2>Журнал</h2>
           <div id="events" class="events"></div>
         </article>
       </section>
     </main>
-    <script src="/app.js?v=20260429-support-link"></script>
+    <script src="/app.js?v=20260501-pages"></script>
   </body>
 </html>

@@ -300,11 +300,48 @@ h2 {
   gap: 16px;
 }
 
+.page-nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 16px;
+  padding: 6px;
+  border: 1px solid #283240;
+  border-radius: 8px;
+  background: #11161d;
+}
+
+.page-tab {
+  min-height: 40px;
+  padding: 9px 13px;
+  border-color: transparent;
+  background: transparent;
+  color: #aeb8c7;
+}
+
+.page-tab:hover {
+  background: #1c2531;
+}
+
+.page-tab.active {
+  border-color: #4d7c9b;
+  background: #1f3140;
+  color: #f2f4f8;
+}
+
 .panel {
   background: #171c24;
   border: 1px solid #2a3340;
   border-radius: 8px;
   padding: 18px;
+}
+
+.panel[data-page]:not(.active-page) {
+  display: none;
+}
+
+.panel.active-page {
+  grid-column: 1 / -1;
 }
 
 .wide {
@@ -457,12 +494,19 @@ dd {
   font-weight: 700;
 }
 
-.notable-player-form,
-.notable-player-row {
+.notable-player-form {
   display: grid;
-  grid-template-columns: minmax(110px, 1fr) minmax(140px, 1.4fr) minmax(92px, 0.8fr) auto;
+  grid-template-columns: minmax(110px, 1fr) minmax(140px, 1.4fr) minmax(92px, 0.8fr) auto auto;
   gap: 10px;
   align-items: end;
+}
+
+.notable-player-list-head,
+.notable-player-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) minmax(140px, 1.4fr) minmax(92px, 0.8fr) minmax(150px, auto);
+  gap: 10px;
+  align-items: center;
 }
 
 .notable-player-form button,
@@ -475,8 +519,14 @@ dd {
   gap: 8px;
 }
 
+.notable-player-list-head {
+  color: #8b96a8;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
 .notable-player-row {
-  align-items: center;
   padding: 8px;
   border: 1px solid #26303d;
   border-radius: 6px;
@@ -498,6 +548,17 @@ dd {
 .notable-player-country {
   color: #9aa5b5;
   font-size: 13px;
+}
+
+.notable-player-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.notable-player-empty {
+  padding: 10px 0;
 }
 
 .section-head {
@@ -731,6 +792,7 @@ code {
   .prediction-type-grid,
   .variable-grid,
   .notable-player-form,
+  .notable-player-list-head,
   .notable-player-row,
   .facts {
     grid-template-columns: 1fr;
@@ -759,5 +821,9 @@ code {
 
   .prediction-preview {
     grid-template-columns: 1fr;
+  }
+
+  .notable-player-actions {
+    justify-content: flex-start;
   }
 }

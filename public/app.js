@@ -2,6 +2,8 @@ const els = {
   gsiStatus: document.querySelector('#gsiStatus'),
   twitchStatus: document.querySelector('#twitchStatus'),
   languageSelect: document.querySelector('#languageSelect'),
+  pageTabs: document.querySelectorAll('[data-page-target]'),
+  pagePanels: document.querySelectorAll('[data-page]'),
   autoDraft: document.querySelector('#autoDraft'),
   autoMinimap: document.querySelector('#autoMinimap'),
   autoQueue: document.querySelector('#autoQueue'),
@@ -21,6 +23,7 @@ const els = {
   rankDisplayMinutes: document.querySelector('#rankDisplayMinutes'),
   customNotablePlayersWrap: document.querySelector('#customNotablePlayersWrap'),
   customNotablePlayersTitle: document.querySelector('#customNotablePlayersTitle'),
+  customNotablePlayersHint: document.querySelector('#customNotablePlayersHint'),
   notablePlayerIdWrap: document.querySelector('#notablePlayerIdWrap'),
   notablePlayerId: document.querySelector('#notablePlayerId'),
   notablePlayerNameWrap: document.querySelector('#notablePlayerNameWrap'),
@@ -28,6 +31,11 @@ const els = {
   notablePlayerCountryWrap: document.querySelector('#notablePlayerCountryWrap'),
   notablePlayerCountry: document.querySelector('#notablePlayerCountry'),
   addNotablePlayer: document.querySelector('#addNotablePlayer'),
+  cancelNotablePlayerEdit: document.querySelector('#cancelNotablePlayerEdit'),
+  notablePlayerListId: document.querySelector('#notablePlayerListId'),
+  notablePlayerListName: document.querySelector('#notablePlayerListName'),
+  notablePlayerListCountry: document.querySelector('#notablePlayerListCountry'),
+  notablePlayerListActions: document.querySelector('#notablePlayerListActions'),
   customNotablePlayersRows: document.querySelector('#customNotablePlayersRows'),
   manualDraft: document.querySelector('#manualDraft'),
   manualMinimap: document.querySelector('#manualMinimap'),
@@ -92,6 +100,8 @@ const els = {
 let snapshot = null;
 let lastTemplateInput = null;
 let predictionConfigSaveTimer = null;
+let activePage = localStorage.getItem('dsk.activePage') || 'protection';
+let editingNotablePlayerAccountId = '';
 
 const translations = {
   ru: {
@@ -102,6 +112,12 @@ const translations = {
     developer: 'Разработчик',
     supportDeveloper: 'Поддержать',
     subtitle: 'Локальная защита стрима и автоматизация Twitch Predictions.',
+    pageProtection: 'Защита',
+    pageIntel: 'Match intel',
+    pagePredictions: 'Прогнозы',
+    pageTwitch: 'Twitch',
+    pageSetup: 'Настройка',
+    pageEvents: 'Журнал',
     protection: 'Защита',
     autoDraft: 'Авто скрывать draft',
     autoMinimap: 'Авто скрывать миникарту',
@@ -134,11 +150,17 @@ const translations = {
     rankDisplayFullGame: 'До конца игры',
     rankDisplayMinutes: 'Показывать первые N минут',
     customNotablePlayers: 'Кастомные Notable Players',
+    customNotablePlayersHint: 'Добавь Dota account id игроков, которых нужно всегда считать notable. Ник и страна из этого списка имеют приоритет над OpenDota.',
     notablePlayerId: 'Dota ID',
     notablePlayerName: 'Никнейм',
     notablePlayerCountry: 'Код страны',
     addNotablePlayer: 'Добавить',
+    saveNotablePlayer: 'Сохранить',
+    cancelNotablePlayerEdit: 'Отмена',
+    editNotablePlayer: 'Редактировать',
     removeNotablePlayer: 'Удалить',
+    notablePlayerListActions: 'Действия',
+    noCustomNotablePlayers: 'Список пока пуст.',
     minimap: 'Миникарта',
     topBar: 'Верхняя панель',
     queue: 'Поиск',
@@ -304,6 +326,12 @@ const translations = {
     developer: 'Developer',
     supportDeveloper: 'Support',
     subtitle: 'Local stream protection and Twitch Predictions automation.',
+    pageProtection: 'Protection',
+    pageIntel: 'Match intel',
+    pagePredictions: 'Predictions',
+    pageTwitch: 'Twitch',
+    pageSetup: 'Setup',
+    pageEvents: 'Log',
     protection: 'Protection',
     autoDraft: 'Auto hide draft',
     autoMinimap: 'Auto hide minimap',
@@ -336,11 +364,17 @@ const translations = {
     rankDisplayFullGame: 'Full game',
     rankDisplayMinutes: 'Show for first N minutes',
     customNotablePlayers: 'Custom notable players',
+    customNotablePlayersHint: 'Add Dota account ids that should always be treated as notable. Name and country here override OpenDota.',
     notablePlayerId: 'Dota ID',
     notablePlayerName: 'Nickname',
     notablePlayerCountry: 'Country code',
     addNotablePlayer: 'Add',
+    saveNotablePlayer: 'Save',
+    cancelNotablePlayerEdit: 'Cancel',
+    editNotablePlayer: 'Edit',
     removeNotablePlayer: 'Remove',
+    notablePlayerListActions: 'Actions',
+    noCustomNotablePlayers: 'The list is empty.',
     minimap: 'Minimap',
     topBar: 'Top bar',
     queue: 'Queue',
@@ -516,6 +550,7 @@ let predictionTypeDefs = [...builtinPredictionTypeDefs];
 let predictionTypeControlKey = '';
 
 buildPredictionTypeControls();
+setActivePage(activePage);
 
 const stream = new EventSource('/api/events');
 stream.onmessage = (event) => {
@@ -533,6 +568,20 @@ async function api(path, body = null, method = 'POST') {
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
   return json;
+}
+
+function setActivePage(page) {
+  const available = [...els.pagePanels].some((panel) => panel.dataset.page === page);
+  activePage = available ? page : 'protection';
+  localStorage.setItem('dsk.activePage', activePage);
+  for (const panel of els.pagePanels) {
+    panel.classList.toggle('active-page', panel.dataset.page === activePage);
+  }
+  for (const tab of els.pageTabs) {
+    const active = tab.dataset.pageTarget === activePage;
+    tab.classList.toggle('active', active);
+    tab.setAttribute('aria-current', active ? 'page' : 'false');
+  }
 }
 
 function t(key) {
@@ -559,6 +608,7 @@ function applyLanguage(config) {
   if (sponsorLinkSpans[0]) sponsorLinkSpans[0].textContent = t('sitePrefix');
   if (sponsorLinkSpans[1]) sponsorLinkSpans[1].textContent = t('botPrefix');
   setText('.top p', 'subtitle');
+  setPageTabLabels();
 
   setText(els.autoDraft.closest('article').querySelector('h2'), 'protection');
   setLabelText(els.autoDraft.closest('label'), t('autoDraft'));
@@ -583,6 +633,7 @@ function applyLanguage(config) {
   setLabelText(els.queueMode.closest('label'), t('queueMode'));
   setOptionText(els.queueMode, 'partial', t('partial'));
   setOptionText(els.queueMode, 'full', t('full'));
+  setText(els.matchIntelEnabled.closest('article').querySelector('h2'), 'pageIntel');
   setLabelText(els.matchIntelEnabled.closest('label'), t('matchIntelEnabled'));
   setLabelText(els.showPlayerRanks.closest('label'), t('showPlayerRanks'));
   setLabelText(els.showPlayerFlags.closest('label'), t('showPlayerFlags'));
@@ -592,10 +643,16 @@ function applyLanguage(config) {
   setOptionText(els.rankDisplayMode, 'full_game', t('rankDisplayFullGame'));
   setLabelText(els.rankDisplayMinutes.closest('label'), t('rankDisplayMinutes'));
   els.customNotablePlayersTitle.textContent = t('customNotablePlayers');
+  els.customNotablePlayersHint.textContent = t('customNotablePlayersHint');
   setLabelText(els.notablePlayerIdWrap, t('notablePlayerId'));
   setLabelText(els.notablePlayerNameWrap, t('notablePlayerName'));
   setLabelText(els.notablePlayerCountryWrap, t('notablePlayerCountry'));
-  els.addNotablePlayer.textContent = t('addNotablePlayer');
+  els.addNotablePlayer.textContent = editingNotablePlayerAccountId ? t('saveNotablePlayer') : t('addNotablePlayer');
+  els.cancelNotablePlayerEdit.textContent = t('cancelNotablePlayerEdit');
+  els.notablePlayerListId.textContent = t('notablePlayerId');
+  els.notablePlayerListName.textContent = t('notablePlayerName');
+  els.notablePlayerListCountry.textContent = t('notablePlayerCountry');
+  els.notablePlayerListActions.textContent = t('notablePlayerListActions');
   els.manualMinimap.textContent = t('minimap');
   els.manualTopBar.textContent = t('topBar');
   els.manualQueue.textContent = t('queue');
@@ -681,6 +738,21 @@ function applyLanguage(config) {
 function setText(target, key) {
   const el = typeof target === 'string' ? document.querySelector(target) : target;
   if (el) el.textContent = t(key);
+}
+
+function setPageTabLabels() {
+  const labelKeys = {
+    protection: 'pageProtection',
+    intel: 'pageIntel',
+    predictions: 'pagePredictions',
+    twitch: 'pageTwitch',
+    setup: 'pageSetup',
+    events: 'pageEvents'
+  };
+  for (const tab of els.pageTabs) {
+    const key = labelKeys[tab.dataset.pageTarget];
+    if (key) tab.textContent = t(key);
+  }
 }
 
 function setLabelText(label, text) {
@@ -1248,6 +1320,7 @@ function renderEvents(events) {
 
 function renderCustomNotablePlayers(players) {
   els.customNotablePlayersRows.innerHTML = '';
+  let rowCount = 0;
   for (const player of Array.isArray(players) ? players : []) {
     const accountId = String(player.accountId || '').trim();
     if (!accountId) continue;
@@ -1267,14 +1340,29 @@ function renderCustomNotablePlayers(players) {
     const country = document.createElement('span');
     country.className = 'notable-player-country';
     country.textContent = countryCode ? `${countryFlagEmoji(countryCode)} ${countryCode}` : '-';
+    const actions = document.createElement('div');
+    actions.className = 'notable-player-actions';
+    const edit = document.createElement('button');
+    edit.type = 'button';
+    edit.className = 'notable-player-edit';
+    edit.dataset.action = 'edit-notable-player';
+    edit.textContent = t('editNotablePlayer');
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'notable-player-remove';
     remove.dataset.action = 'remove-notable-player';
     remove.textContent = t('removeNotablePlayer');
+    actions.append(edit, remove);
 
-    row.append(id, name, country, remove);
+    row.append(id, name, country, actions);
     els.customNotablePlayersRows.append(row);
+    rowCount += 1;
+  }
+  if (!rowCount) {
+    const empty = document.createElement('div');
+    empty.className = 'notable-player-empty muted';
+    empty.textContent = t('noCustomNotablePlayers');
+    els.customNotablePlayersRows.append(empty);
   }
 }
 
@@ -1305,13 +1393,37 @@ function addCustomNotablePlayer() {
     return;
   }
 
-  const players = customNotablePlayersFromForm().filter((player) => String(player.accountId) !== accountId);
+  const previousAccountId = editingNotablePlayerAccountId || accountId;
+  const players = customNotablePlayersFromForm()
+    .filter((player) => String(player.accountId) !== previousAccountId && String(player.accountId) !== accountId);
   players.push({ accountId: Number(accountId), name, countryCode });
   renderCustomNotablePlayers(players);
+  resetNotablePlayerEditor();
+  saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+}
+
+function editCustomNotablePlayer(row) {
+  if (!row) return;
+  editingNotablePlayerAccountId = row.dataset.accountId || '';
+  els.notablePlayerId.value = editingNotablePlayerAccountId;
+  els.notablePlayerName.value = row.dataset.name || '';
+  els.notablePlayerCountry.value = normalizeCountryCode(row.dataset.countryCode);
+  updateNotablePlayerEditorMode();
+  els.notablePlayerId.focus();
+}
+
+function resetNotablePlayerEditor() {
+  editingNotablePlayerAccountId = '';
   els.notablePlayerId.value = '';
   els.notablePlayerName.value = '';
   els.notablePlayerCountry.value = '';
-  saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+  updateNotablePlayerEditorMode();
+}
+
+function updateNotablePlayerEditorMode() {
+  const editing = Boolean(editingNotablePlayerAccountId);
+  els.addNotablePlayer.textContent = editing ? t('saveNotablePlayer') : t('addNotablePlayer');
+  els.cancelNotablePlayerEdit.hidden = !editing;
 }
 
 function normalizeDotaAccountIdInput(value) {
@@ -1371,11 +1483,23 @@ els.rankDisplayMode.addEventListener('change', () => {
   saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
 });
 els.rankDisplayMinutes.addEventListener('change', () => saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert));
+els.pageTabs.forEach((tab) => {
+  tab.addEventListener('click', () => setActivePage(tab.dataset.pageTarget));
+});
 els.addNotablePlayer.addEventListener('click', addCustomNotablePlayer);
+els.cancelNotablePlayerEdit.addEventListener('click', resetNotablePlayerEditor);
 els.customNotablePlayersRows.addEventListener('click', (event) => {
-  if (!event.target.matches('[data-action="remove-notable-player"]')) return;
-  event.target.closest('.notable-player-row')?.remove();
-  saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+  const row = event.target.closest('.notable-player-row');
+  if (!row) return;
+  if (event.target.matches('[data-action="edit-notable-player"]')) {
+    editCustomNotablePlayer(row);
+    return;
+  }
+  if (event.target.matches('[data-action="remove-notable-player"]')) {
+    if (row.dataset.accountId === editingNotablePlayerAccountId) resetNotablePlayerEditor();
+    row.remove();
+    saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+  }
 });
 els.manualDraft.addEventListener('click', () => saveProtection({ manualDraft: nextManualProtectionState('manualDraft', 'draft') }).catch(alert));
 els.manualMinimap.addEventListener('click', () => saveProtection({ manualMinimap: nextManualProtectionState('manualMinimap', 'minimap') }).catch(alert));
