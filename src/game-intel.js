@@ -185,6 +185,7 @@ function inferRosterSlot(payload, player) {
   const source = payload?.allplayers || payload?.players;
   if (!source || typeof source !== 'object') return null;
   const targetAccountId = normalizeAccountId(player.accountid ?? player.account_id ?? player.accountId ?? player.steamid ?? player.steam_id);
+  const targetTeam = normalizeRosterTeam(player.team_name || player.team || '');
   const targetHero = normalizeHeroToken(payload?.hero?.name || payload?.hero?.hero_name || payload?.hero?.heroName || payload?.hero?.localized_name || player.hero_name || player.heroName || player.hero || '');
   let heroMatch = null;
 
@@ -193,14 +194,23 @@ function inferRosterSlot(payload, player) {
     const slot = normalizePlayerSlot(rosterPlayer.player_slot ?? rosterPlayer.playerSlot ?? rosterPlayer.team_slot ?? rosterPlayer.teamSlot ?? key, rosterPlayer);
     if (slot === null) continue;
     const rosterAccountId = normalizeAccountId(rosterPlayer.accountid ?? rosterPlayer.account_id ?? rosterPlayer.accountId ?? rosterPlayer.steamid ?? rosterPlayer.steam_id);
-    if (targetAccountId && rosterAccountId && targetAccountId === rosterAccountId) return slot;
+    const rosterTeam = normalizeRosterTeam(rosterPlayer.team_name || rosterPlayer.team || slot);
+    const sameTeam = !targetTeam || !rosterTeam || targetTeam === rosterTeam;
+    if (targetAccountId && rosterAccountId && targetAccountId === rosterAccountId && sameTeam) return slot;
     const rosterHero = normalizeHeroToken(rosterPlayer.hero_name || rosterPlayer.heroName || rosterPlayer.hero || rosterPlayer.hero_id || '');
-    if (targetHero && rosterHero && targetHero === rosterHero && heroMatch === null) {
+    if (sameTeam && targetHero && rosterHero && targetHero === rosterHero && heroMatch === null) {
       heroMatch = slot;
     }
   }
 
   return heroMatch;
+}
+
+function normalizeRosterTeam(value) {
+  const text = String(value || '').toLowerCase();
+  if (text.includes('dire') || text.includes('bad')) return 'dire';
+  if (text.includes('radiant') || text.includes('good')) return 'radiant';
+  return null;
 }
 
 function normalizeHeroToken(value) {
@@ -236,6 +246,7 @@ function upsertCurrentPlayer(players, currentPlayer) {
 
 function normalizePlayerSlot(rawSlot, player) {
   const numeric = Number(rawSlot);
+  const team = String(player?.team_name || player?.team || '').toLowerCase();
   if (Number.isFinite(numeric)) {
     if (numeric >= 0 && numeric <= 4) return Math.trunc(numeric);
     if (numeric >= 128 && numeric <= 132) return Math.trunc(numeric - 128 + 5);
@@ -245,10 +256,15 @@ function normalizePlayerSlot(rawSlot, player) {
   const keyMatch = String(rawSlot || '').match(/(?:player)?(\d+)$/i);
   if (keyMatch) {
     const index = Number(keyMatch[1]);
-    if (Number.isFinite(index) && index >= 0 && index <= 9) return index;
+    if (Number.isFinite(index) && index >= 0 && index <= 9) {
+      if (index <= 4) {
+        if (team.includes('dire') || team.includes('bad')) return Math.trunc(index + 5);
+        if (team.includes('radiant') || team.includes('good')) return Math.trunc(index);
+      }
+      return Math.trunc(index);
+    }
   }
 
-  const team = String(player?.team_name || player?.team || '').toLowerCase();
   const teamSlot = Number(player?.team_slot ?? player?.teamSlot);
   if (Number.isFinite(teamSlot) && teamSlot >= 0 && teamSlot <= 4) {
     if (team.includes('dire') || team.includes('bad')) return Math.trunc(teamSlot + 5);
