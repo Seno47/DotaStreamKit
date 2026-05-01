@@ -263,7 +263,7 @@ body {
   position: absolute;
   left: -12px;
   right: -12px;
-  bottom: -9px;
+  bottom: -4px;
   width: 94px;
   height: 94px;
   object-fit: contain;
@@ -286,10 +286,15 @@ body {
 .streamerStatsWinLoss {
   display: inline-flex;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
   color: #ffffff;
   font-size: 15px;
   min-width: 104px;
+}
+
+.streamerStatsWinNumber,
+.streamerStatsLossNumber {
+  color: #ffffff;
 }
 
 .streamerStatsWin {
