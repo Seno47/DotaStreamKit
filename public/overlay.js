@@ -3,6 +3,7 @@ const draftScreenMask = document.querySelector('#draftScreenMask');
 const minimapMask = document.querySelector('#minimapMask');
 const topBarSlotsRoot = document.querySelector('#topBarSlots');
 const matchIntelRoot = document.querySelector('#matchIntel');
+const streamerStatsEl = document.querySelector('#streamerStats');
 let queuePartEls = [];
 let topBarSlotEls = [];
 let matchIntelSlotEls = [];
@@ -36,6 +37,7 @@ function renderOverlay({ config, state }) {
   applyDraftParts(draftParts, reference, state);
   applyTopBarSlots(slots, reference, state);
   applyMatchIntel(matchIntelSlots, reference, config.protection.matchIntel || {}, state);
+  applyStreamerStats(reference, config.protection || {}, state);
   applyMinimap(config.protection, reference, state);
   setVisible(minimapMask, state.protection.minimap);
 }
@@ -502,6 +504,55 @@ function roshanText(status) {
   if (status.phase === 'possible') return 'UP?';
   if (status.phase === 'window') return `0:00-${formatClock(status.latestRemaining)}`;
   return `${formatClock(status.earliestRemaining)}-${formatClock(status.latestRemaining)}`;
+}
+
+function applyStreamerStats(reference, protection, state) {
+  if (!streamerStatsEl) return;
+  const settings = protection.matchIntel || {};
+  const stats = state.streamerStats || {};
+  const gameState = String(state.gsi?.gameState || '');
+  const visibleState = state.gsi?.connected
+    && !state.gsi?.leftGameView
+    && /PRE_GAME|GAME_IN_PROGRESS/i.test(gameState);
+  if (!settings.showStreamerStats || !visibleState) {
+    setVisible(streamerStatsEl, false);
+    return;
+  }
+
+  const parts = [];
+  const medal = stats.medal;
+  if (settings.showStreamerRankMedal !== false && medal?.id) {
+    parts.push(`<img class="streamerStatsMedal" src="/assets/rank-medal-${encodeURIComponent(medal.id)}.png?v=${assetVersion(state)}" alt="">`);
+  }
+  const textParts = [];
+  const mmr = Number(stats.currentMmr || settings.streamerMmr || 0);
+  if (settings.showStreamerMmr !== false && mmr > 0) {
+    textParts.push(`<span class="streamerStatsMmr">${Math.trunc(mmr)}</span>`);
+  }
+  if (settings.showStreamerWinLoss !== false) {
+    textParts.push(`<span class="streamerStatsWinLoss">${Math.max(0, Number(stats.wins || 0))}-${Math.max(0, Number(stats.losses || 0))}</span>`);
+  }
+  const lastChange = Number(stats.lastMmrChange || 0);
+  if (settings.showStreamerMmr !== false && lastChange) {
+    textParts.push(`<span class="streamerStatsLastChange ${lastChange < 0 ? 'loss' : ''}">${lastChange > 0 ? '+' : ''}${lastChange}</span>`);
+  }
+  if (textParts.length) {
+    parts.push(`<span class="streamerStatsText">${textParts.join('')}</span>`);
+  }
+  if (!parts.length) {
+    setVisible(streamerStatsEl, false);
+    return;
+  }
+
+  streamerStatsEl.innerHTML = parts.join('');
+  const minimapSide = protection.minimapSide === 'right' ? 'right' : 'left';
+  const left = minimapSide === 'right' ? 302 : 1390;
+  const inPreGame = /PRE_GAME/i.test(gameState);
+  const box = inPreGame
+    ? { left, top: 54, width: 230, height: 44 }
+    : { left, bottom: 10, width: 230, height: 54 };
+  applyScaledBox(streamerStatsEl, box, reference);
+  setVisible(streamerStatsEl, true);
 }
 
 function formatClock(totalSeconds) {

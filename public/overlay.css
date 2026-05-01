@@ -12,7 +12,8 @@ body {
 .draftMaskPart,
 .topBarSlot,
 .matchIntelSlot,
-.roshanIntel {
+.roshanIntel,
+#streamerStats {
   display: none;
   position: fixed;
   background-color: transparent;
@@ -26,7 +27,8 @@ body {
 .draftMaskPart.visible,
 .topBarSlot.visible,
 .matchIntelSlot.visible,
-.roshanIntel.visible {
+.roshanIntel.visible,
+#streamerStats.visible {
   display: block;
 }
 
@@ -220,4 +222,54 @@ body {
   width: 27px;
   height: 27px;
   object-fit: contain;
+}
+
+#streamerStats {
+  z-index: 18;
+  pointer-events: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #f6f0d8;
+  font-family: "Arial Narrow", "Roboto Condensed", "Segoe UI Condensed", "Segoe UI", Arial, Helvetica, sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+  text-shadow: 0 2px 3px #000, 0 0 4px #000;
+  white-space: nowrap;
+}
+
+#streamerStats.visible {
+  display: flex;
+}
+
+.streamerStatsMedal {
+  width: 39px;
+  height: 39px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.85));
+}
+
+.streamerStatsText {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.streamerStatsMmr {
+  color: #fff5c8;
+}
+
+.streamerStatsWinLoss {
+  color: #e9f2ff;
+}
+
+.streamerStatsLastChange {
+  font-size: 13px;
+  color: #94f2a8;
+}
+
+.streamerStatsLastChange.loss {
+  color: #ffaaa2;
 }

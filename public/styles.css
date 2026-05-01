@@ -479,7 +479,8 @@ dd {
   min-height: 46px;
 }
 
-.notable-players {
+.notable-players,
+.streamer-stats-settings {
   flex: 1 1 100%;
   display: grid;
   gap: 10px;
@@ -499,6 +500,26 @@ dd {
   grid-template-columns: minmax(110px, 1fr) minmax(140px, 1.4fr) minmax(92px, 0.8fr) auto auto;
   gap: 10px;
   align-items: end;
+}
+
+.streamer-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.streamer-stats-status {
+  padding: 9px 10px;
+  border: 1px solid #26303d;
+  border-radius: 6px;
+  background: #0f141b;
+  color: #cfd8e6;
+  font-weight: 600;
+}
+
+.streamer-stats-actions {
+  margin-bottom: 0;
 }
 
 .notable-player-list-head,
@@ -791,6 +812,7 @@ code {
   .prediction-types,
   .prediction-type-grid,
   .variable-grid,
+  .streamer-stats-grid,
   .notable-player-form,
   .notable-player-list-head,
   .notable-player-row,

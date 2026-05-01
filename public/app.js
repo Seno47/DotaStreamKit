@@ -22,6 +22,25 @@ const els = {
   rankDisplayMode: document.querySelector('#rankDisplayMode'),
   rankDisplayMinutesWrap: document.querySelector('#rankDisplayMinutesWrap'),
   rankDisplayMinutes: document.querySelector('#rankDisplayMinutes'),
+  streamerStatsWrap: document.querySelector('#streamerStatsWrap'),
+  streamerStatsTitle: document.querySelector('#streamerStatsTitle'),
+  streamerStatsHint: document.querySelector('#streamerStatsHint'),
+  showStreamerStats: document.querySelector('#showStreamerStats'),
+  showStreamerRankMedal: document.querySelector('#showStreamerRankMedal'),
+  showStreamerMmr: document.querySelector('#showStreamerMmr'),
+  showStreamerWinLoss: document.querySelector('#showStreamerWinLoss'),
+  streamerMedalSourceWrap: document.querySelector('#streamerMedalSourceWrap'),
+  streamerMedalSource: document.querySelector('#streamerMedalSource'),
+  streamerMmrWrap: document.querySelector('#streamerMmrWrap'),
+  streamerMmr: document.querySelector('#streamerMmr'),
+  autoUpdateStreamerMmr: document.querySelector('#autoUpdateStreamerMmr'),
+  streamerMmrWinDeltaWrap: document.querySelector('#streamerMmrWinDeltaWrap'),
+  streamerMmrWinDelta: document.querySelector('#streamerMmrWinDelta'),
+  streamerMmrLossDeltaWrap: document.querySelector('#streamerMmrLossDeltaWrap'),
+  streamerMmrLossDelta: document.querySelector('#streamerMmrLossDelta'),
+  streamerStatsStatus: document.querySelector('#streamerStatsStatus'),
+  resetStreamerStats: document.querySelector('#resetStreamerStats'),
+  restoreStreamerStats: document.querySelector('#restoreStreamerStats'),
   customNotablePlayersWrap: document.querySelector('#customNotablePlayersWrap'),
   customNotablePlayersTitle: document.querySelector('#customNotablePlayersTitle'),
   customNotablePlayersHint: document.querySelector('#customNotablePlayersHint'),
@@ -152,6 +171,29 @@ const translations = {
     rankDisplayFullGame: 'До конца игры',
     rankDisplayPreGameOnly: 'Только до начала игры',
     rankDisplayMinutes: 'Показывать первые N минут',
+    streamerStats: 'Статистика стримера',
+    streamerStatsHint: 'Локальный W-L за стрим, ручной MMR и медаль ранга. Offline не сбрасывает сессию первые 2 часа.',
+    showStreamerStats: 'Статистика стримера в overlay',
+    showStreamerRankMedal: 'Медаль ранга',
+    showStreamerMmr: 'MMR',
+    showStreamerWinLoss: 'Win-Lose',
+    streamerMedalSource: 'Источник медали',
+    streamerMedalAuto: 'Аккаунт, затем MMR',
+    streamerMedalAccount: 'Dota аккаунт',
+    streamerMedalMmr: 'Указанный MMR',
+    streamerMmr: 'Текущий MMR',
+    autoUpdateStreamerMmr: 'Авто считать MMR после матча',
+    streamerMmrWinDelta: 'MMR за победу',
+    streamerMmrLossDelta: 'MMR за поражение',
+    resetStreamerStats: 'Сбросить W-L',
+    restoreStreamerStats: 'Восстановить прошлый W-L',
+    streamerStatsStatus: 'W-L: {wins}-{losses} / MMR: {mmr} / медаль: {medal} / стрим: {stream}',
+    streamerStatsNoMmr: 'не указан',
+    streamerStatsNoMedal: 'нет данных',
+    streamerStatsOnline: 'online',
+    streamerStatsOffline: 'offline',
+    streamerStatsUnknown: 'неизвестно',
+    streamerStatsPrevious: ' / прошлый W-L можно восстановить: {wins}-{losses}',
     customNotablePlayers: 'Кастомные Notable Players',
     customNotablePlayersHint: 'Добавь Dota account id игроков, которых нужно всегда считать notable. Ник и страна из этого списка имеют приоритет над OpenDota.',
     notablePlayerId: 'Dota ID',
@@ -368,6 +410,29 @@ const translations = {
     rankDisplayFullGame: 'Full game',
     rankDisplayPreGameOnly: 'Before the game starts only',
     rankDisplayMinutes: 'Show for first N minutes',
+    streamerStats: 'Streamer stats',
+    streamerStatsHint: 'Local stream W-L, manual MMR, and rank medal. Offline keeps the session for the first 2 hours.',
+    showStreamerStats: 'Streamer stats overlay',
+    showStreamerRankMedal: 'Rank medal',
+    showStreamerMmr: 'MMR',
+    showStreamerWinLoss: 'Win-Lose',
+    streamerMedalSource: 'Medal source',
+    streamerMedalAuto: 'Account, then MMR',
+    streamerMedalAccount: 'Dota account',
+    streamerMedalMmr: 'Manual MMR',
+    streamerMmr: 'Current MMR',
+    autoUpdateStreamerMmr: 'Auto update MMR after match',
+    streamerMmrWinDelta: 'MMR for win',
+    streamerMmrLossDelta: 'MMR for loss',
+    resetStreamerStats: 'Reset W-L',
+    restoreStreamerStats: 'Restore previous W-L',
+    streamerStatsStatus: 'W-L: {wins}-{losses} / MMR: {mmr} / medal: {medal} / stream: {stream}',
+    streamerStatsNoMmr: 'not set',
+    streamerStatsNoMedal: 'no data',
+    streamerStatsOnline: 'online',
+    streamerStatsOffline: 'offline',
+    streamerStatsUnknown: 'unknown',
+    streamerStatsPrevious: ' / previous W-L can be restored: {wins}-{losses}',
     customNotablePlayers: 'Custom notable players',
     customNotablePlayersHint: 'Add Dota account ids that should always be treated as notable. Name and country here override OpenDota.',
     notablePlayerId: 'Dota ID',
@@ -649,6 +714,22 @@ function applyLanguage(config) {
   setOptionText(els.rankDisplayMode, 'full_game', t('rankDisplayFullGame'));
   setOptionText(els.rankDisplayMode, 'pre_game_only', t('rankDisplayPreGameOnly'));
   setLabelText(els.rankDisplayMinutes.closest('label'), t('rankDisplayMinutes'));
+  els.streamerStatsTitle.textContent = t('streamerStats');
+  els.streamerStatsHint.textContent = t('streamerStatsHint');
+  setLabelText(els.showStreamerStats.closest('label'), t('showStreamerStats'));
+  setLabelText(els.showStreamerRankMedal.closest('label'), t('showStreamerRankMedal'));
+  setLabelText(els.showStreamerMmr.closest('label'), t('showStreamerMmr'));
+  setLabelText(els.showStreamerWinLoss.closest('label'), t('showStreamerWinLoss'));
+  setLabelText(els.streamerMedalSourceWrap, t('streamerMedalSource'));
+  setOptionText(els.streamerMedalSource, 'auto', t('streamerMedalAuto'));
+  setOptionText(els.streamerMedalSource, 'account', t('streamerMedalAccount'));
+  setOptionText(els.streamerMedalSource, 'mmr', t('streamerMedalMmr'));
+  setLabelText(els.streamerMmrWrap, t('streamerMmr'));
+  setLabelText(els.autoUpdateStreamerMmr.closest('label'), t('autoUpdateStreamerMmr'));
+  setLabelText(els.streamerMmrWinDeltaWrap, t('streamerMmrWinDelta'));
+  setLabelText(els.streamerMmrLossDeltaWrap, t('streamerMmrLossDelta'));
+  els.resetStreamerStats.textContent = t('resetStreamerStats');
+  els.restoreStreamerStats.textContent = t('restoreStreamerStats');
   els.customNotablePlayersTitle.textContent = t('customNotablePlayers');
   els.customNotablePlayersHint.textContent = t('customNotablePlayersHint');
   setLabelText(els.notablePlayerIdWrap, t('notablePlayerId'));
@@ -868,6 +949,16 @@ function render(data) {
   els.showRoshanTimer.checked = matchIntel.showRoshanTimer !== false && matchIntel.showAegisRoshan !== false;
   els.rankDisplayMode.value = matchIntel.rankDisplayMode || 'minutes';
   setInputValue(els.rankDisplayMinutes, matchIntel.rankDisplayMinutes || 12);
+  els.showStreamerStats.checked = matchIntel.showStreamerStats === true;
+  els.showStreamerRankMedal.checked = matchIntel.showStreamerRankMedal !== false;
+  els.showStreamerMmr.checked = matchIntel.showStreamerMmr !== false;
+  els.showStreamerWinLoss.checked = matchIntel.showStreamerWinLoss !== false;
+  els.streamerMedalSource.value = matchIntel.streamerMedalSource || 'auto';
+  setInputValue(els.streamerMmr, matchIntel.streamerMmr || 0);
+  els.autoUpdateStreamerMmr.checked = matchIntel.autoUpdateStreamerMmr !== false;
+  setInputValue(els.streamerMmrWinDelta, matchIntel.streamerMmrWinDelta ?? 25);
+  setInputValue(els.streamerMmrLossDelta, matchIntel.streamerMmrLossDelta ?? 25);
+  renderStreamerStatsStatus(state.streamerStats || {}, matchIntel);
   renderCustomNotablePlayers(matchIntel.customPlayers || []);
   updateMatchIntelFieldVisibility();
   toggleButton(els.manualDraft, config.protection.manualDraft, state.protection.draft);
@@ -1454,6 +1545,28 @@ function normalizeCountryCode(value) {
   return /^[A-Z]{2}$/.test(code) ? code : '';
 }
 
+function renderStreamerStatsStatus(stats, settings) {
+  const mmr = Number(stats.currentMmr || settings.streamerMmr || 0);
+  const stream = stats.effectiveStreamOnline === true
+    ? t('streamerStatsOnline')
+    : stats.effectiveStreamOnline === false
+      ? t('streamerStatsOffline')
+      : t('streamerStatsUnknown');
+  let text = t('streamerStatsStatus')
+    .replace('{wins}', String(stats.wins || 0))
+    .replace('{losses}', String(stats.losses || 0))
+    .replace('{mmr}', mmr > 0 ? String(Math.trunc(mmr)) : t('streamerStatsNoMmr'))
+    .replace('{medal}', stats.medal?.name || t('streamerStatsNoMedal'))
+    .replace('{stream}', stream);
+  if (stats.previousSession) {
+    text += t('streamerStatsPrevious')
+      .replace('{wins}', String(stats.previousSession.wins || 0))
+      .replace('{losses}', String(stats.previousSession.losses || 0));
+  }
+  els.streamerStatsStatus.textContent = text;
+  els.restoreStreamerStats.disabled = !stats.previousSession;
+}
+
 function countryFlagEmoji(code) {
   const normalized = normalizeCountryCode(code);
   if (!normalized) return '';
@@ -1492,6 +1605,20 @@ els.rankDisplayMode.addEventListener('change', () => {
   saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
 });
 els.rankDisplayMinutes.addEventListener('change', () => saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert));
+[
+  els.showStreamerStats,
+  els.showStreamerRankMedal,
+  els.showStreamerMmr,
+  els.showStreamerWinLoss,
+  els.streamerMedalSource,
+  els.autoUpdateStreamerMmr
+].forEach((input) => input.addEventListener('change', () => {
+  updateMatchIntelFieldVisibility();
+  saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+}));
+[els.streamerMmr, els.streamerMmrWinDelta, els.streamerMmrLossDelta].forEach((input) => {
+  input.addEventListener('change', () => saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert));
+});
 els.pageTabs.forEach((tab) => {
   tab.addEventListener('click', () => setActivePage(tab.dataset.pageTarget));
 });
@@ -1514,6 +1641,8 @@ els.manualDraft.addEventListener('click', () => saveProtection({ manualDraft: ne
 els.manualMinimap.addEventListener('click', () => saveProtection({ manualMinimap: nextManualProtectionState('manualMinimap', 'minimap') }).catch(alert));
 els.manualTopBar.addEventListener('click', () => saveProtection({ manualTopBar: nextManualProtectionState('manualTopBar', 'topBar') }).catch(alert));
 els.manualQueue.addEventListener('click', () => saveProtection({ manualQueue: nextManualProtectionState('manualQueue', 'queue') }).catch(alert));
+els.resetStreamerStats.addEventListener('click', () => api('/api/streamer-stats/reset', {}).catch(alert));
+els.restoreStreamerStats.addEventListener('click', () => api('/api/streamer-stats/restore', {}).catch(alert));
 
 function protectionMatchIntelFromForm() {
   return {
@@ -1524,6 +1653,15 @@ function protectionMatchIntelFromForm() {
     showRoshanTimer: els.showRoshanTimer.checked,
     rankDisplayMode: els.rankDisplayMode.value,
     rankDisplayMinutes: Number(els.rankDisplayMinutes.value),
+    showStreamerStats: els.showStreamerStats.checked,
+    showStreamerRankMedal: els.showStreamerRankMedal.checked,
+    showStreamerMmr: els.showStreamerMmr.checked,
+    showStreamerWinLoss: els.showStreamerWinLoss.checked,
+    streamerMedalSource: els.streamerMedalSource.value,
+    streamerMmr: Number(els.streamerMmr.value),
+    autoUpdateStreamerMmr: els.autoUpdateStreamerMmr.checked,
+    streamerMmrWinDelta: Number(els.streamerMmrWinDelta.value),
+    streamerMmrLossDelta: Number(els.streamerMmrLossDelta.value),
     customPlayers: customNotablePlayersFromForm()
   };
 }
@@ -1531,12 +1669,25 @@ function protectionMatchIntelFromForm() {
 function updateMatchIntelFieldVisibility() {
   const matchIntelEnabled = els.matchIntelEnabled.checked;
   const notablePlayersEnabled = matchIntelEnabled && (els.showPlayerRanks.checked || els.showPlayerFlags.checked);
+  const streamerStatsEnabled = matchIntelEnabled && els.showStreamerStats.checked;
   els.showPlayerRanks.closest('label').hidden = !matchIntelEnabled;
   els.showPlayerFlags.closest('label').hidden = !matchIntelEnabled;
   els.showAegisTimer.closest('label').hidden = !matchIntelEnabled;
   els.showRoshanTimer.closest('label').hidden = !matchIntelEnabled;
   els.rankDisplayModeWrap.hidden = !notablePlayersEnabled;
   els.rankDisplayMinutesWrap.hidden = !notablePlayersEnabled || ['full_game', 'pre_game_only'].includes(els.rankDisplayMode.value);
+  els.streamerStatsWrap.hidden = !matchIntelEnabled;
+  els.showStreamerRankMedal.closest('label').hidden = !streamerStatsEnabled;
+  els.showStreamerMmr.closest('label').hidden = !streamerStatsEnabled;
+  els.showStreamerWinLoss.closest('label').hidden = !streamerStatsEnabled;
+  els.streamerMedalSourceWrap.hidden = !streamerStatsEnabled || !els.showStreamerRankMedal.checked;
+  els.streamerMmrWrap.hidden = !streamerStatsEnabled || (!els.showStreamerMmr.checked && els.streamerMedalSource.value === 'account');
+  els.autoUpdateStreamerMmr.closest('label').hidden = !streamerStatsEnabled;
+  els.streamerMmrWinDeltaWrap.hidden = !streamerStatsEnabled || !els.autoUpdateStreamerMmr.checked;
+  els.streamerMmrLossDeltaWrap.hidden = !streamerStatsEnabled || !els.autoUpdateStreamerMmr.checked;
+  els.streamerStatsStatus.hidden = !streamerStatsEnabled;
+  els.resetStreamerStats.hidden = !streamerStatsEnabled;
+  els.restoreStreamerStats.hidden = !streamerStatsEnabled;
   els.customNotablePlayersWrap.hidden = !notablePlayersEnabled;
 }
 

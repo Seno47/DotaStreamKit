@@ -119,6 +119,26 @@
             <label class="check"><input type="checkbox" id="showRoshanTimer"> Roshan timer</label>
             <label id="rankDisplayModeWrap">Rank display<select id="rankDisplayMode"><option value="minutes">First N minutes</option><option value="full_game">Full game</option><option value="pre_game_only">Before the game starts only</option></select></label>
             <label id="rankDisplayMinutesWrap">Rank display minutes<input id="rankDisplayMinutes" type="number" min="1" max="30" step="1"></label>
+            <div class="streamer-stats-settings" id="streamerStatsWrap">
+              <div class="notable-players-head" id="streamerStatsTitle">Streamer stats</div>
+              <p class="muted" id="streamerStatsHint">Track stream W-L, manual MMR, and rank medal.</p>
+              <div class="streamer-stats-grid">
+                <label class="check"><input type="checkbox" id="showStreamerStats"> Streamer stats overlay</label>
+                <label class="check"><input type="checkbox" id="showStreamerRankMedal"> Rank medal</label>
+                <label class="check"><input type="checkbox" id="showStreamerMmr"> MMR</label>
+                <label class="check"><input type="checkbox" id="showStreamerWinLoss"> Win-Lose</label>
+                <label id="streamerMedalSourceWrap">Medal source<select id="streamerMedalSource"><option value="auto">Account, then MMR</option><option value="account">Dota account</option><option value="mmr">Manual MMR</option></select></label>
+                <label id="streamerMmrWrap">Current MMR<input id="streamerMmr" type="number" min="0" max="20000" step="1"></label>
+                <label class="check"><input type="checkbox" id="autoUpdateStreamerMmr"> Auto update MMR</label>
+                <label id="streamerMmrWinDeltaWrap">Win MMR<input id="streamerMmrWinDelta" type="number" min="0" max="200" step="1"></label>
+                <label id="streamerMmrLossDeltaWrap">Loss MMR<input id="streamerMmrLossDelta" type="number" min="0" max="200" step="1"></label>
+              </div>
+              <div class="streamer-stats-status" id="streamerStatsStatus">-</div>
+              <div class="button-row streamer-stats-actions">
+                <button id="resetStreamerStats" type="button">Reset W-L</button>
+                <button id="restoreStreamerStats" type="button">Restore previous W-L</button>
+              </div>
+            </div>
             <div class="notable-players" id="customNotablePlayersWrap">
               <div class="notable-players-head" id="customNotablePlayersTitle">Custom notable players</div>
               <p class="muted" id="customNotablePlayersHint">Add Dota account ids that should always be treated as notable.</p>

@@ -17,8 +17,6 @@ $realisticVtex = Join-Path $extracted "materials__overviews__dota_psd.vtex_c"
 $realisticPng = Join-Path $extracted "materials__overviews__dota_psd.png"
 $simpleVtex = Join-Path $extracted "materials__overviews__dota_minimal_psd_f4e53729.vtex_c"
 $simplePng = Join-Path $extracted "materials__overviews__dota_minimal_psd_f4e53729.png"
-$rankImmortalVtex = Join-Path $extracted "panorama__images__rank_tier_icons__rank8_psd.vtex_c"
-$rankImmortalPng = Join-Path $extracted "panorama__images__rank_tier_icons__rank8_psd.png"
 $aegisVtex = Join-Path $extracted "panorama__images__items__aegis_png.vtex_c"
 $aegisPng = Join-Path $extracted "panorama__images__items__aegis_png.png"
 $roshanVtex = Join-Path $extracted "panorama__images__heroes__npc_dota_hero_roshan_png.vtex_c"
@@ -39,7 +37,9 @@ node (Join-Path $root "scripts\extract-vpk-file.js") $pak "panorama/images/hero_
 node (Join-Path $root "scripts\extract-vpk-file.js") $pak "materials/vgui/hud/minimap_ward_invis_psd_46a724e0" $extracted
 node (Join-Path $root "scripts\extract-vpk-file.js") $pak "materials/overviews/dota_psd" $extracted
 node (Join-Path $root "scripts\extract-vpk-file.js") $pak "materials/overviews/dota_minimal_psd" $extracted
-node (Join-Path $root "scripts\extract-vpk-file.js") $pak "panorama/images/rank_tier_icons/rank8_psd" $extracted
+for ($rank = 1; $rank -le 8; $rank++) {
+  node (Join-Path $root "scripts\extract-vpk-file.js") $pak "panorama/images/rank_tier_icons/rank$($rank)_psd" $extracted
+}
 node (Join-Path $root "scripts\extract-vpk-file.js") $pak "panorama/images/items/aegis_png" $extracted
 node (Join-Path $root "scripts\extract-vpk-file.js") $pak "panorama/images/heroes/npc_dota_hero_roshan_png" $extracted
 
@@ -76,11 +76,19 @@ if (Test-Path -LiteralPath $simpleVtex) {
   }
 }
 
-if (Test-Path -LiteralPath $rankImmortalVtex) {
-  & $vrf -i $rankImmortalVtex -o $extracted -d
-  if (Test-Path -LiteralPath $rankImmortalPng) {
-    Copy-Item -LiteralPath $rankImmortalPng -Destination (Join-Path $assetDir "rank-immortal.png") -Force
-    Copy-Item -LiteralPath $rankImmortalPng -Destination (Join-Path $root "public\default-assets\rank-immortal.png") -Force
+for ($rank = 1; $rank -le 8; $rank++) {
+  $rankVtex = Join-Path $extracted "panorama__images__rank_tier_icons__rank$($rank)_psd.vtex_c"
+  $rankPng = Join-Path $extracted "panorama__images__rank_tier_icons__rank$($rank)_psd.png"
+  if (Test-Path -LiteralPath $rankVtex) {
+    & $vrf -i $rankVtex -o $extracted -d
+    if (Test-Path -LiteralPath $rankPng) {
+      Copy-Item -LiteralPath $rankPng -Destination (Join-Path $assetDir "rank-medal-$($rank).png") -Force
+      Copy-Item -LiteralPath $rankPng -Destination (Join-Path $root "public\default-assets\rank-medal-$($rank).png") -Force
+      if ($rank -eq 8) {
+        Copy-Item -LiteralPath $rankPng -Destination (Join-Path $assetDir "rank-immortal.png") -Force
+        Copy-Item -LiteralPath $rankPng -Destination (Join-Path $root "public\default-assets\rank-immortal.png") -Force
+      }
+    }
   }
 }
 
@@ -113,9 +121,9 @@ if (Test-Path -LiteralPath (Join-Path $assetDir "sentry-eye.png")) {
   Write-Host "Extracted Dota sentry minimap icon:"
   Write-Host "  $sentryPng"
 }
-if (Test-Path -LiteralPath (Join-Path $assetDir "rank-immortal.png")) {
-  Write-Host "Extracted Dota immortal rank medal:"
-  Write-Host "  $rankImmortalPng"
+if (Test-Path -LiteralPath (Join-Path $assetDir "rank-medal-8.png")) {
+  Write-Host "Extracted Dota rank medals:"
+  Write-Host "  $(Join-Path $assetDir "rank-medal-1.png") .. $(Join-Path $assetDir "rank-medal-8.png")"
 }
 if (Test-Path -LiteralPath (Join-Path $assetDir "aegis.png")) {
   Write-Host "Extracted Dota Aegis icon:"

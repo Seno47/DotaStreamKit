@@ -18,6 +18,15 @@ import {
   notablePlayersFromRankCache,
   updateMatchIntel
 } from './game-intel.js';
+import {
+  applyStreamerMatchResult,
+  normalizeStreamerStatsConfig,
+  normalizeStreamerStatsState,
+  resetStreamerSession,
+  restorePreviousStreamerSession,
+  selectStreamerMedal,
+  updateStreamerSessionPresence
+} from './streamer-stats.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const execFileAsync = promisify(execFile);
@@ -269,6 +278,15 @@ const defaultConfig = {
       showPlayerFlags: false,
       showAegisTimer: true,
       showRoshanTimer: true,
+      showStreamerStats: true,
+      showStreamerRankMedal: true,
+      showStreamerMmr: true,
+      showStreamerWinLoss: true,
+      streamerMedalSource: 'auto',
+      streamerMmr: 0,
+      autoUpdateStreamerMmr: true,
+      streamerMmrWinDelta: 25,
+      streamerMmrLossDelta: 25,
       rankDisplayMode: 'minutes',
       rankDisplayMinutes: 12,
       customPlayers: []
@@ -378,6 +396,7 @@ const runtime = {
       roshanStatus: null,
       aegis: null
     },
+    streamerStats: normalizeStreamerStatsState({}),
     dota: {
       processRunning: null,
       processCheckedAt: null
@@ -451,6 +470,7 @@ runtime.state.matchIntel = {
   roshanStatus: null,
   aegis: null
 };
+runtime.state.streamerStats = normalizeStreamerStatsState(runtime.state.streamerStats);
 runtime.state.lastAutoPredictionAttempt = null;
 runtime.state.autoPredictionCreatedKey = null;
 runtime.state.autoPredictionSuppressedKey = null;
@@ -470,6 +490,8 @@ const server = createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/api/config') return sendJson(res, sanitizeConfig(runtime.config));
     if (req.method === 'POST' && url.pathname === '/api/config') return await updateConfig(req, res);
     if (req.method === 'POST' && url.pathname === '/api/protection') return await updateProtection(req, res);
+    if (req.method === 'POST' && url.pathname === '/api/streamer-stats/reset') return await resetStreamerStatsApi(res);
+    if (req.method === 'POST' && url.pathname === '/api/streamer-stats/restore') return await restoreStreamerStatsApi(res);
     if (req.method === 'POST' && url.pathname === '/gsi/dota2') return await handleGsi(req, res);
     if (req.method === 'GET' && url.pathname === '/api/dota/detect') return await detectDotaApi(res);
     if (req.method === 'POST' && url.pathname === '/api/install-gsi') return await installGsi(req, res);
@@ -536,7 +558,8 @@ async function refreshRuntimePresence() {
   }
   const protection = computeProtection(runtime.config, runtime.state.gsi);
   const protectionChanged = !sameProtection(runtime.state.protection, protection);
-  if (processChanged || connectionChanged || protectionChanged) {
+  const streamerSessionChanged = syncStreamerSessionPresence();
+  if (processChanged || connectionChanged || protectionChanged || streamerSessionChanged) {
     runtime.state.protection = protection;
     persistState();
     broadcast();
@@ -1219,6 +1242,7 @@ function assetNames() {
     'fake-minimap-vision-realistic.png',
     'fake-minimap-vision-simple.png',
     'fake-minimap-vision-empty.png',
+    ...Array.from({ length: 8 }, (_, index) => `rank-medal-${index + 1}.png`),
     'rank-immortal.png',
     'aegis.png',
     'roshan.png',
@@ -1233,6 +1257,7 @@ function defaultSeedAssetNames() {
     'draft-screenshot.png',
     'ward-eye.png',
     'sentry-eye.png',
+    ...Array.from({ length: 8 }, (_, index) => `rank-medal-${index + 1}.png`),
     'rank-immortal.png',
     'aegis.png',
     'roshan.png',
@@ -1243,13 +1268,41 @@ function defaultSeedAssetNames() {
 
 function publicState() {
   const { twitchToken, ...safeRuntimeState } = runtime.state;
+  const streamerStats = publicStreamerStats();
   return {
     config: sanitizeConfig(runtime.config),
     state: {
       ...safeRuntimeState,
+      streamerStats,
       twitch: { ...runtime.state.twitch },
       events: runtime.state.events.slice(0, 50)
     }
+  };
+}
+
+function publicStreamerStats() {
+  const stats = normalizeStreamerStatsState(runtime.state.streamerStats);
+  const settings = runtime.config.protection.matchIntel || {};
+  const configuredMmr = Number(settings.streamerMmr || 0);
+  const medal = selectStreamerMedal({
+    source: settings.streamerMedalSource || 'auto',
+    accountRankTier: stats.accountRankTier,
+    mmr: configuredMmr > 0 ? configuredMmr : null
+  });
+  return {
+    ...stats,
+    currentMmr: configuredMmr,
+    medal: medal ? {
+      id: medal.medal,
+      name: medal.name,
+      minMmr: medal.minMmr,
+      source: settings.streamerMedalSource === 'mmr'
+        ? 'mmr'
+        : stats.accountRankTier && settings.streamerMedalSource !== 'mmr'
+          ? 'account'
+          : 'mmr'
+    } : null,
+    effectiveStreamOnline: effectiveStreamerStreamOnline()
   };
 }
 
@@ -1383,6 +1436,7 @@ async function updateConfig(req, res) {
   }
   hydrateTwitchStatus();
   runtime.state.protection = computeProtection(runtime.config, runtime.state.gsi);
+  syncStreamerSessionPresence();
   await persistConfig();
   await persistState();
   logEvent('config', 'Settings updated');
@@ -1425,7 +1479,24 @@ async function updateProtection(req, res) {
     runtime.state.matchIntel = buildMatchIntel({}, runtime.state.gsi, runtime.state.matchIntel?.players || []);
   }
   runtime.state.protection = computeProtection(runtime.config, runtime.state.gsi);
+  syncStreamerSessionPresence();
   await persistConfig();
+  await persistState();
+  broadcast();
+  sendJson(res, publicState());
+}
+
+async function resetStreamerStatsApi(res) {
+  const result = resetStreamerSession(runtime.state.streamerStats);
+  runtime.state.streamerStats = result.state;
+  await persistState();
+  broadcast();
+  sendJson(res, publicState());
+}
+
+async function restoreStreamerStatsApi(res) {
+  const result = restorePreviousStreamerSession(runtime.state.streamerStats);
+  runtime.state.streamerStats = result.state;
   await persistState();
   broadcast();
   sendJson(res, publicState());
@@ -1502,9 +1573,13 @@ async function handleGsi(req, res) {
 
   runtime.state.gsi = gsi;
   runtime.state.matchIntel = buildMatchIntel(payload, gsi, matchPlayers);
+  updateStreamerStatsIdentity(payload, gsi);
   runtime.state.protection = computeProtection(runtime.config, gsi);
   refreshNotablePlayerRanks(matchPlayers).catch((error) => logEvent('system', `Player rank lookup failed: ${error.message}`));
+  refreshStreamerAccountRank().catch((error) => logEvent('system', `Streamer rank lookup failed: ${error.message}`));
+  const streamerStatsChangedConfig = applyStreamerStatsMatchResult(previous, gsi);
   await maybeAutomatePrediction(previous, gsi);
+  if (streamerStatsChangedConfig) await persistConfig();
   await persistState();
   broadcast();
   sendJson(res, { ok: true });
@@ -1541,6 +1616,89 @@ function buildMatchIntel(payload, gsi, players) {
     intel.aegis = null;
   }
   return intel;
+}
+
+function updateStreamerStatsIdentity(payload) {
+  const accountId = normalizeAccountId(
+    payload?.player?.accountid
+    ?? payload?.player?.account_id
+    ?? payload?.player?.accountId
+    ?? payload?.player?.steamid
+    ?? payload?.player?.steam_id
+  );
+  if (!accountId) return false;
+  const previous = runtime.state.streamerStats || {};
+  if (String(previous.streamerAccountId || '') === String(accountId)) return false;
+  runtime.state.streamerStats = {
+    ...normalizeStreamerStatsState(previous),
+    streamerAccountId: accountId,
+    accountRankTier: null,
+    accountLeaderboardRank: null,
+    accountRankCheckedAt: null
+  };
+  return true;
+}
+
+function applyStreamerStatsMatchResult(previous, gsi) {
+  const settings = runtime.config.protection.matchIntel;
+  const result = inferResult(gsi);
+  const matchId = gsi.matchId || gsi.activeMatchId || previous.matchId || previous.activeMatchId;
+  const applied = applyStreamerMatchResult(runtime.state.streamerStats, settings, result, matchId);
+  runtime.state.streamerStats = applied.state;
+  if (applied.configChanged) {
+    runtime.config.protection.matchIntel = {
+      ...runtime.config.protection.matchIntel,
+      ...applied.config
+    };
+    normalizeMatchIntelConfig(runtime.config.protection.matchIntel);
+  }
+  if (applied.changed) {
+    const delta = Number(runtime.state.streamerStats.lastMmrChange || 0);
+    const mmrText = delta ? `, MMR ${delta > 0 ? '+' : ''}${delta}` : '';
+    logEvent('system', `Streamer stats updated: ${result}${mmrText}`);
+  }
+  return applied.configChanged;
+}
+
+async function refreshStreamerAccountRank() {
+  const settings = runtime.config.protection.matchIntel;
+  if (!settings?.showStreamerStats || !settings.showStreamerRankMedal) return;
+  if (!['auto', 'account'].includes(settings.streamerMedalSource || 'auto')) return;
+  const accountId = runtime.state.streamerStats?.streamerAccountId;
+  if (!accountId) return;
+  const cached = getCachedPlayerRank(String(accountId));
+  if (cached && !shouldRefreshPlayerRank(String(accountId))) {
+    runtime.state.streamerStats = {
+      ...normalizeStreamerStatsState(runtime.state.streamerStats),
+      accountRankTier: cached.rankTier || null,
+      accountLeaderboardRank: cached.leaderboardRank || null,
+      accountRankCheckedAt: runtime.state.streamerStats?.accountRankCheckedAt || new Date().toISOString()
+    };
+    return;
+  }
+  const rank = await fetchAndCachePlayerRank(String(accountId));
+  runtime.state.streamerStats = {
+    ...normalizeStreamerStatsState(runtime.state.streamerStats),
+    accountRankTier: rank?.rankTier || null,
+    accountLeaderboardRank: rank?.leaderboardRank || null,
+    accountRankCheckedAt: new Date().toISOString()
+  };
+  await persistState();
+  broadcast();
+}
+
+function syncStreamerSessionPresence() {
+  if (!runtime.config.protection.matchIntel?.showStreamerStats) return false;
+  const result = updateStreamerSessionPresence(runtime.state.streamerStats, effectiveStreamerStreamOnline());
+  runtime.state.streamerStats = result.state;
+  return result.changed;
+}
+
+function effectiveStreamerStreamOnline() {
+  if (runtime.config.predictions?.forceStreamOnline) return true;
+  if (typeof runtime.state.twitch?.isLive === 'boolean') return runtime.state.twitch.isLive;
+  if (typeof runtime.twitchStreamStatus?.isLive === 'boolean') return runtime.twitchStreamStatus.isLive;
+  return null;
 }
 
 function buildRosterDebug(payload) {
@@ -1634,6 +1792,14 @@ async function fetchAndCachePlayerRank(accountId) {
       };
       runtime.playerRankCache.set(accountId, cacheEntry);
       runtime.pendingPlayerRankFetches.delete(accountId);
+      if (String(runtime.state.streamerStats?.streamerAccountId || '') === String(accountId)) {
+        runtime.state.streamerStats = {
+          ...normalizeStreamerStatsState(runtime.state.streamerStats),
+          accountRankTier: cacheEntry.rankTier,
+          accountLeaderboardRank: cacheEntry.leaderboardRank,
+          accountRankCheckedAt: new Date().toISOString()
+        };
+      }
       const players = runtime.state.matchIntel?.players || [];
       const notablePlayers = buildNotablePlayers(players);
       if (!sameJson(runtime.state.matchIntel.notablePlayers, notablePlayers)) {
@@ -2380,6 +2546,7 @@ function normalizeMatchIntelConfig(config) {
   if (!['minutes', 'full_game', 'pre_game_only'].includes(config.rankDisplayMode)) config.rankDisplayMode = 'minutes';
   config.rankDisplayMinutes = clampInt(config.rankDisplayMinutes, 1, 30);
   config.customPlayers = normalizeCustomNotablePlayers(config.customPlayers);
+  normalizeStreamerStatsConfig(config);
 }
 
 function normalizeCustomNotablePlayers(value) {
@@ -2813,6 +2980,7 @@ async function isBroadcasterLive(force = false) {
     title: stream?.title || null
   };
   hydrateTwitchStatus();
+  syncStreamerSessionPresence();
   await persistState();
   broadcast();
   return runtime.twitchStreamStatus.isLive;
