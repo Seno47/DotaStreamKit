@@ -1443,6 +1443,8 @@ async function handleGsi(req, res) {
   const lifecycle = inferGsiLifecycle(previous, gameState, matchId);
   const playerActivity = player.activity || null;
   const playerTeam = normalizeTeam(player.team_name || player.team || player.activity);
+  const playerSlotRaw = player.player_slot ?? player.playerSlot ?? null;
+  const playerTeamSlotRaw = player.team_slot ?? player.teamSlot ?? null;
   const teamStats = collectTeamStats(payload, playerTeam);
   const heroId = hero.id ?? hero.hero_id ?? (!lifecycle.newDraft ? previous.heroId : null) ?? null;
   const heroName = resolveHeroName(hero, heroId, previous, lifecycle);
@@ -1459,6 +1461,7 @@ async function handleGsi(req, res) {
   const queueSearchSignal = inferQueueSearchSignal(payload);
   const inGameScreen = inferInGameScreen(gameState, playerActivity);
   const matchPlayers = collectMatchPlayers(payload);
+  const rosterDebug = buildRosterDebug(payload);
   const leftGameView = inferLeftGameView({
     connected: true,
     activeMatchId,
@@ -1475,6 +1478,8 @@ async function handleGsi(req, res) {
     activeMatchId,
     playerActivity,
     playerTeam,
+    playerSlotRaw,
+    playerTeamSlotRaw,
     winTeam: normalizeTeam(map.win_team),
     heroName,
     heroId,
@@ -1491,7 +1496,8 @@ async function handleGsi(req, res) {
     draftCycle: lifecycle.draftCycle,
     queueSearchSignal,
     inGameScreen,
-    leftGameView
+    leftGameView,
+    rosterDebug
   };
 
   runtime.state.gsi = gsi;
@@ -1530,6 +1536,21 @@ function buildMatchIntel(payload, gsi, players) {
     intel.aegis = null;
   }
   return intel;
+}
+
+function buildRosterDebug(payload) {
+  return Object.entries(payload?.allplayers || payload?.players || {})
+    .filter(([key, player]) => key !== '0' && key !== 'player0' && player && typeof player === 'object')
+    .map(([key, player]) => ({
+      key,
+      accountId: normalizeAccountId(player.accountid ?? player.account_id ?? player.accountId ?? player.steamid ?? player.steam_id),
+      name: String(player.name || player.player_name || player.personaname || '').slice(0, 40),
+      hero: String(player.hero_name || player.heroName || player.hero || '').slice(0, 60),
+      team: normalizeTeam(player.team_name || player.team || player.activity || ''),
+      playerSlot: player.player_slot ?? player.playerSlot ?? null,
+      teamSlot: player.team_slot ?? player.teamSlot ?? null
+    }))
+    .sort((left, right) => String(left.key).localeCompare(String(right.key), undefined, { numeric: true }));
 }
 
 function getCachedPlayerRank(accountId) {

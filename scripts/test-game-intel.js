@@ -102,6 +102,18 @@ assert.deepEqual(fallbackPlayers, [{
   hasAegis: true
 }]);
 
+const direTeamSlotPriority = collectMatchPlayers({
+  player: {
+    team_name: 'dire',
+    player_slot: 1,
+    team_slot: 0,
+    accountid: 333,
+    name: 'Streamer'
+  },
+  hero: { name: 'npc_dota_hero_disruptor' }
+});
+assert.equal(direTeamSlotPriority[0].slot, 5);
+
 const singlePlayerPayload = collectMatchPlayers({
   players: {
     player9: { player_slot: 1, accountid: 333, name: 'Streamer' }

@@ -134,7 +134,7 @@ export function normalizeAccountId(value) {
 function normalizeMatchPlayer(key, player) {
   if (isIgnoredRosterKey(key)) return null;
   if (!player || typeof player !== 'object') return null;
-  const slot = normalizePlayerSlot(player.player_slot ?? player.playerSlot ?? player.team_slot ?? player.teamSlot, player);
+  const slot = normalizePlayerSlot(player.team_slot ?? player.teamSlot ?? player.player_slot ?? player.playerSlot, player);
   if (slot === null) return null;
   const accountId = normalizeAccountId(player.accountid ?? player.account_id ?? player.accountId ?? player.steamid ?? player.steam_id);
   return {
@@ -169,12 +169,12 @@ function normalizeCurrentMatchPlayer(payload, forceVisualFirst = false) {
 
 function currentPlayerTopbarSlot(payload, player, forceVisualFirst) {
   const team = String(player.team_name || player.team || '').toLowerCase();
-  if (player.player_slot !== undefined || player.playerSlot !== undefined) {
-    const slot = normalizePlayerSlot(player.player_slot ?? player.playerSlot, player);
-    if (slot !== null) return slot;
-  }
   if (player.team_slot !== undefined || player.teamSlot !== undefined) {
     const slot = normalizePlayerSlot(player.team_slot ?? player.teamSlot, player);
+    if (slot !== null) return slot;
+  }
+  if (player.player_slot !== undefined || player.playerSlot !== undefined) {
+    const slot = normalizePlayerSlot(player.player_slot ?? player.playerSlot, player);
     if (slot !== null) return slot;
   }
   const rosterSlot = inferRosterSlot(payload, player);
@@ -197,7 +197,7 @@ function inferRosterSlot(payload, player) {
   for (const [key, rosterPlayer] of Object.entries(source)) {
     if (isIgnoredRosterKey(key)) continue;
     if (!rosterPlayer || typeof rosterPlayer !== 'object') continue;
-    const slot = normalizePlayerSlot(rosterPlayer.player_slot ?? rosterPlayer.playerSlot ?? rosterPlayer.team_slot ?? rosterPlayer.teamSlot, rosterPlayer);
+    const slot = normalizePlayerSlot(rosterPlayer.team_slot ?? rosterPlayer.teamSlot ?? rosterPlayer.player_slot ?? rosterPlayer.playerSlot, rosterPlayer);
     if (slot === null) continue;
     const rosterAccountId = normalizeAccountId(rosterPlayer.accountid ?? rosterPlayer.account_id ?? rosterPlayer.accountId ?? rosterPlayer.steamid ?? rosterPlayer.steam_id);
     const rosterTeam = normalizeRosterTeam(rosterPlayer.team_name || rosterPlayer.team || slot);
@@ -254,7 +254,11 @@ function normalizePlayerSlot(rawSlot, player) {
   const numeric = Number(rawSlot);
   const team = String(player?.team_name || player?.team || '').toLowerCase();
   if (Number.isFinite(numeric)) {
-    if (numeric >= 0 && numeric <= 4) return Math.trunc(numeric);
+    if (numeric >= 0 && numeric <= 4) {
+      if (team.includes('dire') || team.includes('bad')) return Math.trunc(numeric + 5);
+      if (team.includes('radiant') || team.includes('good')) return Math.trunc(numeric);
+      return Math.trunc(numeric);
+    }
     if (numeric >= 128 && numeric <= 132) return Math.trunc(numeric - 128 + 5);
     if (numeric >= 5 && numeric <= 9) return Math.trunc(numeric);
   }
