@@ -335,8 +335,8 @@ function applyRoshanIntel(reference, settings, state, version, slots) {
   span.textContent = text;
   const firstSlot = slots.reduce((leftmost, slot) => !leftmost || Number(slot.left) < Number(leftmost.left) ? slot : leftmost, null);
   const box = firstSlot
-    ? { left: Math.max(0, Number(firstSlot.left) - 150), top: Number(firstSlot.top || 0) + 6, width: 118, height: 34 }
-    : { left: 398, top: 6, width: 118, height: 34 };
+    ? { left: Math.max(0, Number(firstSlot.left) - 230), top: Number(firstSlot.top || 0) + 6, width: 145, height: 34 }
+    : { left: 318, top: 6, width: 145, height: 34 };
   applyScaledBox(roshanIntelEl, box, reference);
   setVisible(roshanIntelEl, true);
 }
