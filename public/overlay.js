@@ -537,19 +537,27 @@ function applyStreamerStats(reference, protection, state) {
     nodes.pips.hidden = true;
   }
 
-  const mmr = Number(stats.currentMmr || settings.streamerMmr || 0);
-  if (settings.showStreamerMmr !== false && mmr > 0) {
-    setTextContent(nodes.mmr, Math.trunc(mmr));
-    nodes.mmr.hidden = false;
-  } else {
-    nodes.mmr.hidden = true;
-  }
   if (settings.showStreamerWinLoss !== false) {
     setTextContent(nodes.winNumber, Math.max(0, Number(stats.wins || 0)));
     setTextContent(nodes.lossNumber, Math.max(0, Number(stats.losses || 0)));
     nodes.winLoss.hidden = false;
   } else {
     nodes.winLoss.hidden = true;
+  }
+  const leaderboardRank = Number(stats.accountLeaderboardRank || 0);
+  if (settings.showStreamerRankMedal !== false && leaderboardRank > 0 && !nodes.medalWrap.hidden) {
+    setTextContent(nodes.leaderboard, `#${Math.trunc(leaderboardRank)}`);
+    nodes.leaderboard.hidden = false;
+  } else {
+    nodes.leaderboard.hidden = true;
+  }
+  streamerStatsEl.classList.toggle('hasLeaderboard', !nodes.leaderboard.hidden);
+  const mmr = Number(stats.currentMmr || settings.streamerMmr || 0);
+  if (settings.showStreamerMmr !== false && mmr > 0) {
+    setTextContent(nodes.mmr, formatStreamerMmr(mmr, nodes.winLoss.hidden, !nodes.leaderboard.hidden));
+    nodes.mmr.hidden = false;
+  } else {
+    nodes.mmr.hidden = true;
   }
   const lastChange = Number(stats.lastMmrChange || 0);
   if (settings.showStreamerMmr !== false && lastChange) {
@@ -560,7 +568,7 @@ function applyStreamerStats(reference, protection, state) {
     nodes.lastChange.hidden = true;
   }
   nodes.text.hidden = nodes.mmr.hidden && nodes.winLoss.hidden && nodes.lastChange.hidden;
-  if (nodes.medalWrap.hidden && nodes.text.hidden) {
+  if (nodes.medalWrap.hidden && nodes.leaderboard.hidden && nodes.text.hidden) {
     setVisible(streamerStatsEl, false);
     return;
   }
@@ -590,6 +598,7 @@ function ensureStreamerStatsNodes() {
   const medalWrap = document.createElement('span');
   const medal = document.createElement('img');
   const pips = document.createElement('img');
+  const leaderboard = document.createElement('span');
   const text = document.createElement('span');
   const mmr = document.createElement('span');
   const winLoss = document.createElement('span');
@@ -606,6 +615,7 @@ function ensureStreamerStatsNodes() {
   pips.className = 'streamerStatsPips';
   pips.alt = '';
   pips.decoding = 'async';
+  leaderboard.className = 'streamerStatsLeaderboard';
   text.className = 'streamerStatsText';
   mmr.className = 'streamerStatsMmr';
   winLoss.className = 'streamerStatsWinLoss';
@@ -620,15 +630,21 @@ function ensureStreamerStatsNodes() {
   loss.textContent = 'L';
   winLoss.append(winNumber, win, dash, lossNumber, loss);
   medalWrap.append(medal, pips);
-  text.append(mmr, winLoss, lastChange);
-  streamerStatsEl.replaceChildren(medalWrap, text);
-  streamerStatsNodes = { medalWrap, medal, pips, text, mmr, winLoss, winNumber, lossNumber, lastChange };
+  text.append(winLoss, mmr, lastChange);
+  streamerStatsEl.replaceChildren(medalWrap, leaderboard, text);
+  streamerStatsNodes = { medalWrap, medal, pips, leaderboard, text, mmr, winLoss, winNumber, lossNumber, lastChange };
   return streamerStatsNodes;
 }
 
 function setTextContent(el, value) {
   const text = String(value ?? '');
   if (el.textContent !== text) el.textContent = text;
+}
+
+function formatStreamerMmr(value, winLossHidden, leaderboardVisible) {
+  const number = Math.max(0, Math.trunc(Number(value) || 0));
+  const text = number.toLocaleString('en-US');
+  return winLossHidden || leaderboardVisible ? `${text} MMR` : text;
 }
 
 function formatClock(totalSeconds) {

@@ -230,10 +230,10 @@ body {
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 1px;
+  gap: 0;
   color: #f6f0d8;
   font-family: "Arial Narrow", "Roboto Condensed", "Segoe UI Condensed", "Segoe UI", Arial, Helvetica, sans-serif;
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1;
@@ -250,6 +250,7 @@ body {
   position: relative;
   width: 70px;
   height: 70px;
+  margin-bottom: 0;
 }
 
 .streamerStatsMedal {
@@ -263,7 +264,7 @@ body {
   position: absolute;
   left: -12px;
   right: -12px;
-  bottom: -8px;
+  bottom: -22px;
   width: 94px;
   height: 94px;
   object-fit: contain;
@@ -273,23 +274,36 @@ body {
 
 .streamerStatsText {
   display: inline-flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 1px;
+  justify-content: center;
+  gap: 8px;
+  margin-top: -10px;
+}
+
+#streamerStats.hasLeaderboard .streamerStatsText {
+  margin-top: 1px;
+}
+
+.streamerStatsLeaderboard {
+  color: #fff3bd;
+  font-size: 20px;
+  line-height: 1;
+  margin-top: -10px;
+  margin-bottom: 1px;
 }
 
 .streamerStatsMmr {
   color: #fff5c8;
-  font-size: 17px;
+  font-size: 20px;
 }
 
 .streamerStatsWinLoss {
   display: inline-flex;
   justify-content: center;
-  gap: 3px;
+  gap: 2px;
   color: #ffffff;
-  font-size: 15px;
-  min-width: 104px;
+  font-size: 19px;
 }
 
 .streamerStatsWinNumber,
@@ -310,7 +324,7 @@ body {
 }
 
 .streamerStatsLastChange {
-  font-size: 12px;
+  font-size: 14px;
   color: #94f2a8;
 }
 
