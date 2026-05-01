@@ -75,7 +75,7 @@ const fallbackPlayers = collectMatchPlayers({
   items: { slot0: { name: 'item_aegis' } }
 });
 assert.deepEqual(fallbackPlayers, [{
-  slot: 0,
+  slot: 2,
   team: 'radiant',
   accountId: 333,
   name: 'Streamer',
@@ -92,7 +92,14 @@ const singlePlayerPayload = collectMatchPlayers({
   hero: { name: 'npc_dota_hero_morphling' }
 });
 assert.equal(singlePlayerPayload.length, 1);
-assert.equal(singlePlayerPayload[0].slot, 0);
+assert.equal(singlePlayerPayload[0].slot, 1);
+
+const fallbackVisualSlot = collectMatchPlayers({
+  player: { team_name: 'radiant', accountid: 444, name: 'Streamer' },
+  hero: { name: 'npc_dota_hero_morphling' }
+});
+assert.equal(fallbackVisualSlot.length, 1);
+assert.equal(fallbackVisualSlot[0].slot, 0);
 
 const currentItemsOverride = collectMatchPlayers({
   allplayers: {
