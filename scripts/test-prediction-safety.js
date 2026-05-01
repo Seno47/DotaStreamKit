@@ -39,6 +39,11 @@ assert.equal(isLeftActiveGameViewCancelSignal(
 ), true);
 
 assert.equal(isLeftActiveGameViewCancelSignal(
+  { activeMatchId: null, gameState: 'DOTA_GAMERULES_STATE_GAME_IN_PROGRESS', inGameScreen: true, clockTime: 90 },
+  { activeMatchId: null, gameState: null, inGameScreen: false, leftGameView: false }
+), true);
+
+assert.equal(isLeftActiveGameViewCancelSignal(
   { activeMatchId: 'match-1', gameState: 'DOTA_GAMERULES_STATE_GAME_IN_PROGRESS', inGameScreen: true, clockTime: 90 },
   { activeMatchId: 'match-1', gameState: 'DOTA_GAMERULES_STATE_DISCONNECT', leftGameView: true }
 ), false);
@@ -51,6 +56,11 @@ assert.equal(isLeftActiveGameViewCancelSignal(
 assert.equal(isLeftActiveGameViewCancelSignal(
   { activeMatchId: 'stale-match', gameState: null, inGameScreen: false, clockTime: null },
   { activeMatchId: 'stale-match', gameState: null, leftGameView: true }
+), false);
+
+assert.equal(isLeftActiveGameViewCancelSignal(
+  { activeMatchId: 'match-1', gameState: 'DOTA_GAMERULES_STATE_GAME_IN_PROGRESS', inGameScreen: true, clockTime: 90 },
+  { activeMatchId: 'match-1', gameState: 'DOTA_GAMERULES_STATE_GAME_IN_PROGRESS', inGameScreen: true, leftGameView: false }
 ), false);
 
 console.log('Prediction safety checks passed');

@@ -49,7 +49,7 @@ const queueAutoOffDelayMs = 2500;
 const queueAutoStaleKeepMs = 10 * 60 * 1000;
 const autoPredictionRetryMs = 30000;
 const activePredictionSyncMs = 15000;
-const leftGameViewPredictionCancelDelaySeconds = 60;
+const leftGameViewPredictionCancelDelaySeconds = 15;
 const playerRankCacheTtlMs = 12 * 60 * 60 * 1000;
 const playerRankFailureTtlMs = 15 * 60 * 1000;
 const inGameStatePattern = /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS|POST_GAME/i;
@@ -408,6 +408,7 @@ const runtime = {
     activePrediction: null,
     activePredictionMatchId: null,
     activePredictionMeta: null,
+    activePredictionRecovery: null,
     predictionCancelCandidate: null,
     lastAutoPredictionAttempt: null,
     autoPredictionCreatedKey: null,
@@ -473,6 +474,7 @@ runtime.state.matchIntel = {
   aegis: null
 };
 runtime.state.streamerStats = normalizeStreamerStatsState(runtime.state.streamerStats);
+runtime.state.activePredictionRecovery = runtime.state.activePredictionRecovery || null;
 runtime.state.lastAutoPredictionAttempt = null;
 runtime.state.autoPredictionCreatedKey = null;
 runtime.state.autoPredictionSuppressedKey = null;
@@ -2323,12 +2325,17 @@ function autoPredictionKey(gsi) {
 function syncActivePredictionMatchId(gsi) {
   if (!runtime.state.activePrediction || runtime.state.activePredictionMatchId) return;
   const matchId = gsi.activeMatchId || gsi.matchId;
-  if (matchId) runtime.state.activePredictionMatchId = matchId;
+  if (matchId) {
+    runtime.state.activePredictionMatchId = matchId;
+    rememberOwnedPrediction(runtime.state.activePrediction, runtime.state.activePredictionMeta);
+  }
 }
 
 async function syncOwnedActivePredictionFromTwitch({ force = false } = {}) {
   const active = runtime.state.activePrediction;
-  if (!active?.id || !['ACTIVE', 'LOCKED'].includes(active.status)) return active || null;
+  if (!active?.id || !['ACTIVE', 'LOCKED'].includes(active.status)) {
+    return await recoverOwnedActivePredictionFromTwitch({ force }) || active || null;
+  }
 
   const lastSync = Date.parse(runtime.state.activePredictionSyncedAt || '');
   if (!force && Number.isFinite(lastSync) && Date.now() - lastSync < activePredictionSyncMs) return active;
@@ -2353,7 +2360,7 @@ async function syncOwnedActivePredictionFromTwitch({ force = false } = {}) {
   const meta = runtime.state.activePredictionMeta;
   const normalized = normalizePrediction(latest, meta?.outcomes?.yesTitle, meta?.outcomes?.noTitle, meta);
   if (['RESOLVED', 'CANCELED'].includes(normalized.status)) {
-    clearActivePredictionState();
+    clearActivePredictionState({ keepRecovery: false });
     await persistState();
     broadcast();
     logEvent('twitch', `Our prediction was ${normalized.status.toLowerCase()} outside DotaStreamKit: ${normalized.title}`);
@@ -2361,8 +2368,42 @@ async function syncOwnedActivePredictionFromTwitch({ force = false } = {}) {
   }
 
   runtime.state.activePrediction = normalized;
+  rememberOwnedPrediction(normalized, meta);
   await persistState();
   broadcast();
+  return normalized;
+}
+
+async function recoverOwnedActivePredictionFromTwitch({ force = false } = {}) {
+  const recovery = runtime.state.activePredictionRecovery;
+  if (!recovery?.id) return null;
+  const rememberedAt = Date.parse(recovery.rememberedAt || recovery.createdAt || '');
+  if (Number.isFinite(rememberedAt) && Date.now() - rememberedAt > 24 * 60 * 60 * 1000) return null;
+
+  const lastSync = Date.parse(runtime.state.activePredictionSyncedAt || '');
+  if (!force && Number.isFinite(lastSync) && Date.now() - lastSync < activePredictionSyncMs) return null;
+
+  let latest;
+  try {
+    latest = await fetchPredictionById(recovery.id);
+  } catch (error) {
+    runtime.state.activePredictionSyncedAt = new Date().toISOString();
+    logEvent('twitch', `Owned prediction recovery check failed: ${error.message}`);
+    return null;
+  }
+
+  runtime.state.activePredictionSyncedAt = new Date().toISOString();
+  if (!latest || !['ACTIVE', 'LOCKED'].includes(latest.status)) return null;
+
+  const meta = recovery.meta || null;
+  const normalized = normalizePrediction(latest, meta?.outcomes?.yesTitle, meta?.outcomes?.noTitle, meta);
+  runtime.state.activePrediction = normalized;
+  runtime.state.activePredictionMeta = meta;
+  runtime.state.activePredictionMatchId = recovery.matchId || null;
+  rememberOwnedPrediction(normalized, meta);
+  await persistState();
+  broadcast();
+  logEvent('twitch', `Recovered bot-owned prediction from Twitch: ${normalized.title}`);
   return normalized;
 }
 
@@ -2490,7 +2531,7 @@ async function refreshActivePredictionBeforeAutomaticCancel(active, candidate) {
   }
 
   if (!latestActive || !['ACTIVE', 'LOCKED'].includes(latestActive.status)) {
-    clearActivePredictionState();
+    clearActivePredictionState({ keepRecovery: false });
     await persistState();
     broadcast();
     logEvent('twitch', 'Auto cancel skipped: active prediction is no longer active on Twitch');
@@ -2523,6 +2564,7 @@ async function refreshActivePredictionFromTwitch(active) {
   const normalized = normalizePrediction(item, meta?.outcomes?.yesTitle, meta?.outcomes?.noTitle, meta);
   runtime.state.activePrediction = normalized;
   runtime.state.activePredictionSyncedAt = new Date().toISOString();
+  rememberOwnedPrediction(normalized, meta);
   await persistState();
   broadcast();
   return normalized;
@@ -2544,12 +2586,30 @@ async function fetchActiveTwitchPrediction() {
   return (result.data || []).find((item) => ['ACTIVE', 'LOCKED'].includes(item.status)) || null;
 }
 
-function clearActivePredictionState() {
+function clearActivePredictionState({ keepRecovery = true } = {}) {
+  if (keepRecovery) {
+    rememberOwnedPrediction(runtime.state.activePrediction, runtime.state.activePredictionMeta);
+  } else {
+    runtime.state.activePredictionRecovery = null;
+  }
   runtime.state.activePrediction = null;
   runtime.state.activePredictionMatchId = null;
   runtime.state.activePredictionMeta = null;
   runtime.state.predictionCancelCandidate = null;
   runtime.state.activePredictionSyncedAt = null;
+}
+
+function rememberOwnedPrediction(prediction, meta = runtime.state.activePredictionMeta) {
+  if (!prediction?.id) return;
+  runtime.state.activePredictionRecovery = {
+    id: prediction.id,
+    title: prediction.title || null,
+    status: prediction.status || null,
+    matchId: runtime.state.activePredictionMatchId || runtime.state.gsi?.activeMatchId || runtime.state.gsi?.matchId || null,
+    createdAt: prediction.createdAt || null,
+    rememberedAt: new Date().toISOString(),
+    meta: meta || null
+  };
 }
 
 function inferResult(gsi) {
@@ -2909,6 +2969,7 @@ async function parseTwitchResponse(response) {
 async function twitchLogout(res) {
   delete runtime.state.twitchToken;
   runtime.state.activePrediction = null;
+  runtime.state.activePredictionRecovery = null;
   hydrateTwitchStatus();
   await deleteTwitchTokenBackup();
   await persistState();
@@ -3059,6 +3120,7 @@ async function createPredictionFromSettings(overrides = {}, options = {}) {
   runtime.state.activePredictionMeta = draft.meta;
   runtime.state.activePrediction = normalizePrediction(item, draft.yesTitle, draft.noTitle, draft.meta);
   runtime.state.activePredictionMatchId = runtime.state.gsi.activeMatchId || runtime.state.gsi.matchId || null;
+  rememberOwnedPrediction(runtime.state.activePrediction, draft.meta);
   runtime.state.predictionCancelCandidate = null;
   runtime.state.activePredictionSyncedAt = new Date().toISOString();
   if (options.automatic) markAutoPredictionCreated(runtime.state.gsi);
@@ -3233,9 +3295,10 @@ async function twitchEndPrediction(id, status, winningOutcomeId = null) {
     const meta = runtime.state.activePredictionMeta;
     runtime.state.activePrediction = normalizePrediction(item, meta?.outcomes?.yesTitle, meta?.outcomes?.noTitle, meta);
     if (['RESOLVED', 'CANCELED'].includes(item.status)) {
-      clearActivePredictionState();
+      clearActivePredictionState({ keepRecovery: false });
     } else {
       runtime.state.activePredictionSyncedAt = new Date().toISOString();
+      rememberOwnedPrediction(runtime.state.activePrediction, meta);
     }
     await persistState();
     broadcast();
