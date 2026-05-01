@@ -256,7 +256,7 @@ const defaultConfig = {
       large: { left: -3, top: 12, width: 91, height: 91 }
     },
     draftMaskParts: [
-      { left: 0, top: 178, width: 1920, height: 692 },
+      { left: 0, top: 128, width: 1920, height: 742 },
       { left: 0, top: 870, width: 838, height: 194 },
       { left: 1324, top: 870, width: 596, height: 194 },
       { left: 0, top: 1064, width: 1920, height: 16 }
@@ -691,7 +691,13 @@ async function migrateConfig(config) {
     && Number(config.protection.draftMaskParts[1]?.width) === 1234
     && Number(config.protection.draftMaskParts[2]?.left) === 1720
     && Number(config.protection.draftMaskParts[2]?.top) === 870;
-  if (!Array.isArray(config.protection.draftMaskParts) || config.protection.draftMaskParts.length !== 4 || hasOldRightChatDraftCutout) {
+  const hasOldLowDraftTop = Array.isArray(config.protection.draftMaskParts)
+    && config.protection.draftMaskParts.length === 4
+    && Number(config.protection.draftMaskParts[0]?.left) === 0
+    && Number(config.protection.draftMaskParts[0]?.top) === 178
+    && Number(config.protection.draftMaskParts[0]?.width) === 1920
+    && Number(config.protection.draftMaskParts[0]?.height) === 692;
+  if (!Array.isArray(config.protection.draftMaskParts) || config.protection.draftMaskParts.length !== 4 || hasOldRightChatDraftCutout || hasOldLowDraftTop) {
     config.protection.draftMaskParts = structuredClone(defaultConfig.protection.draftMaskParts);
     changed = true;
   }
