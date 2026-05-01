@@ -24,7 +24,7 @@ setInterval(() => {
 
 function renderOverlay({ config, state }) {
   const reference = normalizeReference(config.protection.referenceSize);
-  const draftParts = effectiveDraftParts(config.protection.draftMaskParts || [], reference, config.protection, state);
+  const draftParts = config.protection.draftMaskParts || [];
   const queueParts = queueMaskParts(config.protection, reference);
   const slots = config.protection.topBarSlots || [];
   const matchIntelSlots = config.protection.matchIntelSlots || slots;
@@ -55,28 +55,6 @@ function queueMaskParts(protection, reference) {
     { left: chatRight, top: chat.top, width: reference.width - chatRight, height: chat.height },
     { left: profileRight, top: chatBottom, width: reference.width - profileRight, height: reference.height - chatBottom }
   ].filter((part) => part.width > 0 && part.height > 0);
-}
-
-function effectiveDraftParts(parts, reference, protection, state) {
-  if ((protection.draftHideMode || 'all') !== 'streamer_team') return parts;
-  const team = String(state.gsi?.playerTeam || '').toLowerCase();
-  if (!['radiant', 'dire'].includes(team)) return parts;
-  const side = team === 'radiant'
-    ? { left: 0, top: 0, width: reference.width / 2, height: reference.height }
-    : { left: reference.width / 2, top: 0, width: reference.width / 2, height: reference.height };
-  return parts.map((part) => intersectBoxes(part, side, reference)).filter(Boolean);
-}
-
-function intersectBoxes(part, clip, reference) {
-  const box = normalizePartBox(part, reference);
-  const left = Math.max(box.left, clip.left);
-  const top = Math.max(box.top, clip.top);
-  const right = Math.min(box.left + box.width, clip.left + clip.width);
-  const bottom = Math.min(box.top + box.height, clip.top + clip.height);
-  const width = right - left;
-  const height = bottom - top;
-  if (width <= 0 || height <= 0) return null;
-  return { left, top, width, height };
 }
 
 function normalizePartBox(part, reference) {
@@ -226,7 +204,13 @@ function applyMatchIntel(slots, reference, settings, state) {
   const playersByAccountId = new Map((intel.players || []).filter((player) => player?.accountId).map((player) => [String(player.accountId), player]));
   const ranksBySlot = new Map((intel.notablePlayers || []).map((player) => [Number(player.slot), player]));
   const aegis = intel.aegis || null;
-  const showAegis = enabled && settings.showAegisTimer !== false && settings.showAegisRoshan !== false && aegis && Number(aegis.expiresAt) > clockTime;
+  const showAegis = enabled
+    && /GAME_IN_PROGRESS/i.test(gameState)
+    && Number.isFinite(clockTime)
+    && settings.showAegisTimer !== false
+    && settings.showAegisRoshan !== false
+    && aegis
+    && Number(aegis.expiresAt) > clockTime;
   const aegisSlot = showAegis ? resolveAegisSlot(aegis, playersByAccountId) : null;
 
   slots.forEach((slot, index) => {
@@ -234,9 +218,9 @@ function applyMatchIntel(slots, reference, settings, state) {
     const rank = ranksBySlot.get(index);
     const hasAegis = showAegis && aegisSlot === index;
     applyScaledBox(el, {
-      left: slot.left + slot.width / 2 - 48,
+      left: slot.left + slot.width / 2 - 31,
       top: slot.top + slot.height + 4,
-      width: 96,
+      width: 62,
       height: 72
     }, reference);
     hideBadge(el, 'rankBadge');
@@ -383,10 +367,10 @@ function localFlagSvgDataUrl(code) {
 
 function nameFontSize(name) {
   const length = String(name || '').trim().length;
-  if (length > 18) return 10;
-  if (length > 14) return 11;
-  if (length > 10) return 12;
-  return 13;
+  if (length > 18) return 7;
+  if (length > 14) return 8;
+  if (length > 10) return 9;
+  return 10;
 }
 
 function applyRoshanIntel(reference, settings, state, version, slots) {

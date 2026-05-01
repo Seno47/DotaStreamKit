@@ -1528,6 +1528,11 @@ function buildMatchIntel(payload, gsi, players) {
   } else {
     intel.notablePlayers = [];
   }
+  if (!/GAME_IN_PROGRESS/i.test(String(gsi.gameState || ''))) {
+    intel.roshan = null;
+    intel.roshanStatus = null;
+    intel.aegis = null;
+  }
   if (!runtime.config.protection.matchIntel.showRoshanTimer) {
     intel.roshan = null;
     intel.roshanStatus = null;
