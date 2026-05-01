@@ -213,11 +213,14 @@ function applyMatchIntel(slots, reference, settings, state) {
   const intel = state.matchIntel || {};
   const version = assetVersion(state);
   const enabled = isMatchIntelActive(settings, state);
+  const gameState = String(state.gsi?.gameState || '');
+  const preGameState = /PRE_GAME/i.test(gameState);
   const clockTime = Number(state.gsi?.clockTime);
   const rankCutoff = Number(settings.rankDisplayMinutes || 12) * 60;
   const fullGameRanks = settings.rankDisplayMode === 'full_game';
+  const preGameOnlyRanks = settings.rankDisplayMode === 'pre_game_only';
   const gameClockStarted = Number.isFinite(clockTime) && clockTime >= 0;
-  const withinNotableWindow = gameClockStarted && (fullGameRanks || clockTime <= rankCutoff);
+  const withinNotableWindow = preGameState || (!preGameOnlyRanks && gameClockStarted && (fullGameRanks || clockTime <= rankCutoff));
   const showRanks = enabled && settings.showPlayerRanks !== false && withinNotableWindow;
   const showFlags = enabled && settings.showPlayerFlags === true && withinNotableWindow;
   const playersByAccountId = new Map((intel.players || []).filter((player) => player?.accountId).map((player) => [String(player.accountId), player]));
@@ -267,6 +270,7 @@ function isMatchIntelActive(settings, state) {
   if (settings.enabled === false || !state.gsi?.connected) return false;
   const gameState = String(state.gsi?.gameState || '');
   if (/POST_GAME|GAME_END|DISCONNECT/i.test(gameState)) return false;
+  if (/PRE_GAME/i.test(gameState)) return true;
   if (gameState) return /GAME_IN_PROGRESS/i.test(gameState);
   return Number.isFinite(Number(state.gsi?.clockTime)) && Number(state.gsi?.clockTime) >= 0;
 }

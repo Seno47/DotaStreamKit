@@ -147,9 +147,10 @@ const translations = {
     showPlayerFlags: 'Флаги игроков',
     showAegisTimer: 'Таймер Aegis',
     showRoshanTimer: 'Таймер Roshan',
-    rankDisplayMode: 'Показывать notable players',
+    rankDisplayMode: 'Когда показывать notable players',
     rankDisplayFirstMinutes: 'Первые N минут',
     rankDisplayFullGame: 'До конца игры',
+    rankDisplayPreGameOnly: 'Только до начала игры',
     rankDisplayMinutes: 'Показывать первые N минут',
     customNotablePlayers: 'Кастомные Notable Players',
     customNotablePlayersHint: 'Добавь Dota account id игроков, которых нужно всегда считать notable. Ник и страна из этого списка имеют приоритет над OpenDota.',
@@ -362,9 +363,10 @@ const translations = {
     showPlayerFlags: 'Player flags',
     showAegisTimer: 'Aegis timer',
     showRoshanTimer: 'Roshan timer',
-    rankDisplayMode: 'Show notable players',
+    rankDisplayMode: 'When to show notable players',
     rankDisplayFirstMinutes: 'First N minutes',
     rankDisplayFullGame: 'Full game',
+    rankDisplayPreGameOnly: 'Before the game starts only',
     rankDisplayMinutes: 'Show for first N minutes',
     customNotablePlayers: 'Custom notable players',
     customNotablePlayersHint: 'Add Dota account ids that should always be treated as notable. Name and country here override OpenDota.',
@@ -645,6 +647,7 @@ function applyLanguage(config) {
   setLabelText(els.rankDisplayMode.closest('label'), t('rankDisplayMode'));
   setOptionText(els.rankDisplayMode, 'minutes', t('rankDisplayFirstMinutes'));
   setOptionText(els.rankDisplayMode, 'full_game', t('rankDisplayFullGame'));
+  setOptionText(els.rankDisplayMode, 'pre_game_only', t('rankDisplayPreGameOnly'));
   setLabelText(els.rankDisplayMinutes.closest('label'), t('rankDisplayMinutes'));
   els.customNotablePlayersTitle.textContent = t('customNotablePlayers');
   els.customNotablePlayersHint.textContent = t('customNotablePlayersHint');
@@ -1533,7 +1536,7 @@ function updateMatchIntelFieldVisibility() {
   els.showAegisTimer.closest('label').hidden = !matchIntelEnabled;
   els.showRoshanTimer.closest('label').hidden = !matchIntelEnabled;
   els.rankDisplayModeWrap.hidden = !notablePlayersEnabled;
-  els.rankDisplayMinutesWrap.hidden = !notablePlayersEnabled || els.rankDisplayMode.value === 'full_game';
+  els.rankDisplayMinutesWrap.hidden = !notablePlayersEnabled || ['full_game', 'pre_game_only'].includes(els.rankDisplayMode.value);
   els.customNotablePlayersWrap.hidden = !notablePlayersEnabled;
 }
 

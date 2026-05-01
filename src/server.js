@@ -1562,11 +1562,15 @@ function getCachedPlayerRank(accountId) {
 async function refreshNotablePlayerRanks(players) {
   if (!shouldShowNotablePlayers()) return;
   if (isMatchIntelFinished(runtime.state.gsi)) return;
+  const gameState = String(runtime.state.gsi.gameState || '');
+  const preGameState = /PRE_GAME/i.test(gameState);
   const clockTime = Number(runtime.state.gsi.clockTime);
   const rankCutoff = Number(runtime.config.protection.matchIntel.rankDisplayMinutes || 12) * 60;
   const fullGameRanks = runtime.config.protection.matchIntel.rankDisplayMode === 'full_game';
-  if (!Number.isFinite(clockTime) || clockTime < 0) return;
-  if (!fullGameRanks && clockTime > rankCutoff) return;
+  const preGameOnlyRanks = runtime.config.protection.matchIntel.rankDisplayMode === 'pre_game_only';
+  if (preGameOnlyRanks && !preGameState) return;
+  if (!preGameState && (!Number.isFinite(clockTime) || clockTime < 0)) return;
+  if (!preGameState && !fullGameRanks && Number.isFinite(clockTime) && clockTime > rankCutoff) return;
   const accountIds = [...new Set(players.map((player) => player.accountId).filter(Boolean).map(String))];
   if (!accountIds.length) return;
 
@@ -2368,7 +2372,7 @@ function normalizeMatchIntelConfig(config) {
   config.showAegisTimer = config.showAegisTimer !== false && legacyAegisRoshan !== false;
   config.showRoshanTimer = config.showRoshanTimer !== false && legacyAegisRoshan !== false;
   delete config.showAegisRoshan;
-  if (!['minutes', 'full_game'].includes(config.rankDisplayMode)) config.rankDisplayMode = 'minutes';
+  if (!['minutes', 'full_game', 'pre_game_only'].includes(config.rankDisplayMode)) config.rankDisplayMode = 'minutes';
   config.rankDisplayMinutes = clampInt(config.rankDisplayMinutes, 1, 30);
   config.customPlayers = normalizeCustomNotablePlayers(config.customPlayers);
 }
