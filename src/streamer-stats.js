@@ -19,7 +19,7 @@ export function normalizeStreamerStatsConfig(config) {
   config.showStreamerWinLoss = config.showStreamerWinLoss !== false;
   config.autoUpdateStreamerMmr = config.autoUpdateStreamerMmr !== false;
   if (!['auto', 'account', 'mmr'].includes(config.streamerMedalSource)) config.streamerMedalSource = 'auto';
-  config.streamerMmr = clampInt(config.streamerMmr, 0, 20000, 0);
+  config.streamerMmr = clampInt(config.streamerMmr, 0, 99999, 0);
   config.streamerMmrWinDelta = clampInt(config.streamerMmrWinDelta, 0, 200, 25);
   config.streamerMmrLossDelta = clampInt(config.streamerMmrLossDelta, 0, 200, 25);
 }

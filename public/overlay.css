@@ -251,25 +251,25 @@ body {
   grid-column: 2;
   justify-self: center;
   position: relative;
-  width: 70px;
-  height: 70px;
-  margin-bottom: -2px;
+  width: 105px;
+  height: 105px;
+  margin-bottom: -18px;
 }
 
 .streamerStatsMedal {
-  width: 70px;
-  height: 70px;
+  width: 105px;
+  height: 105px;
   object-fit: contain;
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.85));
 }
 
 .streamerStatsPips {
   position: absolute;
-  left: -12px;
-  right: -12px;
-  bottom: -22px;
-  width: 94px;
-  height: 94px;
+  left: -18px;
+  right: -18px;
+  bottom: -33px;
+  width: 141px;
+  height: 141px;
   object-fit: contain;
   pointer-events: none;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.85));
@@ -281,8 +281,8 @@ body {
   color: #fff3bd;
   font-size: 18px;
   line-height: 1;
-  margin-top: -7px;
-  margin-bottom: 0;
+  margin-top: -14px;
+  margin-bottom: -1px;
 }
 
 .streamerStatsMmrLine {

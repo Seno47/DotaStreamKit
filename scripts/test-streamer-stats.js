@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   applyStreamerMatchResult,
+  normalizeStreamerStatsConfig,
   rankMedalFromMmr,
   rankMedalFromRankTier,
   restorePreviousStreamerSession,
@@ -24,6 +25,10 @@ assert.equal(rankMedalFromRankTier(75).medal, 7);
 assert.equal(rankMedalFromRankTier(75).stars, 5);
 assert.equal(rankMedalFromRankTier(80).medal, 8);
 assert.equal(rankMedalFromRankTier(80).stars, 0);
+
+const normalizedConfig = { streamerMmr: 120000 };
+normalizeStreamerStatsConfig(normalizedConfig);
+assert.equal(normalizedConfig.streamerMmr, 99999);
 
 const config = {
   showStreamerStats: true,

@@ -545,7 +545,12 @@ function applyStreamerStats(reference, protection, state) {
     nodes.winLoss.hidden = true;
   }
   const leaderboardRank = Number(stats.accountLeaderboardRank || 0);
-  if (settings.showStreamerRankMedal !== false && leaderboardRank > 0 && !nodes.medalWrap.hidden) {
+  if (
+    settings.showStreamerRankMedal !== false
+    && leaderboardRank >= 1
+    && leaderboardRank <= 25000
+    && !nodes.medalWrap.hidden
+  ) {
     setTextContent(nodes.leaderboard, `#${Math.trunc(leaderboardRank)}`);
     nodes.leaderboard.hidden = false;
   } else {
@@ -579,8 +584,8 @@ function applyStreamerStats(reference, protection, state) {
     ? minimapSide === 'right' ? 302 : 1390
     : minimapSide === 'right' ? 1500 : 1276;
   const box = inLiveGame
-    ? { left, bottom: 8, width: 230, height: 122 }
-    : { left, top: 18, width: 170, height: 116 };
+    ? { left, bottom: 8, width: 260, height: 150 }
+    : { left, top: 18, width: 220, height: 150 };
   applyScaledBox(streamerStatsEl, box, reference);
   setVisible(streamerStatsEl, true);
 }
