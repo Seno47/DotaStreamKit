@@ -215,7 +215,8 @@ function applyMatchIntel(slots, reference, settings, state) {
   const clockTime = Number(state.gsi?.clockTime);
   const rankCutoff = Number(settings.rankDisplayMinutes || 12) * 60;
   const fullGameRanks = settings.rankDisplayMode === 'full_game';
-  const withinNotableWindow = fullGameRanks || (Number.isFinite(clockTime) && clockTime >= 0 && clockTime <= rankCutoff);
+  const gameClockStarted = Number.isFinite(clockTime) && clockTime >= 0;
+  const withinNotableWindow = gameClockStarted && (fullGameRanks || clockTime <= rankCutoff);
   const showRanks = enabled && settings.showPlayerRanks !== false && withinNotableWindow;
   const showFlags = enabled && settings.showPlayerFlags === true && withinNotableWindow;
   const ranksBySlot = new Map((intel.notablePlayers || []).map((player) => [Number(player.slot), player]));

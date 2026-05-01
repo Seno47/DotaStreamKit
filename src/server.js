@@ -1527,7 +1527,8 @@ async function refreshNotablePlayerRanks(players) {
   const clockTime = Number(runtime.state.gsi.clockTime);
   const rankCutoff = Number(runtime.config.protection.matchIntel.rankDisplayMinutes || 12) * 60;
   const fullGameRanks = runtime.config.protection.matchIntel.rankDisplayMode === 'full_game';
-  if (!fullGameRanks && (!Number.isFinite(clockTime) || clockTime < 0 || clockTime > rankCutoff)) return;
+  if (!Number.isFinite(clockTime) || clockTime < 0) return;
+  if (!fullGameRanks && clockTime > rankCutoff) return;
   const accountIds = [...new Set(players.map((player) => player.accountId).filter(Boolean).map(String))];
   if (!accountIds.length) return;
 
