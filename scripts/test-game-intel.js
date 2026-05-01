@@ -104,7 +104,7 @@ assert.deepEqual(fallbackPlayers, [{
 
 const singlePlayerPayload = collectMatchPlayers({
   players: {
-    player1: { player_slot: 1, accountid: 333, name: 'Streamer' }
+    player9: { player_slot: 1, accountid: 333, name: 'Streamer' }
   },
   player: { team_name: 'radiant', player_slot: 1, accountid: 333, name: 'Streamer' },
   hero: { name: 'npc_dota_hero_morphling' }
@@ -115,9 +115,9 @@ assert.equal(singlePlayerPayload[0].slot, 1);
 const rosterHeroMatch = collectMatchPlayers({
   allplayers: {
     player0: { accountid: 111, hero_name: 'npc_dota_hero_omniknight' },
-    player1: { team_name: 'radiant', hero_name: 'npc_dota_hero_omniknight' },
-    player6: { team_name: 'dire', hero_name: 'npc_dota_hero_lina' },
-    player7: { accountid: 333, hero_name: 'npc_dota_hero_axe' }
+    player3: { team_name: 'radiant', player_slot: 0, hero_name: 'npc_dota_hero_omniknight' },
+    player8: { team_name: 'dire', player_slot: 128, hero_name: 'npc_dota_hero_lina' },
+    player9: { accountid: 333, team_name: 'dire', player_slot: 129, hero_name: 'npc_dota_hero_axe' }
   },
   player: { team_name: 'dire', name: 'Streamer' },
   hero: { name: 'npc_dota_hero_lina' }
@@ -126,7 +126,7 @@ assert.equal(rosterHeroMatch.find((player) => player.name === 'Streamer')?.slot,
 
 const currentItemsOverride = collectMatchPlayers({
   allplayers: {
-    player1: {
+    player9: {
       player_slot: 0,
       accountid: 444,
       items: { slot0: { name: 'item_aegis' } }

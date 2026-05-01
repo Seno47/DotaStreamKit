@@ -134,7 +134,7 @@ export function normalizeAccountId(value) {
 function normalizeMatchPlayer(key, player) {
   if (isIgnoredRosterKey(key)) return null;
   if (!player || typeof player !== 'object') return null;
-  const slot = normalizePlayerSlot(player.player_slot ?? player.playerSlot ?? player.team_slot ?? player.teamSlot ?? key, player);
+  const slot = normalizePlayerSlot(player.player_slot ?? player.playerSlot ?? player.team_slot ?? player.teamSlot, player);
   if (slot === null) return null;
   const accountId = normalizeAccountId(player.accountid ?? player.account_id ?? player.accountId ?? player.steamid ?? player.steam_id);
   return {
@@ -197,7 +197,7 @@ function inferRosterSlot(payload, player) {
   for (const [key, rosterPlayer] of Object.entries(source)) {
     if (isIgnoredRosterKey(key)) continue;
     if (!rosterPlayer || typeof rosterPlayer !== 'object') continue;
-    const slot = normalizePlayerSlot(rosterPlayer.player_slot ?? rosterPlayer.playerSlot ?? rosterPlayer.team_slot ?? rosterPlayer.teamSlot ?? key, rosterPlayer);
+    const slot = normalizePlayerSlot(rosterPlayer.player_slot ?? rosterPlayer.playerSlot ?? rosterPlayer.team_slot ?? rosterPlayer.teamSlot, rosterPlayer);
     if (slot === null) continue;
     const rosterAccountId = normalizeAccountId(rosterPlayer.accountid ?? rosterPlayer.account_id ?? rosterPlayer.accountId ?? rosterPlayer.steamid ?? rosterPlayer.steam_id);
     const rosterTeam = normalizeRosterTeam(rosterPlayer.team_name || rosterPlayer.team || slot);
@@ -257,13 +257,6 @@ function normalizePlayerSlot(rawSlot, player) {
     if (numeric >= 0 && numeric <= 4) return Math.trunc(numeric);
     if (numeric >= 128 && numeric <= 132) return Math.trunc(numeric - 128 + 5);
     if (numeric >= 5 && numeric <= 9) return Math.trunc(numeric);
-  }
-
-  const keyMatch = String(rawSlot || '').match(/(?:player)?(\d+)$/i);
-  if (keyMatch) {
-    const index = Number(keyMatch[1]);
-    if (Number.isFinite(index) && index > 0 && index <= 10) return Math.trunc(index - 1);
-    return null;
   }
 
   const teamSlot = Number(player?.team_slot ?? player?.teamSlot);
