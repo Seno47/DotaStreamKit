@@ -20,6 +20,7 @@ If the project helps you, please leave a star on GitHub: https://github.com/Seno
   - [Настройка Dota GSI](#настройка-dota-gsi)
   - [Настройка OBS](#настройка-obs)
   - [Защита стрима](#защита-стрима)
+  - [Match Intel и статистика стримера](#match-intel-и-статистика-стримера)
   - [Прогнозы за баллы канала](#прогнозы-за-баллы-канала)
   - [Частые проблемы](#частые-проблемы)
   - [Support](#support)
@@ -31,6 +32,7 @@ If the project helps you, please leave a star on GitHub: https://github.com/Seno
   - [Dota GSI Setup](#dota-gsi-setup)
   - [OBS Setup](#obs-setup)
   - [Stream Protection](#stream-protection)
+  - [Match Intel and Streamer Stats](#match-intel-and-streamer-stats)
   - [Channel Points Predictions](#channel-points-predictions)
   - [Troubleshooting](#troubleshooting)
   - [Developer Support](#developer-support)
@@ -72,8 +74,12 @@ http://localhost:37273/overlay.html
 - скрытие стадии драфта и верхней панели с пиками;
 - скрытие миникарты fake-vision маской, чтобы не палить варды;
 - скрытие меню поиска игры через загруженный или встроенный скрин меню;
+- Match Intel оверлей: отмеченные игроки, флаги, держатель Aegis и таймер Рошана;
+- статистика стримера на оверлее: Dota-медаль, звёзды/пипы, ранг в leaderboard, MMR и W-L счётчик;
+- режим калибровки: при MMR `0` показывается отдельная calibration-медаль, а MMR после матчей не меняется;
 - автоматическое создание Twitch Predictions после пика героя стримером;
 - автоматическое закрытие, отмена и ручное управление прогнозами;
+- оверлей Twitch-прогноза: название, таймер закрытия, баллы канала, проценты и анимированная полоса исходов;
 - поддержка личного Twitch-аккаунта или отдельного аккаунта-модератора;
 - локальная установка Dota Game State Integration.
 
@@ -224,6 +230,8 @@ npm run install:gsi -- -DotaCfgDir "D:\SteamLibrary\steamapps\common\dota 2 beta
 - после завершения pick-фазы, в которой стример выбрал героя, остаётся скрытие верхней панели;
 - после завершения драфта и перехода к планированию маски убираются.
 
+В настройках можно выбрать, скрывать ли все пики или только сторону стримера. Если команда стримера ещё неизвестна, DotaStreamKit временно скрывает все пики, чтобы не раскрыть лишнее.
+
 #### Миникарта
 
 Миникарта закрывается встроенной fake-vision маской. Пользовательская загрузка миникарты не используется.
@@ -247,6 +255,26 @@ npm run install:gsi -- -DotaCfgDir "D:\SteamLibrary\steamapps\common\dota 2 beta
 - кнопка `Поиск` вручную - принудительно держит маску включённой, пока ты сам её не выключишь.
 
 Если Dota закрыта полностью, авто-скрытие поиска выключается. Если Dota запущена, но первый матч ещё не был сыгран и GSI молчит, режим `Меню + поиск` всё равно может включить маску по процессу `dota2.exe`.
+
+### Match Intel и статистика стримера
+
+Match Intel добавляет на OBS-оверлей небольшие игровые подсказки, которые не требуют открывать отдельные сайты во время матча.
+
+Что можно включить:
+
+- отмеченные игроки - имена над слотами героев;
+- флаги игроков, если страна известна или задана вручную;
+- таймер Aegis под игроком, который держит Aegis;
+- таймер Рошана с окном возрождения;
+- статистику стримера: медаль, MMR, ранг в leaderboard и W-L за сессию.
+
+Отмеченные игроки берутся из двух источников. DotaStreamKit может использовать данные OpenDota для игроков с высоким рангом в leaderboard, а ещё позволяет добавить игроков вручную по Dota account id. Ручной список удобен для друзей, частых соперников, известных игроков или любых аккаунтов, которые ты хочешь отмечать всегда. Для каждого такого игрока можно задать ник и двухбуквенный код страны.
+
+Статистика стримера на оверлее настраивается отдельно от отмеченных игроков. Можно показывать только медаль, только MMR, только W-L или любую комбинацию. Источник медали выбирается в настройках: по Dota-аккаунту, по ручному MMR или автоматически - сначала аккаунт, потом ручной MMR.
+
+MMR можно вести вручную или обновлять автоматически после победы/поражения. Авто-обновление применяет заданные `Win MMR` и `Loss MMR`, но не выходит за диапазон `1..99999`. Если поставить MMR `0`, программа считает аккаунт на калибровке: показывает calibration-медаль и не трогает MMR после матчей.
+
+Во время драфта медаль и W-L скрываются, чтобы не мешать защите пиков. После выхода из матча Match Intel очищается с оверлея, чтобы старые отметки, Aegis или таймер Рошана не оставались на экране.
 
 ### Прогнозы за баллы канала
 
@@ -289,7 +317,13 @@ DotaStreamKit может автоматически создавать прог�
 {total_kills}
 ```
 
-Опция `Отменять незасчитанную игру` отменяет активный прогноз при сильных сигналах, что матч не должен засчитываться: долгий disconnect, новый match id при старом прогнозе, ранний post-game без победителя. Для краша/перезахода используется задержка, чтобы обычные 5 минут reconnect не отменяли прогноз сразу.
+На OBS-оверлее можно показывать только тот прогноз, который создал и отслеживает DotaStreamKit. Блок показывает название прогноза, время до закрытия приёма, названия исходов, количество баллов канала и проценты. Полоса исходов плавно анимируется при изменении соотношения ставок, а очень маленький исход всё равно остаётся читаемым.
+
+DotaStreamKit специально не подхватывает чужие активные прогнозы на канале. Если на Twitch уже есть прогноз, созданный вручную или другим ботом, программа не будет его закрывать, отменять или завершать.
+
+Опция `Отменять незасчитанную игру` отменяет активный прогноз при сильных сигналах, что матч не должен засчитываться: долгий disconnect, новый match id при старом прогнозе, ранний post-game без победителя или выход из активного лобби/матча. Для краша/перезахода используется задержка, чтобы обычные 5 минут reconnect не отменяли прогноз сразу.
+
+Опция `Отменять, если один исход без ставок` отменяет прогноз после игры, если хотя бы на один исход не поставили баллы канала. Перед отменой или завершением программа перечитывает состояние прогноза с Twitch, чтобы не решать исход по устаревшим локальным данным.
 
 ### Частые проблемы
 
@@ -384,8 +418,12 @@ Main features:
 - hides Dota 2 draft screen and top pick bar;
 - hides minimap ward information with a fake-vision overlay;
 - hides queue/search menu areas using a menu screenshot;
+- Match Intel overlay: notable players, country flags, Aegis holder, and Roshan timer;
+- streamer stats overlay: Dota rank medal, pips/stars, leaderboard rank, MMR, and W-L counter;
+- calibration mode: MMR `0` shows a calibration medal and disables automatic MMR changes;
 - creates Twitch Channel Points Predictions after the streamer picks a hero;
 - supports manual prediction controls and automatic lock/resolve/cancel flows;
+- Twitch prediction overlay: title, close timer, channel points, percentages, and animated outcome bar;
 - supports personal Twitch account mode and separate moderator account mode;
 - installs Dota Game State Integration locally.
 
@@ -519,6 +557,8 @@ Auto behavior:
 - after the streamer's pick phase ends, hide only the top pick bar;
 - remove draft/top masks after draft ends and strategy/planning starts.
 
+You can choose whether to hide all picks or only the streamer's team side. If the streamer's team is not known yet, DotaStreamKit temporarily hides all picks to avoid leaking information.
+
 #### Minimap
 
 The minimap uses the built-in fake-vision overlay. Custom minimap uploads are not supported.
@@ -542,6 +582,26 @@ Modes:
 - manual `Queue` button - force the mask to stay on until you turn it off.
 
 If Dota is closed, automatic queue masking turns off. If Dota is running but GSI has not sent data yet, `Menu + search` can still enable the mask by checking the local `dota2.exe` process.
+
+### Match Intel and Streamer Stats
+
+Match Intel adds small in-game helpers to the OBS overlay, so the streamer does not need to keep extra sites open during a match.
+
+Available overlay pieces:
+
+- notable players - marked player names above hero slots;
+- player flags when the country is known or set manually;
+- Aegis timer under the current Aegis holder;
+- Roshan timer with the respawn window;
+- streamer stats: rank medal, MMR, leaderboard rank, and session W-L.
+
+Notable players come from two places. DotaStreamKit can use OpenDota data for high leaderboard players, and you can also add any Dota account id manually. The manual list is useful for friends, frequent stream snipers, known players, or any account you want to mark every time. Each manual player can have a custom nickname and a two-letter country code.
+
+Streamer stats are configured separately from notable players. You can show only the medal, only MMR, only W-L, or any combination. The rank medal source can be the Dota account, manual MMR, or automatic fallback from account to manual MMR.
+
+Manual MMR can be updated automatically after wins and losses. The configured `Win MMR` and `Loss MMR` values are applied after the match, clamped to `1..99999`. If MMR is set to `0`, DotaStreamKit treats the account as calibrating: it shows the calibration medal and does not change MMR after matches.
+
+During draft, the medal and W-L are hidden so they do not interfere with pick protection. After leaving a match, Match Intel is cleared from the overlay so old player marks, Aegis, or Roshan timers do not stay on screen.
 
 ### Channel Points Predictions
 
@@ -584,7 +644,13 @@ Custom templates can use variables such as:
 {total_kills}
 ```
 
-The `Cancel invalid game` option cancels active predictions on strong signals that a match should not count: long disconnect, a new match id while an old prediction is active, or early post-game without a winner. Crash/reconnect handling uses a delay so a normal reconnect window does not cancel instantly.
+The OBS overlay can show only the prediction created and tracked by DotaStreamKit. The block shows the prediction title, time until betting closes, outcome names, channel points, and percentages. The outcome bar animates smoothly when the split changes, and a very small outcome still keeps readable text.
+
+DotaStreamKit intentionally does not adopt unrelated active predictions on the channel. If Twitch already has a prediction created manually or by another bot, the app will not lock, cancel, or resolve it.
+
+The `Cancel invalid game` option cancels active predictions on strong signals that a match should not count: long disconnect, a new match id while an old prediction is active, early post-game without a winner, or leaving an active lobby/match view. Crash/reconnect handling uses a delay so a normal reconnect window does not cancel instantly.
+
+The `Cancel if one outcome has no points` option cancels the prediction after the game if at least one outcome received no Channel Points. Before canceling or resolving, DotaStreamKit refreshes the prediction from Twitch so it does not decide from stale local data.
 
 ### Troubleshooting
 
