@@ -266,6 +266,7 @@ const defaultConfig = {
       enabled: true,
       showPlayerRanks: true,
       showAegisRoshan: true,
+      rankDisplayMode: 'minutes',
       rankDisplayMinutes: 12
     },
     topBarSlots: [
@@ -1501,7 +1502,8 @@ async function refreshNotablePlayerRanks(players) {
   if (!runtime.config.protection.matchIntel?.enabled || !runtime.config.protection.matchIntel.showPlayerRanks) return;
   const clockTime = Number(runtime.state.gsi.clockTime);
   const rankCutoff = Number(runtime.config.protection.matchIntel.rankDisplayMinutes || 12) * 60;
-  if (!Number.isFinite(clockTime) || clockTime < 0 || clockTime > rankCutoff) return;
+  const fullGameRanks = runtime.config.protection.matchIntel.rankDisplayMode === 'full_game';
+  if (!fullGameRanks && (!Number.isFinite(clockTime) || clockTime < 0 || clockTime > rankCutoff)) return;
   const accountIds = [...new Set(players.map((player) => player.accountId).filter(Boolean).map(String))];
   if (!accountIds.length) return;
 
@@ -2276,6 +2278,7 @@ function normalizeMatchIntelConfig(config) {
   config.enabled = config.enabled !== false;
   config.showPlayerRanks = config.showPlayerRanks !== false;
   config.showAegisRoshan = config.showAegisRoshan !== false;
+  if (!['minutes', 'full_game'].includes(config.rankDisplayMode)) config.rankDisplayMode = 'minutes';
   config.rankDisplayMinutes = clampInt(config.rankDisplayMinutes, 1, 30);
 }
 

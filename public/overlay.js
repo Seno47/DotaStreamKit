@@ -173,7 +173,8 @@ function applyMatchIntel(slots, reference, settings, state) {
   const enabled = settings.enabled !== false && state.gsi?.connected && /PRE_GAME|GAME_IN_PROGRESS|POST_GAME/i.test(String(state.gsi?.gameState || ''));
   const clockTime = Number(state.gsi?.clockTime);
   const rankCutoff = Number(settings.rankDisplayMinutes || 12) * 60;
-  const showRanks = enabled && settings.showPlayerRanks !== false && Number.isFinite(clockTime) && clockTime >= 0 && clockTime <= rankCutoff;
+  const fullGameRanks = settings.rankDisplayMode === 'full_game';
+  const showRanks = enabled && settings.showPlayerRanks !== false && (fullGameRanks || (Number.isFinite(clockTime) && clockTime >= 0 && clockTime <= rankCutoff));
   const ranksBySlot = new Map((intel.notablePlayers || []).map((player) => [Number(player.slot), player]));
   const aegis = intel.aegis || null;
   const showAegis = enabled && settings.showAegisRoshan !== false && aegis && Number(aegis.expiresAt) > clockTime;

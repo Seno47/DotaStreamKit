@@ -13,6 +13,9 @@ const els = {
   matchIntelEnabled: document.querySelector('#matchIntelEnabled'),
   showPlayerRanks: document.querySelector('#showPlayerRanks'),
   showAegisRoshan: document.querySelector('#showAegisRoshan'),
+  rankDisplayModeWrap: document.querySelector('#rankDisplayModeWrap'),
+  rankDisplayMode: document.querySelector('#rankDisplayMode'),
+  rankDisplayMinutesWrap: document.querySelector('#rankDisplayMinutesWrap'),
   rankDisplayMinutes: document.querySelector('#rankDisplayMinutes'),
   manualDraft: document.querySelector('#manualDraft'),
   manualMinimap: document.querySelector('#manualMinimap'),
@@ -110,6 +113,9 @@ const translations = {
     matchIntelEnabled: 'Игровая аналитика в overlay',
     showPlayerRanks: 'Ранги топ-игроков',
     showAegisRoshan: 'Aegis и Roshan',
+    rankDisplayMode: 'Показывать ранги',
+    rankDisplayFirstMinutes: 'Первые N минут',
+    rankDisplayFullGame: 'До конца игры',
     rankDisplayMinutes: 'Показывать ранги первые N минут',
     minimap: 'Миникарта',
     topBar: 'Верхняя панель',
@@ -299,6 +305,9 @@ const translations = {
     matchIntelEnabled: 'Match intel overlay',
     showPlayerRanks: 'Top player ranks',
     showAegisRoshan: 'Aegis and Roshan',
+    rankDisplayMode: 'Show ranks',
+    rankDisplayFirstMinutes: 'First N minutes',
+    rankDisplayFullGame: 'Full game',
     rankDisplayMinutes: 'Show ranks for first N minutes',
     minimap: 'Minimap',
     topBar: 'Top bar',
@@ -542,6 +551,9 @@ function applyLanguage(config) {
   setLabelText(els.matchIntelEnabled.closest('label'), t('matchIntelEnabled'));
   setLabelText(els.showPlayerRanks.closest('label'), t('showPlayerRanks'));
   setLabelText(els.showAegisRoshan.closest('label'), t('showAegisRoshan'));
+  setLabelText(els.rankDisplayMode.closest('label'), t('rankDisplayMode'));
+  setOptionText(els.rankDisplayMode, 'minutes', t('rankDisplayFirstMinutes'));
+  setOptionText(els.rankDisplayMode, 'full_game', t('rankDisplayFullGame'));
   setLabelText(els.rankDisplayMinutes.closest('label'), t('rankDisplayMinutes'));
   els.manualMinimap.textContent = t('minimap');
   els.manualTopBar.textContent = t('topBar');
@@ -731,7 +743,9 @@ function render(data) {
   els.matchIntelEnabled.checked = matchIntel.enabled !== false;
   els.showPlayerRanks.checked = matchIntel.showPlayerRanks !== false;
   els.showAegisRoshan.checked = matchIntel.showAegisRoshan !== false;
+  els.rankDisplayMode.value = matchIntel.rankDisplayMode || 'minutes';
   setInputValue(els.rankDisplayMinutes, matchIntel.rankDisplayMinutes || 12);
+  updateMatchIntelFieldVisibility();
   toggleButton(els.manualDraft, config.protection.manualDraft, state.protection.draft);
   toggleButton(els.manualMinimap, config.protection.manualMinimap, state.protection.minimap);
   toggleButton(els.manualTopBar, config.protection.manualTopBar, state.protection.topBar);
@@ -1200,9 +1214,19 @@ els.minimapSize.addEventListener('change', () => saveProtection({ minimapSize: e
 els.minimapSide.addEventListener('change', () => saveProtection({ minimapSide: els.minimapSide.value }).catch(alert));
 els.minimapStyle.addEventListener('change', () => saveProtection({ minimapStyle: els.minimapStyle.value }).catch(alert));
 els.queueMode.addEventListener('change', () => saveProtection({ queueMode: els.queueMode.value }).catch(alert));
-els.matchIntelEnabled.addEventListener('change', () => saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert));
-els.showPlayerRanks.addEventListener('change', () => saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert));
+els.matchIntelEnabled.addEventListener('change', () => {
+  updateMatchIntelFieldVisibility();
+  saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+});
+els.showPlayerRanks.addEventListener('change', () => {
+  updateMatchIntelFieldVisibility();
+  saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+});
 els.showAegisRoshan.addEventListener('change', () => saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert));
+els.rankDisplayMode.addEventListener('change', () => {
+  updateMatchIntelFieldVisibility();
+  saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+});
 els.rankDisplayMinutes.addEventListener('change', () => saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert));
 els.manualDraft.addEventListener('click', () => saveProtection({ manualDraft: nextManualProtectionState('manualDraft', 'draft') }).catch(alert));
 els.manualMinimap.addEventListener('click', () => saveProtection({ manualMinimap: nextManualProtectionState('manualMinimap', 'minimap') }).catch(alert));
@@ -1214,8 +1238,18 @@ function protectionMatchIntelFromForm() {
     enabled: els.matchIntelEnabled.checked,
     showPlayerRanks: els.showPlayerRanks.checked,
     showAegisRoshan: els.showAegisRoshan.checked,
+    rankDisplayMode: els.rankDisplayMode.value,
     rankDisplayMinutes: Number(els.rankDisplayMinutes.value)
   };
+}
+
+function updateMatchIntelFieldVisibility() {
+  const matchIntelEnabled = els.matchIntelEnabled.checked;
+  const ranksEnabled = matchIntelEnabled && els.showPlayerRanks.checked;
+  els.showPlayerRanks.closest('label').hidden = !matchIntelEnabled;
+  els.showAegisRoshan.closest('label').hidden = !matchIntelEnabled;
+  els.rankDisplayModeWrap.hidden = !ranksEnabled;
+  els.rankDisplayMinutesWrap.hidden = !ranksEnabled || els.rankDisplayMode.value === 'full_game';
 }
 
 function nextManualProtectionState(configKey, stateKey) {
