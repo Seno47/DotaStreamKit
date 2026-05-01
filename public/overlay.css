@@ -239,6 +239,7 @@ body {
   line-height: 1;
   text-shadow: 0 2px 3px #000, 0 0 4px #000;
   white-space: nowrap;
+  box-sizing: border-box;
 }
 
 #streamerStats.visible {
@@ -246,8 +247,8 @@ body {
 }
 
 .streamerStatsMedal {
-  width: 46px;
-  height: 46px;
+  width: 70px;
+  height: 70px;
   object-fit: contain;
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.85));
 }
@@ -265,8 +266,24 @@ body {
 }
 
 .streamerStatsWinLoss {
-  color: #e9f2ff;
+  display: inline-flex;
+  justify-content: center;
+  gap: 4px;
+  color: #ffffff;
   font-size: 15px;
+  min-width: 104px;
+}
+
+.streamerStatsWin {
+  color: #93f2a4;
+}
+
+.streamerStatsLoss {
+  color: #ff9e94;
+}
+
+.streamerStatsDash {
+  color: #ffffff;
 }
 
 .streamerStatsLastChange {

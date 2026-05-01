@@ -536,7 +536,8 @@ function applyStreamerStats(reference, protection, state) {
     nodes.mmr.hidden = true;
   }
   if (settings.showStreamerWinLoss !== false) {
-    setTextContent(nodes.winLoss, `${Math.max(0, Number(stats.wins || 0))}-${Math.max(0, Number(stats.losses || 0))}`);
+    setTextContent(nodes.win, `W ${Math.max(0, Number(stats.wins || 0))}`);
+    setTextContent(nodes.loss, `L ${Math.max(0, Number(stats.losses || 0))}`);
     nodes.winLoss.hidden = false;
   } else {
     nodes.winLoss.hidden = true;
@@ -556,11 +557,13 @@ function applyStreamerStats(reference, protection, state) {
   }
 
   const minimapSide = protection.minimapSide === 'right' ? 'right' : 'left';
-  const left = minimapSide === 'right' ? 302 : 1390;
   const inLiveGame = /GAME_IN_PROGRESS/i.test(gameState);
+  const left = inLiveGame
+    ? minimapSide === 'right' ? 302 : 1390
+    : minimapSide === 'right' ? 1500 : 1276;
   const box = inLiveGame
-    ? { left, bottom: 8, width: 230, height: 96 }
-    : { left, top: 52, width: 230, height: 96 };
+    ? { left, bottom: 8, width: 230, height: 122 }
+    : { left, top: 8, width: 170, height: 116 };
   applyScaledBox(streamerStatsEl, box, reference);
   setVisible(streamerStatsEl, true);
 }
@@ -579,6 +582,9 @@ function ensureStreamerStatsNodes() {
   const text = document.createElement('span');
   const mmr = document.createElement('span');
   const winLoss = document.createElement('span');
+  const win = document.createElement('span');
+  const dash = document.createElement('span');
+  const loss = document.createElement('span');
   const lastChange = document.createElement('span');
   medal.className = 'streamerStatsMedal';
   medal.alt = '';
@@ -586,10 +592,15 @@ function ensureStreamerStatsNodes() {
   text.className = 'streamerStatsText';
   mmr.className = 'streamerStatsMmr';
   winLoss.className = 'streamerStatsWinLoss';
+  win.className = 'streamerStatsWin';
+  dash.className = 'streamerStatsDash';
+  loss.className = 'streamerStatsLoss';
   lastChange.className = 'streamerStatsLastChange';
+  dash.textContent = '-';
+  winLoss.append(win, dash, loss);
   text.append(mmr, winLoss, lastChange);
   streamerStatsEl.replaceChildren(medal, text);
-  streamerStatsNodes = { medal, text, mmr, winLoss, lastChange };
+  streamerStatsNodes = { medal, text, mmr, winLoss, win, loss, lastChange };
   return streamerStatsNodes;
 }
 
