@@ -21,7 +21,8 @@ export function updateMatchIntel(previousIntel, payload, gsi, players) {
   const activeMatchId = gsi?.activeMatchId || gsi?.matchId || null;
   const matchChanged = previous.matchId && activeMatchId && String(previous.matchId) !== String(activeMatchId);
   const base = matchChanged ? {} : previous;
-  const aegisHolder = players.find((player) => player.hasAegis) || null;
+  const rosterAegisHolder = players.find((player) => player.source === 'roster' && player.hasAegis) || null;
+  const aegisHolder = rosterAegisHolder || players.find((player) => player.hasAegis) || null;
   const roshanKilled = hasRoshanKillEvent(payload);
   const roshanRespawned = hasRoshanRespawnEvent(payload);
   let roshan = base.roshan ? { ...base.roshan } : null;
@@ -137,6 +138,7 @@ function normalizeMatchPlayer(key, player) {
   return {
     slot,
     team: slot < 5 ? 'radiant' : 'dire',
+    source: 'roster',
     accountId,
     name: String(player.name || player.player_name || player.personaname || '').slice(0, 40),
     hero: String(player.hero_name || player.heroName || player.hero || '').slice(0, 60),
@@ -154,6 +156,7 @@ function normalizeCurrentMatchPlayer(payload, forceVisualFirst = false) {
   return {
     slot,
     team: slot < 5 ? 'radiant' : 'dire',
+    source: 'current',
     accountId: normalizeAccountId(player.accountid ?? player.account_id ?? player.accountId ?? player.steamid ?? player.steam_id),
     name: String(player.name || player.player_name || player.personaname || '').slice(0, 40),
     hero: String(hero.name || hero.hero_name || hero.heroName || hero.localized_name || '').slice(0, 60),

@@ -220,14 +220,16 @@ function applyMatchIntel(slots, reference, settings, state) {
   const withinNotableWindow = gameClockStarted && (fullGameRanks || clockTime <= rankCutoff);
   const showRanks = enabled && settings.showPlayerRanks !== false && withinNotableWindow;
   const showFlags = enabled && settings.showPlayerFlags === true && withinNotableWindow;
+  const playersByAccountId = new Map((intel.players || []).filter((player) => player?.accountId).map((player) => [String(player.accountId), player]));
   const ranksBySlot = new Map((intel.notablePlayers || []).map((player) => [Number(player.slot), player]));
   const aegis = intel.aegis || null;
   const showAegis = enabled && settings.showAegisTimer !== false && settings.showAegisRoshan !== false && aegis && Number(aegis.expiresAt) > clockTime;
+  const aegisSlot = showAegis ? resolveAegisSlot(aegis, playersByAccountId) : null;
 
   slots.forEach((slot, index) => {
     const el = matchIntelSlotEls[index];
     const rank = ranksBySlot.get(index);
-    const hasAegis = showAegis && Number(aegis.slot) === index;
+    const hasAegis = showAegis && aegisSlot === index;
     applyScaledBox(el, {
       left: slot.left + slot.width / 2 - 48,
       top: slot.top + slot.height + 4,
@@ -247,6 +249,18 @@ function applyMatchIntel(slots, reference, settings, state) {
   });
 
   applyRoshanIntel(reference, settings, state, version, slots);
+}
+
+function resolveAegisSlot(aegis, playersByAccountId) {
+  if (!aegis) return null;
+  const accountId = aegis.accountId !== undefined && aegis.accountId !== null ? String(aegis.accountId) : '';
+  if (accountId && playersByAccountId.has(accountId)) {
+    const player = playersByAccountId.get(accountId);
+    const slot = Number(player?.slot);
+    if (Number.isFinite(slot)) return slot;
+  }
+  const slot = Number(aegis.slot);
+  return Number.isFinite(slot) ? slot : null;
 }
 
 function isMatchIntelActive(settings, state) {

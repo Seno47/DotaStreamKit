@@ -77,6 +77,7 @@ const fallbackPlayers = collectMatchPlayers({
 assert.deepEqual(fallbackPlayers, [{
   slot: 2,
   team: 'radiant',
+  source: 'current',
   accountId: 333,
   name: 'Streamer',
   hero: 'npc_dota_hero_axe',
@@ -118,5 +119,6 @@ const currentItemsOverride = collectMatchPlayers({
 });
 assert.equal(currentItemsOverride[0].hasItemData, true);
 assert.equal(currentItemsOverride[0].hasAegis, false);
+assert.equal(currentItemsOverride[0].source, 'roster');
 
 console.log('Game intel checks passed');
