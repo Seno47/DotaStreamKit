@@ -434,6 +434,13 @@ body {
   line-height: 1;
 }
 
+#streamerStats.mainMenuScale .streamerStatsWinLoss {
+  grid-row: 1;
+  align-self: start;
+  font-size: 33.25px;
+  margin-top: 0;
+}
+
 .streamerStatsWinNumber,
 .streamerStatsLossNumber {
   color: #ffffff;
