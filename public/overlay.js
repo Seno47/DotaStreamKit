@@ -14,6 +14,7 @@ let minimapVisionImageEl = null;
 let roshanIntelEl = null;
 let streamerStatsNodes = null;
 let predictionOverlayNodes = null;
+let predictionOverlayAnimation = null;
 let lastOverlaySnapshot = null;
 
 const stream = new EventSource('/api/events');
@@ -534,12 +535,14 @@ function applyPredictionOverlay(reference, predictionsConfig, state) {
   if (!predictionOverlayEl) return;
   const prediction = state.activePrediction;
   if (!shouldShowPredictionOverlay(prediction)) {
+    resetPredictionOverlayAnimation();
     setVisible(predictionOverlayEl, false);
     return;
   }
 
   const outcomes = predictionOverlayOutcomes(prediction);
   if (outcomes.length < 2) {
+    resetPredictionOverlayAnimation();
     setVisible(predictionOverlayEl, false);
     return;
   }
@@ -552,15 +555,14 @@ function applyPredictionOverlay(reference, predictionsConfig, state) {
   setTextContent(nodes.timer, formatClock(predictionRemainingSeconds(prediction, predictionsConfig)));
 
   outcomes.forEach((outcome, index) => {
-    const label = `${outcome.title} ${displayPercentages[index]}% (${formatPredictionPoints(outcome.points)})`;
     const colorClass = outcome.kind === 'no' || /pink|no/i.test(String(outcome.color || '')) ? 'no' : 'yes';
     nodes.fills[index].className = `predictionOverlayFill ${colorClass}`;
     nodes.fills[index].style.flexBasis = `${layoutPercentages[index]}%`;
-    nodes.labels[index].className = `predictionOverlayLabel ${colorClass}`;
+    nodes.labels[index].className = `predictionOverlayLabel ${colorClass}${layoutPercentages[index] <= 28 ? ' compact' : ''}`;
     nodes.labels[index].style.left = `${index === 0 ? 0 : layoutPercentages[0]}%`;
     nodes.labels[index].style.width = `${layoutPercentages[index]}%`;
-    setTextContent(nodes.labels[index], label);
   });
+  animatePredictionOverlayLabels(prediction.id, nodes, outcomes, displayPercentages, layoutPercentages);
 
   const box = { left: 610, top: 104, width: 700, height: 96 };
   applyScaledBox(predictionOverlayEl, box, reference);
@@ -587,7 +589,7 @@ function predictionOverlayOutcomes(prediction) {
 
 function outcomeLayoutPercentages(outcomes, totalPoints) {
   if (totalPoints <= 0) return [50, 50];
-  const first = clampNumber((outcomes[0].points / totalPoints) * 100, 8, 92, 50);
+  const first = clampNumber((outcomes[0].points / totalPoints) * 100, 24, 76, 50);
   return [first, 100 - first];
 }
 
@@ -611,6 +613,87 @@ function predictionRemainingSeconds(prediction, predictionsConfig) {
 
 function formatPredictionPoints(value) {
   return Math.max(0, Math.trunc(Number(value) || 0)).toLocaleString('en-US');
+}
+
+function animatePredictionOverlayLabels(predictionId, nodes, outcomes, targetPercentages, layoutPercentages) {
+  const targetId = String(predictionId || '');
+  const normalizedTargets = targetPercentages.map((value) => Math.max(0, Math.min(100, Math.round(Number(value) || 0))));
+  const compact = layoutPercentages.map((value) => Number(value) <= 28);
+  const stateChanged = !predictionOverlayAnimation || predictionOverlayAnimation.predictionId !== targetId;
+  if (stateChanged) {
+    resetPredictionOverlayAnimation();
+    predictionOverlayAnimation = {
+      predictionId: targetId,
+      values: [...normalizedTargets],
+      targets: [...normalizedTargets],
+      starts: [...normalizedTargets],
+      startedAt: 0,
+      duration: 700,
+      frame: null,
+      labels: nodes.labels,
+      outcomes: predictionOverlayLabelData(outcomes, compact)
+    };
+    updatePredictionOverlayLabelText(predictionOverlayAnimation);
+    return;
+  }
+
+  predictionOverlayAnimation.labels = nodes.labels;
+  predictionOverlayAnimation.outcomes = predictionOverlayLabelData(outcomes, compact);
+  if (sameNumberArray(predictionOverlayAnimation.targets, normalizedTargets)) {
+    updatePredictionOverlayLabelText(predictionOverlayAnimation);
+    return;
+  }
+
+  if (predictionOverlayAnimation.frame) cancelAnimationFrame(predictionOverlayAnimation.frame);
+  predictionOverlayAnimation.starts = [...predictionOverlayAnimation.values];
+  predictionOverlayAnimation.targets = [...normalizedTargets];
+  predictionOverlayAnimation.startedAt = performance.now();
+  const tick = (now) => {
+    const progress = Math.min(1, (now - predictionOverlayAnimation.startedAt) / predictionOverlayAnimation.duration);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    predictionOverlayAnimation.values = predictionOverlayAnimation.targets.map((target, index) => {
+      const start = predictionOverlayAnimation.starts[index] ?? target;
+      return Math.round(start + (target - start) * eased);
+    });
+    updatePredictionOverlayLabelText(predictionOverlayAnimation);
+    if (progress < 1) {
+      predictionOverlayAnimation.frame = requestAnimationFrame(tick);
+    } else {
+      predictionOverlayAnimation.frame = null;
+      predictionOverlayAnimation.values = [...predictionOverlayAnimation.targets];
+      updatePredictionOverlayLabelText(predictionOverlayAnimation);
+    }
+  };
+  predictionOverlayAnimation.frame = requestAnimationFrame(tick);
+}
+
+function predictionOverlayLabelData(outcomes, compact) {
+  return outcomes.map((outcome, index) => ({
+    title: outcome.title,
+    points: outcome.points,
+    compact: Boolean(compact[index])
+  }));
+}
+
+function updatePredictionOverlayLabelText(animation) {
+  animation.labels.forEach((label, index) => {
+    const outcome = animation.outcomes[index];
+    if (!outcome) return;
+    const percent = Math.max(0, Math.min(100, Math.round(animation.values[index] || 0)));
+    const text = outcome.compact
+      ? `${outcome.title} ${percent}%`
+      : `${outcome.title} ${percent}% (${formatPredictionPoints(outcome.points)})`;
+    setTextContent(label, text);
+  });
+}
+
+function resetPredictionOverlayAnimation() {
+  if (predictionOverlayAnimation?.frame) cancelAnimationFrame(predictionOverlayAnimation.frame);
+  predictionOverlayAnimation = null;
+}
+
+function sameNumberArray(left, right) {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
 function ensurePredictionOverlayNodes() {
