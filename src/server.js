@@ -1242,7 +1242,7 @@ function assetNames() {
     'fake-minimap-vision-realistic.png',
     'fake-minimap-vision-simple.png',
     'fake-minimap-vision-empty.png',
-    ...Array.from({ length: 8 }, (_, index) => `rank-medal-${index + 1}.png`),
+    ...Array.from({ length: 9 }, (_, index) => `rank-medal-${index}.png`),
     'rank-immortal.png',
     'aegis.png',
     'roshan.png',
@@ -1257,7 +1257,7 @@ function defaultSeedAssetNames() {
     'draft-screenshot.png',
     'ward-eye.png',
     'sentry-eye.png',
-    ...Array.from({ length: 8 }, (_, index) => `rank-medal-${index + 1}.png`),
+    ...Array.from({ length: 9 }, (_, index) => `rank-medal-${index}.png`),
     'rank-immortal.png',
     'aegis.png',
     'roshan.png',
@@ -1284,10 +1284,13 @@ function publicStreamerStats() {
   const stats = normalizeStreamerStatsState(runtime.state.streamerStats);
   const settings = runtime.config.protection.matchIntel || {};
   const configuredMmr = Number(settings.streamerMmr || 0);
+  const medalMmr = settings.streamerMedalSource === 'account' && stats.accountRankTier
+    ? null
+    : Math.max(0, configuredMmr);
   const medal = selectStreamerMedal({
     source: settings.streamerMedalSource || 'auto',
     accountRankTier: stats.accountRankTier,
-    mmr: configuredMmr > 0 ? configuredMmr : null
+    mmr: medalMmr
   });
   return {
     ...stats,

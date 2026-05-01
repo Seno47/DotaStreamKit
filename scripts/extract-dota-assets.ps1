@@ -37,7 +37,7 @@ node (Join-Path $root "scripts\extract-vpk-file.js") $pak "panorama/images/hero_
 node (Join-Path $root "scripts\extract-vpk-file.js") $pak "materials/vgui/hud/minimap_ward_invis_psd_46a724e0" $extracted
 node (Join-Path $root "scripts\extract-vpk-file.js") $pak "materials/overviews/dota_psd" $extracted
 node (Join-Path $root "scripts\extract-vpk-file.js") $pak "materials/overviews/dota_minimal_psd" $extracted
-for ($rank = 1; $rank -le 8; $rank++) {
+for ($rank = 0; $rank -le 8; $rank++) {
   node (Join-Path $root "scripts\extract-vpk-file.js") $pak "panorama/images/rank_tier_icons/rank$($rank)_psd" $extracted
 }
 node (Join-Path $root "scripts\extract-vpk-file.js") $pak "panorama/images/items/aegis_png" $extracted
@@ -76,7 +76,7 @@ if (Test-Path -LiteralPath $simpleVtex) {
   }
 }
 
-for ($rank = 1; $rank -le 8; $rank++) {
+for ($rank = 0; $rank -le 8; $rank++) {
   $rankVtex = Join-Path $extracted "panorama__images__rank_tier_icons__rank$($rank)_psd.vtex_c"
   $rankPng = Join-Path $extracted "panorama__images__rank_tier_icons__rank$($rank)_psd.png"
   if (Test-Path -LiteralPath $rankVtex) {
@@ -123,7 +123,7 @@ if (Test-Path -LiteralPath (Join-Path $assetDir "sentry-eye.png")) {
 }
 if (Test-Path -LiteralPath (Join-Path $assetDir "rank-medal-8.png")) {
   Write-Host "Extracted Dota rank medals:"
-  Write-Host "  $(Join-Path $assetDir "rank-medal-1.png") .. $(Join-Path $assetDir "rank-medal-8.png")"
+  Write-Host "  $(Join-Path $assetDir "rank-medal-0.png") .. $(Join-Path $assetDir "rank-medal-8.png")"
 }
 if (Test-Path -LiteralPath (Join-Path $assetDir "aegis.png")) {
   Write-Host "Extracted Dota Aegis icon:"

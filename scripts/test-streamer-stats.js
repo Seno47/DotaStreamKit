@@ -7,7 +7,8 @@ import {
   updateStreamerSessionPresence
 } from '../src/streamer-stats.js';
 
-assert.equal(rankMedalFromMmr(0).medal, 1);
+assert.equal(rankMedalFromMmr(0).medal, 0);
+assert.equal(rankMedalFromMmr(1).medal, 1);
 assert.equal(rankMedalFromMmr(770).medal, 2);
 assert.equal(rankMedalFromMmr(4619).medal, 6);
 assert.equal(rankMedalFromMmr(4620).medal, 7);

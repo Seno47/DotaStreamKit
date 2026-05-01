@@ -225,14 +225,15 @@ body {
 }
 
 #streamerStats {
-  z-index: 18;
+  z-index: 2147483647;
   pointer-events: none;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 1px;
   color: #f6f0d8;
   font-family: "Arial Narrow", "Roboto Condensed", "Segoe UI Condensed", "Segoe UI", Arial, Helvetica, sans-serif;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1;
@@ -245,28 +246,31 @@ body {
 }
 
 .streamerStatsMedal {
-  width: 39px;
-  height: 39px;
+  width: 46px;
+  height: 46px;
   object-fit: contain;
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.85));
 }
 
 .streamerStatsText {
   display: inline-flex;
-  align-items: baseline;
-  gap: 5px;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
 }
 
 .streamerStatsMmr {
   color: #fff5c8;
+  font-size: 17px;
 }
 
 .streamerStatsWinLoss {
   color: #e9f2ff;
+  font-size: 15px;
 }
 
 .streamerStatsLastChange {
-  font-size: 13px;
+  font-size: 12px;
   color: #94f2a8;
 }
 

@@ -1,6 +1,7 @@
 export const streamOfflineGraceMs = 2 * 60 * 60 * 1000;
 
 export const rankMedalThresholds = [
+  { medal: 0, name: 'Unranked', minMmr: 0 },
   { medal: 1, name: 'Herald', minMmr: 0 },
   { medal: 2, name: 'Guardian', minMmr: 770 },
   { medal: 3, name: 'Crusader', minMmr: 1540 },
@@ -46,8 +47,9 @@ export function rankMedalFromMmr(mmr) {
   if (mmr === null || mmr === undefined || mmr === '') return null;
   const value = Number(mmr);
   if (!Number.isFinite(value) || value < 0) return null;
-  let current = rankMedalThresholds[0];
-  for (const threshold of rankMedalThresholds) {
+  if (value <= 0) return { ...rankMedalThresholds[0] };
+  let current = rankMedalThresholds[1];
+  for (const threshold of rankMedalThresholds.slice(1)) {
     if (value >= threshold.minMmr) current = threshold;
   }
   return { ...current };
