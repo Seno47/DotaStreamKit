@@ -564,15 +564,7 @@ function applyStreamerStats(reference, protection, state) {
   } else {
     nodes.mmr.hidden = true;
   }
-  const lastChange = Number(stats.lastMmrChange || 0);
-  if (settings.showStreamerMmr !== false && lastChange) {
-    setTextContent(nodes.lastChange, `${lastChange > 0 ? '+' : ''}${lastChange}`);
-    nodes.lastChange.classList.toggle('loss', lastChange < 0);
-    nodes.lastChange.hidden = false;
-  } else {
-    nodes.lastChange.hidden = true;
-  }
-  nodes.mmrLine.hidden = nodes.mmr.hidden && nodes.lastChange.hidden;
+  nodes.mmrLine.hidden = nodes.mmr.hidden;
   if (nodes.medalWrap.hidden && nodes.leaderboard.hidden && nodes.winLoss.hidden && nodes.mmrLine.hidden) {
     setVisible(streamerStatsEl, false);
     return;
@@ -580,12 +572,13 @@ function applyStreamerStats(reference, protection, state) {
 
   const minimapSide = protection.minimapSide === 'right' ? 'right' : 'left';
   const inLiveGame = /PRE_GAME|GAME_IN_PROGRESS/i.test(gameState);
+  streamerStatsEl.classList.toggle('mainMenuScale', !inLiveGame);
   const left = inLiveGame
     ? minimapSide === 'right' ? 302 : 1390
     : minimapSide === 'right' ? 1500 : 1276;
   const box = inLiveGame
     ? { left, bottom: 8, width: 260, height: 150 }
-    : { left, top: 18, width: 220, height: 150 };
+    : { left, top: 18, width: 170, height: 116 };
   applyScaledBox(streamerStatsEl, box, reference);
   setVisible(streamerStatsEl, true);
 }
@@ -612,7 +605,6 @@ function ensureStreamerStatsNodes() {
   const dash = document.createElement('span');
   const lossNumber = document.createElement('span');
   const loss = document.createElement('span');
-  const lastChange = document.createElement('span');
   medalWrap.className = 'streamerStatsMedalWrap';
   medal.className = 'streamerStatsMedal';
   medal.alt = '';
@@ -629,15 +621,14 @@ function ensureStreamerStatsNodes() {
   dash.className = 'streamerStatsDash';
   lossNumber.className = 'streamerStatsLossNumber';
   loss.className = 'streamerStatsLoss';
-  lastChange.className = 'streamerStatsLastChange';
   win.textContent = 'W';
   dash.textContent = '-';
   loss.textContent = 'L';
   winLoss.append(winNumber, win, dash, lossNumber, loss);
   medalWrap.append(medal, pips);
-  mmrLine.append(mmr, lastChange);
+  mmrLine.append(mmr);
   streamerStatsEl.replaceChildren(medalWrap, leaderboard, winLoss, mmrLine);
-  streamerStatsNodes = { medalWrap, medal, pips, leaderboard, mmrLine, mmr, winLoss, winNumber, lossNumber, lastChange };
+  streamerStatsNodes = { medalWrap, medal, pips, leaderboard, mmrLine, mmr, winLoss, winNumber, lossNumber };
   return streamerStatsNodes;
 }
 

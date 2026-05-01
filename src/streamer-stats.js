@@ -12,6 +12,8 @@ export const rankMedalThresholds = [
   { medal: 8, name: 'Immortal', minMmr: 5620, starStep: 0 }
 ];
 
+export const calibrationMedal = { medal: 'calibration', name: 'Calibration', minMmr: 0, starStep: 0, stars: 0 };
+
 export function normalizeStreamerStatsConfig(config) {
   config.showStreamerStats = config.showStreamerStats === true;
   config.showStreamerRankMedal = config.showStreamerRankMedal !== false;
@@ -47,7 +49,7 @@ export function rankMedalFromMmr(mmr) {
   if (mmr === null || mmr === undefined || mmr === '') return null;
   const value = Number(mmr);
   if (!Number.isFinite(value) || value < 0) return null;
-  if (value <= 0) return { ...rankMedalThresholds[0] };
+  if (value <= 0) return { ...calibrationMedal };
   let current = rankMedalThresholds[1];
   for (const threshold of rankMedalThresholds.slice(1)) {
     if (value >= threshold.minMmr) current = threshold;
@@ -93,12 +95,13 @@ export function applyStreamerMatchResult(state, config, result, matchId, now = n
 
   let configChanged = false;
   if (nextConfig.autoUpdateStreamerMmr !== false && Number(nextConfig.streamerMmr) > 0) {
+    const previousMmr = Math.trunc(Number(nextConfig.streamerMmr));
     const delta = result === 'win'
       ? Math.max(0, Math.trunc(Number(nextConfig.streamerMmrWinDelta) || 25))
       : -Math.max(0, Math.trunc(Number(nextConfig.streamerMmrLossDelta) || 25));
-    nextConfig.streamerMmr = Math.max(0, Math.trunc(Number(nextConfig.streamerMmr) + delta));
-    nextState.lastMmrChange = delta;
-    configChanged = true;
+    nextConfig.streamerMmr = clampInt(previousMmr + delta, 1, 99999, 1);
+    nextState.lastMmrChange = nextConfig.streamerMmr - previousMmr;
+    configChanged = nextConfig.streamerMmr !== previousMmr;
   }
 
   return { state: nextState, config: nextConfig, changed: true, configChanged };

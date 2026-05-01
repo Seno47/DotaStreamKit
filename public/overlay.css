@@ -241,10 +241,16 @@ body {
   text-shadow: 0 2px 3px #000, 0 0 4px #000;
   white-space: nowrap;
   box-sizing: border-box;
+  transform: none;
+  transform-origin: top center;
 }
 
 #streamerStats.visible {
   display: grid;
+}
+
+#streamerStats.mainMenuScale {
+  transform: scale(0.6666667);
 }
 
 .streamerStatsMedalWrap {
@@ -330,14 +336,4 @@ body {
 
 .streamerStatsDash {
   color: #ffffff;
-}
-
-.streamerStatsLastChange {
-  font-size: 14px;
-  color: #94f2a8;
-  line-height: 1;
-}
-
-.streamerStatsLastChange.loss {
-  color: #ffaaa2;
 }

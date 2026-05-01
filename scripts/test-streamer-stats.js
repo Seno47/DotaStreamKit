@@ -8,7 +8,7 @@ import {
   updateStreamerSessionPresence
 } from '../src/streamer-stats.js';
 
-assert.equal(rankMedalFromMmr(0).medal, 0);
+assert.equal(rankMedalFromMmr(0).medal, 'calibration');
 assert.equal(rankMedalFromMmr(1).medal, 1);
 assert.equal(rankMedalFromMmr(1).stars, 1);
 assert.equal(rankMedalFromMmr(153).stars, 1);
@@ -52,6 +52,20 @@ assert.equal(applied.state.wins, 1);
 assert.equal(applied.state.losses, 1);
 assert.equal(applied.config.streamerMmr, 5000);
 assert.equal(applied.state.lastMmrChange, -25);
+
+applied = applyStreamerMatchResult({}, { ...config, streamerMmr: 1 }, 'lose', '125', new Date('2026-05-01T10:30:00Z'));
+assert.equal(applied.config.streamerMmr, 1);
+assert.equal(applied.state.lastMmrChange, 0);
+assert.equal(applied.configChanged, false);
+
+applied = applyStreamerMatchResult({}, { ...config, streamerMmr: 99990 }, 'win', '126', new Date('2026-05-01T10:40:00Z'));
+assert.equal(applied.config.streamerMmr, 99999);
+assert.equal(applied.state.lastMmrChange, 9);
+
+applied = applyStreamerMatchResult({}, { ...config, streamerMmr: 0 }, 'win', '127', new Date('2026-05-01T10:50:00Z'));
+assert.equal(applied.config.streamerMmr, 0);
+assert.equal(applied.state.lastMmrChange, 0);
+assert.equal(applied.configChanged, false);
 
 let session = updateStreamerSessionPresence(
   { wins: 2, losses: 1, sessionStartedAt: '2026-05-01T08:00:00Z' },

@@ -21,6 +21,8 @@ $aegisVtex = Join-Path $extracted "panorama__images__items__aegis_png.vtex_c"
 $aegisPng = Join-Path $extracted "panorama__images__items__aegis_png.png"
 $roshanVtex = Join-Path $extracted "panorama__images__heroes__npc_dota_hero_roshan_png.vtex_c"
 $roshanPng = Join-Path $extracted "panorama__images__heroes__npc_dota_hero_roshan_png.png"
+$calibrationVtex = Join-Path $extracted "panorama__images__plus__achievements__calibrate_ranked_icon_png.vtex_c"
+$calibrationPng = Join-Path $extracted "panorama__images__plus__achievements__calibrate_ranked_icon_png.png"
 
 if (-not (Test-Path -LiteralPath $pak)) {
   throw "Dota pak not found: $pak"
@@ -43,6 +45,7 @@ for ($rank = 0; $rank -le 8; $rank++) {
 for ($pip = 1; $pip -le 5; $pip++) {
   node (Join-Path $root "scripts\extract-vpk-file.js") $pak "panorama/images/rank_tier_icons/pip$($pip)_psd" $extracted
 }
+node (Join-Path $root "scripts\extract-vpk-file.js") $pak "panorama/images/plus/achievements/calibrate_ranked_icon_png" $extracted
 node (Join-Path $root "scripts\extract-vpk-file.js") $pak "panorama/images/items/aegis_png" $extracted
 node (Join-Path $root "scripts\extract-vpk-file.js") $pak "panorama/images/heroes/npc_dota_hero_roshan_png" $extracted
 
@@ -107,6 +110,14 @@ for ($pip = 1; $pip -le 5; $pip++) {
   }
 }
 
+if (Test-Path -LiteralPath $calibrationVtex) {
+  & $vrf -i $calibrationVtex -o $extracted -d
+  if (Test-Path -LiteralPath $calibrationPng) {
+    Copy-Item -LiteralPath $calibrationPng -Destination (Join-Path $assetDir "rank-medal-calibration.png") -Force
+    Copy-Item -LiteralPath $calibrationPng -Destination (Join-Path $root "public\default-assets\rank-medal-calibration.png") -Force
+  }
+}
+
 if (Test-Path -LiteralPath $aegisVtex) {
   & $vrf -i $aegisVtex -o $extracted -d
   if (Test-Path -LiteralPath $aegisPng) {
@@ -143,6 +154,10 @@ if (Test-Path -LiteralPath (Join-Path $assetDir "rank-medal-8.png")) {
 if (Test-Path -LiteralPath (Join-Path $assetDir "rank-pip-5.png")) {
   Write-Host "Extracted Dota rank stars:"
   Write-Host "  $(Join-Path $assetDir "rank-pip-1.png") .. $(Join-Path $assetDir "rank-pip-5.png")"
+}
+if (Test-Path -LiteralPath (Join-Path $assetDir "rank-medal-calibration.png")) {
+  Write-Host "Extracted Dota calibration rank medal:"
+  Write-Host "  $calibrationPng"
 }
 if (Test-Path -LiteralPath (Join-Path $assetDir "aegis.png")) {
   Write-Host "Extracted Dota Aegis icon:"
