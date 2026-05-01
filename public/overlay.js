@@ -2,15 +2,27 @@ const queueMask = document.querySelector('#queueMask');
 const draftScreenMask = document.querySelector('#draftScreenMask');
 const minimapMask = document.querySelector('#minimapMask');
 const topBarSlotsRoot = document.querySelector('#topBarSlots');
+const matchIntelRoot = document.querySelector('#matchIntel');
 let queuePartEls = [];
 let topBarSlotEls = [];
+let matchIntelSlotEls = [];
 let draftPartEls = [];
 let minimapLayerEl = null;
 let minimapVisionImageEl = null;
+let roshanIntelEl = null;
+let lastOverlaySnapshot = null;
 
 const stream = new EventSource('/api/events');
 stream.onmessage = (event) => {
-  const { config, state } = JSON.parse(event.data);
+  lastOverlaySnapshot = JSON.parse(event.data);
+  renderOverlay(lastOverlaySnapshot);
+};
+
+setInterval(() => {
+  if (lastOverlaySnapshot) renderOverlay(lastOverlaySnapshot);
+}, 1000);
+
+function renderOverlay({ config, state }) {
   const reference = normalizeReference(config.protection.referenceSize);
   const draftParts = config.protection.draftMaskParts || [];
   const queueParts = queueMaskParts(config.protection, reference);
@@ -18,12 +30,14 @@ stream.onmessage = (event) => {
   ensureQueueParts(queueParts.length);
   ensureDraftParts(draftParts.length);
   ensureTopBarSlots(slots.length);
+  ensureMatchIntelSlots(slots.length);
   applyQueueParts(queueParts, reference, state);
   applyDraftParts(draftParts, reference, state);
   applyTopBarSlots(slots, reference, state);
+  applyMatchIntel(slots, reference, config.protection.matchIntel || {}, state);
   applyMinimap(config.protection, reference, state);
   setVisible(minimapMask, state.protection.minimap);
-};
+}
 
 function queueMaskParts(protection, reference) {
   if ((protection.queueMode || 'partial') === 'full') {
@@ -101,6 +115,23 @@ function ensureTopBarSlots(count) {
   }
 }
 
+function ensureMatchIntelSlots(count) {
+  while (matchIntelSlotEls.length < count) {
+    const el = document.createElement('div');
+    el.className = 'matchIntelSlot';
+    matchIntelRoot.append(el);
+    matchIntelSlotEls.push(el);
+  }
+  while (matchIntelSlotEls.length > count) {
+    matchIntelSlotEls.pop().remove();
+  }
+  if (!roshanIntelEl) {
+    roshanIntelEl = document.createElement('div');
+    roshanIntelEl.className = 'roshanIntel';
+    matchIntelRoot.append(roshanIntelEl);
+  }
+}
+
 function applyQueueParts(parts, reference, state) {
   const version = assetVersion(state);
   parts.forEach((part, index) => {
@@ -134,6 +165,64 @@ function applyTopBarSlots(slots, reference, state) {
     el.style.backgroundImage = `url('/assets/${encodeURIComponent(slot.asset)}?v=${version}')`;
     setVisible(el, visible);
   });
+}
+
+function applyMatchIntel(slots, reference, settings, state) {
+  const intel = state.matchIntel || {};
+  const version = assetVersion(state);
+  const enabled = settings.enabled !== false && state.gsi?.connected && /PRE_GAME|GAME_IN_PROGRESS|POST_GAME/i.test(String(state.gsi?.gameState || ''));
+  const clockTime = Number(state.gsi?.clockTime);
+  const rankCutoff = Number(settings.rankDisplayMinutes || 12) * 60;
+  const showRanks = enabled && settings.showPlayerRanks !== false && Number.isFinite(clockTime) && clockTime >= 0 && clockTime <= rankCutoff;
+  const ranksBySlot = new Map((intel.notablePlayers || []).map((player) => [Number(player.slot), player]));
+  const aegis = intel.aegis || null;
+  const showAegis = enabled && settings.showAegisRoshan !== false && aegis && Number(aegis.expiresAt) > clockTime;
+
+  slots.forEach((slot, index) => {
+    const el = matchIntelSlotEls[index];
+    const rank = ranksBySlot.get(index);
+    const hasAegis = showAegis && Number(aegis.slot) === index;
+    applyScaledBox(el, {
+      left: slot.left + slot.width / 2 - 48,
+      top: slot.top + slot.height + 4,
+      width: 96,
+      height: 72
+    }, reference);
+    el.innerHTML = '';
+    if (showRanks && rank) {
+      const rankBadge = document.createElement('div');
+      rankBadge.className = 'rankBadge';
+      rankBadge.innerHTML = `<img src="/assets/rank-immortal.png?v=${version}" alt=""><span>#${escapeHtml(rank.leaderboardRank)}</span>`;
+      el.append(rankBadge);
+    }
+    if (hasAegis) {
+      const remaining = Math.max(0, Math.ceil(Number(aegis.expiresAt) - clockTime));
+      const aegisBadge = document.createElement('div');
+      aegisBadge.className = 'aegisBadge';
+      aegisBadge.innerHTML = `<img src="/assets/aegis.png?v=${version}" alt=""><span>${formatClock(remaining)}</span>`;
+      el.append(aegisBadge);
+    }
+    setVisible(el, enabled && (el.children.length > 0));
+  });
+
+  applyRoshanIntel(reference, settings, state, version);
+}
+
+function applyRoshanIntel(reference, settings, state, version) {
+  if (!roshanIntelEl) return;
+  const intel = state.matchIntel || {};
+  const status = intel.roshanStatus;
+  const enabled = settings.enabled !== false && settings.showAegisRoshan !== false && state.gsi?.connected && status;
+  if (!enabled) {
+    setVisible(roshanIntelEl, false);
+    return;
+  }
+
+  const text = roshanText(status);
+  roshanIntelEl.innerHTML = `<img src="/assets/roshan.png?v=${version}" alt=""><span>${text}</span>`;
+  roshanIntelEl.style.left = '50vw';
+  roshanIntelEl.style.top = `${toPercent(82, reference.height)}vh`;
+  setVisible(roshanIntelEl, true);
 }
 
 function applyMinimap(protection, reference, state) {
@@ -224,4 +313,26 @@ function applyScaledBox(el, box, reference, side = 'left') {
 
 function toPercent(value, total) {
   return (Number(value) / Number(total)) * 100;
+}
+
+function roshanText(status) {
+  if (status.phase === 'possible') return 'ROSHAN UP?';
+  if (status.phase === 'window') return `ROSHAN 0:00-${formatClock(status.latestRemaining)}`;
+  return `ROSHAN ${formatClock(status.earliestRemaining)}-${formatClock(status.latestRemaining)}`;
+}
+
+function formatClock(totalSeconds) {
+  const seconds = Math.max(0, Math.ceil(Number(totalSeconds) || 0));
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes}:${String(seconds % 60).padStart(2, '0')}`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[char]));
 }

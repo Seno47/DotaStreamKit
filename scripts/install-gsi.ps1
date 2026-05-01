@@ -21,7 +21,10 @@ $cfg = @"
     "map" "1"
     "player" "1"
     "hero" "1"
+    "items" "1"
+    "allplayers" "1"
     "draft" "1"
+    "events" "1"
   }
 }
 "@

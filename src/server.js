@@ -12,6 +12,12 @@ import {
   hasPointsOnEveryPredictionOutcome,
   isPredictionUncontested
 } from './prediction-safety.js';
+import {
+  collectMatchPlayers,
+  normalizeAccountId,
+  notablePlayersFromRankCache,
+  updateMatchIntel
+} from './game-intel.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const execFileAsync = promisify(execFile);
@@ -33,6 +39,8 @@ const queueAutoOffDelayMs = 2500;
 const queueAutoStaleKeepMs = 10 * 60 * 1000;
 const autoPredictionRetryMs = 30000;
 const activePredictionSyncMs = 15000;
+const playerRankCacheTtlMs = 12 * 60 * 60 * 1000;
+const playerRankFailureTtlMs = 15 * 60 * 1000;
 const inGameStatePattern = /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS|POST_GAME/i;
 const queueSearchPattern = /queue|search|matchmaking|match_making|find.?match|finding.?match|game.?search|party.?search/i;
 const dotaProcessName = 'dota2.exe';
@@ -254,6 +262,12 @@ const defaultConfig = {
     ],
     queueProfileRight: 398,
     queueChatBox: { left: 616, top: 742, width: 688, height: 317 },
+    matchIntel: {
+      enabled: true,
+      showPlayerRanks: true,
+      showAegisRoshan: true,
+      rankDisplayMinutes: 12
+    },
     topBarSlots: [
       { left: 208, top: 0, width: 122, height: 75, asset: 'topbar-slot-0.png' },
       { left: 333, top: 0, width: 122, height: 75, asset: 'topbar-slot-1.png' },
@@ -299,6 +313,8 @@ const runtime = {
   queueAuto: { active: false, desired: false, desiredSince: 0 },
   dotaProcess: { running: null, checkedAt: null },
   twitchStreamStatus: { broadcasterId: null, checkedAt: 0, isLive: null, streamId: null, gameName: null, title: null },
+  playerRankCache: new Map(),
+  pendingPlayerRankFetches: new Map(),
   config: structuredClone(defaultConfig),
   state: {
     startedAt: new Date().toISOString(),
@@ -336,6 +352,14 @@ const runtime = {
       queueSearchSignal: false,
       inGameScreen: false,
       leftGameView: false
+    },
+    matchIntel: {
+      matchId: null,
+      players: [],
+      notablePlayers: [],
+      roshan: null,
+      roshanStatus: null,
+      aegis: null
     },
     dota: {
       processRunning: null,
@@ -401,6 +425,14 @@ runtime.state.gsi = {
 runtime.state.dota = {
   processRunning: null,
   processCheckedAt: null
+};
+runtime.state.matchIntel = {
+  matchId: null,
+  players: [],
+  notablePlayers: [],
+  roshan: null,
+  roshanStatus: null,
+  aegis: null
 };
 runtime.state.lastAutoPredictionAttempt = null;
 runtime.state.autoPredictionCreatedKey = null;
@@ -682,6 +714,15 @@ async function migrateConfig(config) {
   if (!queueChatBox || !Number.isFinite(Number(queueChatBox.left)) || !Number.isFinite(Number(queueChatBox.width))) {
     config.protection.queueChatBox = structuredClone(defaultConfig.protection.queueChatBox);
     changed = true;
+  }
+  if (!config.protection.matchIntel || typeof config.protection.matchIntel !== 'object') {
+    config.protection.matchIntel = structuredClone(defaultConfig.protection.matchIntel);
+    changed = true;
+  } else {
+    const beforeMatchIntel = JSON.stringify(config.protection.matchIntel);
+    config.protection.matchIntel = merge(structuredClone(defaultConfig.protection.matchIntel), config.protection.matchIntel);
+    normalizeMatchIntelConfig(config.protection.matchIntel);
+    if (JSON.stringify(config.protection.matchIntel) !== beforeMatchIntel) changed = true;
   }
 
   if (changed) await persistConfig();
@@ -1142,6 +1183,9 @@ function assetNames() {
     'fake-minimap-vision-realistic.png',
     'fake-minimap-vision-simple.png',
     'fake-minimap-vision-empty.png',
+    'rank-immortal.png',
+    'aegis.png',
+    'roshan.png',
     'draft-screenshot.png',
     'queue-screenshot.png',
     ...Array.from({ length: 10 }, (_, index) => `topbar-slot-${index}.png`)
@@ -1153,6 +1197,9 @@ function defaultSeedAssetNames() {
     'draft-screenshot.png',
     'ward-eye.png',
     'sentry-eye.png',
+    'rank-immortal.png',
+    'aegis.png',
+    'roshan.png',
     'minimap-base-realistic.png',
     'minimap-base-simple.png'
   ];
@@ -1330,6 +1377,14 @@ async function updateProtection(req, res) {
   if (['realistic', 'simple', 'empty'].includes(body.minimapStyle)) {
     runtime.config.protection.minimapStyle = body.minimapStyle;
   }
+  if (body.matchIntel && typeof body.matchIntel === 'object') {
+    runtime.config.protection.matchIntel = merge(
+      structuredClone(runtime.config.protection.matchIntel || defaultConfig.protection.matchIntel),
+      body.matchIntel
+    );
+    normalizeMatchIntelConfig(runtime.config.protection.matchIntel);
+    runtime.state.matchIntel = buildMatchIntel({}, runtime.state.gsi, runtime.state.matchIntel?.players || []);
+  }
   runtime.state.protection = computeProtection(runtime.config, runtime.state.gsi);
   await persistConfig();
   await persistState();
@@ -1364,6 +1419,7 @@ async function handleGsi(req, res) {
   const activeMatchId = inferActiveMatchId(previous, gameState, matchId, lifecycle);
   const queueSearchSignal = inferQueueSearchSignal(payload);
   const inGameScreen = inferInGameScreen(gameState, playerActivity);
+  const matchPlayers = collectMatchPlayers(payload);
   const leftGameView = inferLeftGameView({
     connected: true,
     activeMatchId,
@@ -1400,11 +1456,129 @@ async function handleGsi(req, res) {
   };
 
   runtime.state.gsi = gsi;
+  runtime.state.matchIntel = buildMatchIntel(payload, gsi, matchPlayers);
   runtime.state.protection = computeProtection(runtime.config, gsi);
+  refreshNotablePlayerRanks(matchPlayers).catch((error) => logEvent('system', `Player rank lookup failed: ${error.message}`));
   await maybeAutomatePrediction(previous, gsi);
   await persistState();
   broadcast();
   sendJson(res, { ok: true });
+}
+
+function buildMatchIntel(payload, gsi, players) {
+  if (!runtime.config.protection.matchIntel?.enabled) {
+    return {
+      matchId: gsi.activeMatchId || gsi.matchId || null,
+      players,
+      notablePlayers: [],
+      roshan: null,
+      roshanStatus: null,
+      aegis: null
+    };
+  }
+
+  const intel = updateMatchIntel(runtime.state.matchIntel, payload, gsi, players);
+  if (runtime.config.protection.matchIntel.showPlayerRanks) {
+    intel.notablePlayers = notablePlayersFromRankCache(players, getCachedPlayerRank);
+  } else {
+    intel.notablePlayers = [];
+  }
+  if (!runtime.config.protection.matchIntel.showAegisRoshan) {
+    intel.roshan = null;
+    intel.roshanStatus = null;
+    intel.aegis = null;
+  }
+  return intel;
+}
+
+function getCachedPlayerRank(accountId) {
+  const cached = runtime.playerRankCache.get(String(accountId));
+  if (!cached || cached.failedAt) return null;
+  return cached;
+}
+
+async function refreshNotablePlayerRanks(players) {
+  if (!runtime.config.protection.matchIntel?.enabled || !runtime.config.protection.matchIntel.showPlayerRanks) return;
+  const clockTime = Number(runtime.state.gsi.clockTime);
+  const rankCutoff = Number(runtime.config.protection.matchIntel.rankDisplayMinutes || 12) * 60;
+  if (!Number.isFinite(clockTime) || clockTime < 0 || clockTime > rankCutoff) return;
+  const accountIds = [...new Set(players.map((player) => player.accountId).filter(Boolean).map(String))];
+  if (!accountIds.length) return;
+
+  const staleIds = accountIds.filter((accountId) => shouldRefreshPlayerRank(accountId));
+  for (const accountId of staleIds) {
+    fetchAndCachePlayerRank(accountId).catch((error) => {
+      runtime.playerRankCache.set(accountId, { checkedAt: Date.now(), failedAt: Date.now(), error: error.message });
+      runtime.pendingPlayerRankFetches.delete(accountId);
+    });
+  }
+
+  const notablePlayers = notablePlayersFromRankCache(players, getCachedPlayerRank);
+  if (!sameJson(runtime.state.matchIntel.notablePlayers, notablePlayers)) {
+    runtime.state.matchIntel.notablePlayers = notablePlayers;
+    await persistState();
+    broadcast();
+  }
+}
+
+function shouldRefreshPlayerRank(accountId) {
+  if (runtime.pendingPlayerRankFetches.has(accountId)) return false;
+  const cached = runtime.playerRankCache.get(accountId);
+  if (!cached) return true;
+  const ttl = cached.failedAt ? playerRankFailureTtlMs : playerRankCacheTtlMs;
+  return Date.now() - Number(cached.checkedAt || 0) > ttl;
+}
+
+async function fetchAndCachePlayerRank(accountId) {
+  const request = fetchOpenDotaPlayer(accountId)
+    .then((data) => {
+      const leaderboardRank = Number(data?.leaderboard_rank);
+      const rankTier = Number(data?.rank_tier);
+      const cacheEntry = {
+        checkedAt: Date.now(),
+        leaderboardRank: Number.isFinite(leaderboardRank) && leaderboardRank > 0 ? Math.trunc(leaderboardRank) : null,
+        rankTier: Number.isFinite(rankTier) && rankTier > 0 ? Math.trunc(rankTier) : null,
+        name: String(data?.profile?.name || data?.profile?.personaname || '').slice(0, 40)
+      };
+      runtime.playerRankCache.set(accountId, cacheEntry);
+      runtime.pendingPlayerRankFetches.delete(accountId);
+      const players = runtime.state.matchIntel?.players || [];
+      const notablePlayers = notablePlayersFromRankCache(players, getCachedPlayerRank);
+      if (!sameJson(runtime.state.matchIntel.notablePlayers, notablePlayers)) {
+        runtime.state.matchIntel.notablePlayers = notablePlayers;
+        persistState().catch(() => {});
+        broadcast();
+      }
+      return cacheEntry;
+    })
+    .catch((error) => {
+      runtime.playerRankCache.set(accountId, { checkedAt: Date.now(), failedAt: Date.now(), error: error.message });
+      runtime.pendingPlayerRankFetches.delete(accountId);
+      throw error;
+    });
+  runtime.pendingPlayerRankFetches.set(accountId, request);
+  return request;
+}
+
+async function fetchOpenDotaPlayer(accountId) {
+  const normalized = normalizeAccountId(accountId);
+  if (!normalized) throw new Error(`Invalid Dota account id: ${accountId}`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 7000);
+  try {
+    const response = await fetch(`https://api.opendota.com/api/players/${encodeURIComponent(normalized)}`, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'DotaStreamKit/1.0' }
+    });
+    if (!response.ok) throw new Error(`OpenDota ${response.status}`);
+    return await response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function sameJson(left, right) {
+  return JSON.stringify(left || null) === JSON.stringify(right || null);
 }
 
 function computeProtection(config, gsi) {
@@ -2096,6 +2270,13 @@ function normalizeDeploymentConfig(config) {
 function normalizeUiConfig(config) {
   if (!['auto', 'ru', 'en'].includes(config.language)) config.language = 'auto';
   if (!['', 'ru', 'en'].includes(config.predictionTemplateLanguage)) config.predictionTemplateLanguage = '';
+}
+
+function normalizeMatchIntelConfig(config) {
+  config.enabled = config.enabled !== false;
+  config.showPlayerRanks = config.showPlayerRanks !== false;
+  config.showAegisRoshan = config.showAegisRoshan !== false;
+  config.rankDisplayMinutes = clampInt(config.rankDisplayMinutes, 1, 30);
 }
 
 function normalizeTwitchConfig(config) {
@@ -2968,8 +3149,10 @@ function makeGsiConfig() {
     "map" "1"
     "player" "1"
     "hero" "1"
+    "items" "1"
     "allplayers" "1"
     "draft" "1"
+    "events" "1"
   }
 }
 `;

@@ -10,6 +10,10 @@ const els = {
   minimapSide: document.querySelector('#minimapSide'),
   minimapStyle: document.querySelector('#minimapStyle'),
   queueMode: document.querySelector('#queueMode'),
+  matchIntelEnabled: document.querySelector('#matchIntelEnabled'),
+  showPlayerRanks: document.querySelector('#showPlayerRanks'),
+  showAegisRoshan: document.querySelector('#showAegisRoshan'),
+  rankDisplayMinutes: document.querySelector('#rankDisplayMinutes'),
   manualDraft: document.querySelector('#manualDraft'),
   manualMinimap: document.querySelector('#manualMinimap'),
   manualTopBar: document.querySelector('#manualTopBar'),
@@ -103,6 +107,10 @@ const translations = {
     queueAutoMenuSearch: 'Меню + поиск',
     partial: 'Только области поиска',
     full: 'Фуллскрин',
+    matchIntelEnabled: 'Игровая аналитика в overlay',
+    showPlayerRanks: 'Ранги топ-игроков',
+    showAegisRoshan: 'Aegis и Roshan',
+    rankDisplayMinutes: 'Показывать ранги первые N минут',
     minimap: 'Миникарта',
     topBar: 'Верхняя панель',
     queue: 'Поиск',
@@ -288,6 +296,10 @@ const translations = {
     queueAutoMenuSearch: 'Menu + search',
     partial: 'Queue areas only',
     full: 'Fullscreen',
+    matchIntelEnabled: 'Match intel overlay',
+    showPlayerRanks: 'Top player ranks',
+    showAegisRoshan: 'Aegis and Roshan',
+    rankDisplayMinutes: 'Show ranks for first N minutes',
     minimap: 'Minimap',
     topBar: 'Top bar',
     queue: 'Queue',
@@ -527,6 +539,10 @@ function applyLanguage(config) {
   setLabelText(els.queueMode.closest('label'), t('queueMode'));
   setOptionText(els.queueMode, 'partial', t('partial'));
   setOptionText(els.queueMode, 'full', t('full'));
+  setLabelText(els.matchIntelEnabled.closest('label'), t('matchIntelEnabled'));
+  setLabelText(els.showPlayerRanks.closest('label'), t('showPlayerRanks'));
+  setLabelText(els.showAegisRoshan.closest('label'), t('showAegisRoshan'));
+  setLabelText(els.rankDisplayMinutes.closest('label'), t('rankDisplayMinutes'));
   els.manualMinimap.textContent = t('minimap');
   els.manualTopBar.textContent = t('topBar');
   els.manualQueue.textContent = t('queue');
@@ -711,6 +727,11 @@ function render(data) {
   els.minimapStyle.value = config.protection.minimapStyle || 'realistic';
   els.queueAutoMode.value = config.protection.queueAutoMode || 'menu_search';
   els.queueMode.value = config.protection.queueMode || 'partial';
+  const matchIntel = config.protection.matchIntel || {};
+  els.matchIntelEnabled.checked = matchIntel.enabled !== false;
+  els.showPlayerRanks.checked = matchIntel.showPlayerRanks !== false;
+  els.showAegisRoshan.checked = matchIntel.showAegisRoshan !== false;
+  setInputValue(els.rankDisplayMinutes, matchIntel.rankDisplayMinutes || 12);
   toggleButton(els.manualDraft, config.protection.manualDraft, state.protection.draft);
   toggleButton(els.manualMinimap, config.protection.manualMinimap, state.protection.minimap);
   toggleButton(els.manualTopBar, config.protection.manualTopBar, state.protection.topBar);
@@ -1179,10 +1200,23 @@ els.minimapSize.addEventListener('change', () => saveProtection({ minimapSize: e
 els.minimapSide.addEventListener('change', () => saveProtection({ minimapSide: els.minimapSide.value }).catch(alert));
 els.minimapStyle.addEventListener('change', () => saveProtection({ minimapStyle: els.minimapStyle.value }).catch(alert));
 els.queueMode.addEventListener('change', () => saveProtection({ queueMode: els.queueMode.value }).catch(alert));
+els.matchIntelEnabled.addEventListener('change', () => saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert));
+els.showPlayerRanks.addEventListener('change', () => saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert));
+els.showAegisRoshan.addEventListener('change', () => saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert));
+els.rankDisplayMinutes.addEventListener('change', () => saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert));
 els.manualDraft.addEventListener('click', () => saveProtection({ manualDraft: nextManualProtectionState('manualDraft', 'draft') }).catch(alert));
 els.manualMinimap.addEventListener('click', () => saveProtection({ manualMinimap: nextManualProtectionState('manualMinimap', 'minimap') }).catch(alert));
 els.manualTopBar.addEventListener('click', () => saveProtection({ manualTopBar: nextManualProtectionState('manualTopBar', 'topBar') }).catch(alert));
 els.manualQueue.addEventListener('click', () => saveProtection({ manualQueue: nextManualProtectionState('manualQueue', 'queue') }).catch(alert));
+
+function protectionMatchIntelFromForm() {
+  return {
+    enabled: els.matchIntelEnabled.checked,
+    showPlayerRanks: els.showPlayerRanks.checked,
+    showAegisRoshan: els.showAegisRoshan.checked,
+    rankDisplayMinutes: Number(els.rankDisplayMinutes.value)
+  };
+}
 
 function nextManualProtectionState(configKey, stateKey) {
   const manualEnabled = Boolean(snapshot?.config?.protection?.[configKey]);

@@ -10,7 +10,9 @@ body {
 #minimapMask,
 .queueMaskPart,
 .draftMaskPart,
-.topBarSlot {
+.topBarSlot,
+.matchIntelSlot,
+.roshanIntel {
   display: none;
   position: fixed;
   background-color: transparent;
@@ -22,7 +24,9 @@ body {
 #minimapMask.visible,
 .queueMaskPart.visible,
 .draftMaskPart.visible,
-.topBarSlot.visible {
+.topBarSlot.visible,
+.matchIntelSlot.visible,
+.roshanIntel.visible {
   display: block;
 }
 
@@ -63,4 +67,85 @@ body {
 
 #queueMask {
   background-color: transparent;
+}
+
+#matchIntel {
+  pointer-events: none;
+}
+
+.matchIntelSlot {
+  z-index: 20;
+  overflow: visible;
+  background: none;
+  font-family: Arial, Helvetica, sans-serif;
+  text-align: center;
+}
+
+.rankBadge,
+.aegisBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  height: 28px;
+  margin: 0 auto 3px;
+  padding: 0 7px 0 4px;
+  border: 1px solid rgba(233, 196, 105, 0.78);
+  border-radius: 4px;
+  background: rgba(8, 12, 16, 0.74);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.55);
+  color: #f7e1a3;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  text-shadow: 0 1px 2px #000;
+}
+
+.rankBadge img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  margin-right: 1px;
+  transform: translateY(-1px);
+}
+
+.aegisBadge {
+  border-color: rgba(255, 129, 72, 0.82);
+  color: #ffd0a7;
+}
+
+.aegisBadge img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  margin-right: 4px;
+}
+
+.roshanIntel {
+  z-index: 19;
+  transform: translateX(-50%);
+  min-width: 142px;
+  height: 34px;
+  padding: 0 10px 0 6px;
+  border: 1px solid rgba(167, 112, 77, 0.82);
+  border-radius: 4px;
+  background: rgba(8, 11, 14, 0.78);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+  color: #f1d0b5;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 34px;
+  text-align: center;
+  text-shadow: 0 1px 2px #000;
+  white-space: nowrap;
+}
+
+.roshanIntel img {
+  width: 31px;
+  height: 31px;
+  object-fit: cover;
+  vertical-align: middle;
+  margin-right: 6px;
+  border-radius: 3px;
 }
