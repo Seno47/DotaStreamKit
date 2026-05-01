@@ -3036,6 +3036,7 @@ async function createPredictionFromSettings(overrides = {}, options = {}) {
   if (!broadcaster) throw new Error('Twitch is not authenticated. Connect Twitch from the dashboard.');
   const draft = buildPredictionDraft(overrides);
   const predictionWindow = clampInt(overrides.windowSeconds ?? runtime.config.predictions.windowSeconds, 30, 1800);
+  draft.meta.predictionWindowSeconds = predictionWindow;
   const body = {
     broadcaster_id: broadcaster,
     title: draft.title,
@@ -3241,12 +3242,18 @@ function isMissingTwitchPredictionError(error) {
 }
 
 function normalizePrediction(item, yesTitle = runtime.config.predictions.winTitle, noTitle = runtime.config.predictions.loseTitle, meta = null) {
+  const predictionWindowSeconds = clampInt(
+    item.prediction_window ?? item.predictionWindow ?? meta?.predictionWindowSeconds ?? meta?.windowSeconds ?? runtime.config.predictions.windowSeconds,
+    30,
+    1800
+  );
   return {
     id: item.id,
     title: item.title,
     status: item.status,
     createdAt: item.created_at,
     lockedAt: item.locked_at,
+    predictionWindowSeconds,
     type: meta?.typeLabel || meta?.typeId || meta?.type || null,
     target: meta?.target || null,
     minute: meta?.minute || null,

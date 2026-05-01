@@ -4,6 +4,7 @@ const minimapMask = document.querySelector('#minimapMask');
 const topBarSlotsRoot = document.querySelector('#topBarSlots');
 const matchIntelRoot = document.querySelector('#matchIntel');
 const streamerStatsEl = document.querySelector('#streamerStats');
+const predictionOverlayEl = document.querySelector('#predictionOverlay');
 let queuePartEls = [];
 let topBarSlotEls = [];
 let matchIntelSlotEls = [];
@@ -12,6 +13,7 @@ let minimapLayerEl = null;
 let minimapVisionImageEl = null;
 let roshanIntelEl = null;
 let streamerStatsNodes = null;
+let predictionOverlayNodes = null;
 let lastOverlaySnapshot = null;
 
 const stream = new EventSource('/api/events');
@@ -39,6 +41,7 @@ function renderOverlay({ config, state }) {
   applyTopBarSlots(slots, reference, state);
   applyMatchIntel(matchIntelSlots, reference, config.protection.matchIntel || {}, state);
   applyStreamerStats(reference, config.protection || {}, state);
+  applyPredictionOverlay(reference, config.predictions || {}, state);
   applyMinimap(config.protection, reference, state);
   setVisible(minimapMask, state.protection.minimap);
 }
@@ -525,6 +528,106 @@ function roshanText(status) {
   if (status.phase === 'possible') return 'UP?';
   if (status.phase === 'window') return `0:00-${formatClock(status.latestRemaining)}`;
   return `${formatClock(status.earliestRemaining)}-${formatClock(status.latestRemaining)}`;
+}
+
+function applyPredictionOverlay(reference, predictionsConfig, state) {
+  if (!predictionOverlayEl) return;
+  const prediction = state.activePrediction;
+  if (!shouldShowPredictionOverlay(prediction)) {
+    setVisible(predictionOverlayEl, false);
+    return;
+  }
+
+  const outcomes = predictionOverlayOutcomes(prediction);
+  if (outcomes.length < 2) {
+    setVisible(predictionOverlayEl, false);
+    return;
+  }
+
+  const nodes = ensurePredictionOverlayNodes();
+  const totalPoints = outcomes.reduce((sum, outcome) => sum + outcome.points, 0);
+  const layoutPercentages = outcomeLayoutPercentages(outcomes, totalPoints);
+  const displayPercentages = outcomeDisplayPercentages(outcomes, totalPoints);
+  setTextContent(nodes.title, prediction.title || '');
+  setTextContent(nodes.timer, formatClock(predictionRemainingSeconds(prediction, predictionsConfig)));
+
+  outcomes.forEach((outcome, index) => {
+    const label = `${outcome.title} ${displayPercentages[index]}% (${formatPredictionPoints(outcome.points)})`;
+    const colorClass = outcome.kind === 'no' || /pink|no/i.test(String(outcome.color || '')) ? 'no' : 'yes';
+    nodes.fills[index].className = `predictionOverlayFill ${colorClass}`;
+    nodes.fills[index].style.flexBasis = `${layoutPercentages[index]}%`;
+    nodes.labels[index].className = `predictionOverlayLabel ${colorClass}`;
+    nodes.labels[index].style.left = `${index === 0 ? 0 : layoutPercentages[0]}%`;
+    nodes.labels[index].style.width = `${layoutPercentages[index]}%`;
+    setTextContent(nodes.labels[index], label);
+  });
+
+  const box = { left: 610, top: 104, width: 700, height: 96 };
+  applyScaledBox(predictionOverlayEl, box, reference);
+  setVisible(predictionOverlayEl, true);
+}
+
+function shouldShowPredictionOverlay(prediction) {
+  return Boolean(prediction?.id) && String(prediction.status || '').toUpperCase() === 'ACTIVE';
+}
+
+function predictionOverlayOutcomes(prediction) {
+  const outcomes = (prediction.outcomes || []).map((outcome, index) => ({
+    title: String(outcome.title || (index === 0 ? 'Yes' : 'No')).slice(0, 25),
+    points: Math.max(0, Math.trunc(Number(outcome.channelPoints) || 0)),
+    kind: outcome.kind || null,
+    color: outcome.color || null,
+    index
+  }));
+  const yes = outcomes.find((outcome) => outcome.kind === 'yes') || outcomes[0];
+  const no = outcomes.find((outcome) => outcome.kind === 'no' && outcome !== yes)
+    || outcomes.find((outcome) => outcome !== yes);
+  return [yes, no].filter(Boolean);
+}
+
+function outcomeLayoutPercentages(outcomes, totalPoints) {
+  if (totalPoints <= 0) return [50, 50];
+  const first = clampNumber((outcomes[0].points / totalPoints) * 100, 8, 92, 50);
+  return [first, 100 - first];
+}
+
+function outcomeDisplayPercentages(outcomes, totalPoints) {
+  if (totalPoints <= 0) return [0, 0];
+  const first = Math.round((outcomes[0].points / totalPoints) * 100);
+  return [first, 100 - first];
+}
+
+function predictionRemainingSeconds(prediction, predictionsConfig) {
+  const createdAt = Date.parse(prediction.createdAt || '');
+  const windowSeconds = clampNumber(
+    prediction.predictionWindowSeconds ?? predictionsConfig.windowSeconds,
+    0,
+    1800,
+    predictionsConfig.windowSeconds || 180
+  );
+  if (!Number.isFinite(createdAt) || windowSeconds <= 0) return 0;
+  return Math.max(0, Math.ceil((createdAt + windowSeconds * 1000 - Date.now()) / 1000));
+}
+
+function formatPredictionPoints(value) {
+  return Math.max(0, Math.trunc(Number(value) || 0)).toLocaleString('en-US');
+}
+
+function ensurePredictionOverlayNodes() {
+  if (predictionOverlayNodes) return predictionOverlayNodes;
+  const title = document.createElement('div');
+  const bar = document.createElement('div');
+  const fills = [document.createElement('span'), document.createElement('span')];
+  const labels = [document.createElement('span'), document.createElement('span')];
+  const timer = document.createElement('div');
+  title.className = 'predictionOverlayTitle';
+  bar.className = 'predictionOverlayBar';
+  timer.className = 'predictionOverlayTimer';
+  fills.forEach((fill) => bar.append(fill));
+  labels.forEach((label) => bar.append(label));
+  predictionOverlayEl.replaceChildren(title, bar, timer);
+  predictionOverlayNodes = { title, bar, fills, labels, timer };
+  return predictionOverlayNodes;
 }
 
 function applyStreamerStats(reference, protection, state) {
