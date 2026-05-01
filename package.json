@@ -8,6 +8,7 @@
     "start": "node src/server.js",
     "stop": "powershell -ExecutionPolicy Bypass -File scripts/stop.ps1",
     "check": "node --check src/server.js",
+    "test:prediction-safety": "node scripts/test-prediction-safety.js",
     "optimize:assets": "node scripts/optimize-assets.js",
     "extract:dota-assets": "powershell -ExecutionPolicy Bypass -File scripts/extract-dota-assets.ps1",
     "install:gsi": "powershell -ExecutionPolicy Bypass -File scripts/install-gsi.ps1",

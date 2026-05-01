@@ -7,6 +7,11 @@ import { randomBytes } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import sharp from 'sharp';
+import {
+  hasCompletePredictionOutcomePoints,
+  hasPointsOnEveryPredictionOutcome,
+  isPredictionUncontested
+} from './prediction-safety.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const execFileAsync = promisify(execFile);
@@ -1909,6 +1914,7 @@ async function maybeCancelPredictionForGsiTimeout() {
   const candidate = {
     reason: 'GSI stopped during an active match',
     delaySeconds: settings.autoCancelDisconnectSeconds,
+    protectContested: true,
     matchId: runtime.state.activePredictionMatchId || runtime.state.gsi.activeMatchId || runtime.state.gsi.matchId || null
   };
   return await applyPredictionCancelCandidate(candidate);
@@ -1926,6 +1932,7 @@ function inferPredictionCancelCandidate(previous, gsi) {
     return {
       reason: `new match started before prediction was closed (${predictionMatchId} -> ${currentMatchId})`,
       delaySeconds: 0,
+      protectContested: true,
       matchId: predictionMatchId
     };
   }
@@ -1934,6 +1941,7 @@ function inferPredictionCancelCandidate(previous, gsi) {
     return {
       reason: 'Dota reported disconnect during an active match',
       delaySeconds: settings.autoCancelDisconnectSeconds,
+      protectContested: true,
       matchId: predictionMatchId || currentMatchId
     };
   }
@@ -1980,7 +1988,9 @@ async function applyPredictionCancelCandidate(candidate) {
   if (elapsedSeconds < candidate.delaySeconds) return false;
 
   try {
-    await twitchEndPrediction(active.id, 'CANCELED');
+    const latestActive = await refreshActivePredictionBeforeAutomaticCancel(active, candidate);
+    if (!latestActive) return false;
+    await twitchEndPrediction(latestActive.id, 'CANCELED');
     logEvent('twitch', `Prediction canceled automatically: ${candidate.reason}`);
     return true;
   } catch (error) {
@@ -1991,6 +2001,41 @@ async function applyPredictionCancelCandidate(candidate) {
 
 function clearPredictionCancelCandidate() {
   if (runtime.state.predictionCancelCandidate) runtime.state.predictionCancelCandidate = null;
+}
+
+async function refreshActivePredictionBeforeAutomaticCancel(active, candidate) {
+  let latestActive;
+  try {
+    latestActive = await refreshActivePredictionFromTwitch(active);
+  } catch (error) {
+    logEvent('twitch', `Auto cancel skipped: could not refresh active prediction (${error.message})`);
+    return null;
+  }
+
+  if (!latestActive || !['ACTIVE', 'LOCKED'].includes(latestActive.status)) {
+    clearActivePredictionState();
+    await persistState();
+    broadcast();
+    logEvent('twitch', 'Auto cancel skipped: active prediction is no longer active on Twitch');
+    return null;
+  }
+
+  if (!candidate.protectContested) return latestActive;
+
+  if (!hasCompletePredictionOutcomePoints(latestActive)) {
+    logEvent('twitch', `Auto cancel skipped: Twitch did not return complete channel point totals for ${candidate.reason}`);
+    return null;
+  }
+
+  if (hasPointsOnEveryPredictionOutcome(latestActive)) {
+    clearPredictionCancelCandidate();
+    await persistState();
+    broadcast();
+    logEvent('twitch', `Auto cancel skipped: ${candidate.reason}; prediction has channel points on every outcome`);
+    return null;
+  }
+
+  return latestActive;
 }
 
 async function refreshActivePredictionFromTwitch(active) {
@@ -2028,11 +2073,6 @@ function clearActivePredictionState() {
   runtime.state.activePredictionMeta = null;
   runtime.state.predictionCancelCandidate = null;
   runtime.state.activePredictionSyncedAt = null;
-}
-
-function isPredictionUncontested(prediction) {
-  const outcomes = Array.isArray(prediction?.outcomes) ? prediction.outcomes : [];
-  return outcomes.length >= 2 && outcomes.some((outcome) => Number(outcome.channelPoints || 0) <= 0);
 }
 
 function inferResult(gsi) {
