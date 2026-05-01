@@ -257,7 +257,7 @@ const defaultConfig = {
     minimapStyle: 'realistic',
     minimapOpacity: 0.92,
     minimapBoxes: {
-      normal: { left: 8, bottom: 8, width: 264, height: 264 },
+      normal: { left: 0, bottom: 0, width: 272, height: 280 },
       large: { left: 0, bottom: 0, width: 326, height: 326 }
     },
     minimapContentAreas: {
@@ -710,6 +710,17 @@ async function migrateConfig(config) {
   }
   if (config.protection.minimapBox) {
     delete config.protection.minimapBox;
+    changed = true;
+  }
+  const normalMinimapBox = config.protection.minimapBoxes?.normal;
+  const expectedNormalMinimapBox = defaultConfig.protection.minimapBoxes.normal;
+  const hasOldNormalMinimapBox = normalMinimapBox
+    && Number(normalMinimapBox.left) === 8
+    && Number(normalMinimapBox.bottom) === 8
+    && Number(normalMinimapBox.width) === 264
+    && Number(normalMinimapBox.height) === 264;
+  if (hasOldNormalMinimapBox) {
+    config.protection.minimapBoxes.normal = structuredClone(expectedNormalMinimapBox);
     changed = true;
   }
   const areas = config.protection.minimapContentAreas;
