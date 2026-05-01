@@ -266,9 +266,11 @@ const defaultConfig = {
     matchIntel: {
       enabled: true,
       showPlayerRanks: true,
+      showPlayerFlags: false,
       showAegisRoshan: true,
       rankDisplayMode: 'minutes',
-      rankDisplayMinutes: 12
+      rankDisplayMinutes: 12,
+      customPlayers: []
     },
     topBarSlots: [
       { left: 208, top: 0, width: 122, height: 75, asset: 'topbar-slot-0.png' },
@@ -1487,8 +1489,8 @@ function buildMatchIntel(payload, gsi, players) {
   }
 
   const intel = updateMatchIntel(runtime.state.matchIntel, payload, gsi, players);
-  if (runtime.config.protection.matchIntel.showPlayerRanks) {
-    intel.notablePlayers = notablePlayersFromRankCache(players, getCachedPlayerRank);
+  if (shouldShowNotablePlayers()) {
+    intel.notablePlayers = buildNotablePlayers(players);
   } else {
     intel.notablePlayers = [];
   }
@@ -1507,7 +1509,7 @@ function getCachedPlayerRank(accountId) {
 }
 
 async function refreshNotablePlayerRanks(players) {
-  if (!runtime.config.protection.matchIntel?.enabled || !runtime.config.protection.matchIntel.showPlayerRanks) return;
+  if (!shouldShowNotablePlayers()) return;
   const clockTime = Number(runtime.state.gsi.clockTime);
   const rankCutoff = Number(runtime.config.protection.matchIntel.rankDisplayMinutes || 12) * 60;
   const fullGameRanks = runtime.config.protection.matchIntel.rankDisplayMode === 'full_game';
@@ -1523,12 +1525,25 @@ async function refreshNotablePlayerRanks(players) {
     });
   }
 
-  const notablePlayers = notablePlayersFromRankCache(players, getCachedPlayerRank);
+  const notablePlayers = buildNotablePlayers(players);
   if (!sameJson(runtime.state.matchIntel.notablePlayers, notablePlayers)) {
     runtime.state.matchIntel.notablePlayers = notablePlayers;
     await persistState();
     broadcast();
   }
+}
+
+function shouldShowNotablePlayers() {
+  const settings = runtime.config.protection.matchIntel;
+  return Boolean(settings?.enabled && (settings.showPlayerRanks || settings.showPlayerFlags));
+}
+
+function buildNotablePlayers(players) {
+  return notablePlayersFromRankCache(
+    players,
+    getCachedPlayerRank,
+    runtime.config.protection.matchIntel?.customPlayers || []
+  );
 }
 
 function shouldRefreshPlayerRank(accountId) {
@@ -1548,12 +1563,13 @@ async function fetchAndCachePlayerRank(accountId) {
         checkedAt: Date.now(),
         leaderboardRank: Number.isFinite(leaderboardRank) && leaderboardRank > 0 ? Math.trunc(leaderboardRank) : null,
         rankTier: Number.isFinite(rankTier) && rankTier > 0 ? Math.trunc(rankTier) : null,
+        countryCode: normalizeCountryCode(data?.profile?.loccountrycode),
         name: String(data?.profile?.name || data?.profile?.personaname || '').slice(0, 40)
       };
       runtime.playerRankCache.set(accountId, cacheEntry);
       runtime.pendingPlayerRankFetches.delete(accountId);
       const players = runtime.state.matchIntel?.players || [];
-      const notablePlayers = notablePlayersFromRankCache(players, getCachedPlayerRank);
+      const notablePlayers = buildNotablePlayers(players);
       if (!sameJson(runtime.state.matchIntel.notablePlayers, notablePlayers)) {
         runtime.state.matchIntel.notablePlayers = notablePlayers;
         persistState().catch(() => {});
@@ -1589,6 +1605,11 @@ async function fetchOpenDotaPlayer(accountId) {
 
 function sameJson(left, right) {
   return JSON.stringify(left || null) === JSON.stringify(right || null);
+}
+
+function normalizeCountryCode(value) {
+  const code = String(value || '').trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(code) ? code : null;
 }
 
 function computeProtection(config, gsi) {
@@ -2285,9 +2306,27 @@ function normalizeUiConfig(config) {
 function normalizeMatchIntelConfig(config) {
   config.enabled = config.enabled !== false;
   config.showPlayerRanks = config.showPlayerRanks !== false;
+  config.showPlayerFlags = config.showPlayerFlags === true;
   config.showAegisRoshan = config.showAegisRoshan !== false;
   if (!['minutes', 'full_game'].includes(config.rankDisplayMode)) config.rankDisplayMode = 'minutes';
   config.rankDisplayMinutes = clampInt(config.rankDisplayMinutes, 1, 30);
+  config.customPlayers = normalizeCustomNotablePlayers(config.customPlayers);
+}
+
+function normalizeCustomNotablePlayers(value) {
+  const rows = Array.isArray(value) ? value : [];
+  const byAccountId = new Map();
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue;
+    const accountId = normalizeAccountId(row.accountId ?? row.dotaId ?? row.id);
+    if (!accountId) continue;
+    byAccountId.set(String(accountId), {
+      accountId,
+      name: String(row.name || row.nickname || '').trim().slice(0, 40),
+      countryCode: normalizeCountryCode(row.countryCode)
+    });
+  }
+  return [...byAccountId.values()].slice(0, 50);
 }
 
 function normalizeTwitchConfig(config) {

@@ -45,8 +45,11 @@ const possibleIntel = updateMatchIntel(windowIntel, {}, { clockTime: 1860, activ
 assert.equal(possibleIntel.roshanStatus.phase, 'possible');
 
 const notable = notablePlayersFromRankCache(players, (accountId) => accountId === '111'
-  ? { leaderboardRank: 123, rankTier: 80, name: 'Top Mid' }
-  : null);
-assert.deepEqual(notable, [{ slot: 0, accountId: 111, name: 'Top Mid', leaderboardRank: 123, rankTier: 80 }]);
+  ? { leaderboardRank: 123, rankTier: 80, name: 'Top Mid', countryCode: 'ua' }
+  : null, [{ accountId: 222, name: 'Custom Carry', countryCode: 'se' }]);
+assert.deepEqual(notable, [
+  { slot: 0, accountId: 111, name: 'Top Mid', leaderboardRank: 123, rankTier: 80, countryCode: 'UA' },
+  { slot: 5, accountId: 222, name: 'Custom Carry', leaderboardRank: null, rankTier: null, countryCode: 'SE' }
+]);
 
 console.log('Game intel checks passed');

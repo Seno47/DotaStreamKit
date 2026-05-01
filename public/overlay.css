@@ -82,6 +82,7 @@ body {
 }
 
 .rankBadge,
+.flagBadge,
 .aegisBadge {
   display: inline-flex;
   align-items: center;
@@ -107,6 +108,18 @@ body {
   object-fit: contain;
   margin-right: 1px;
   transform: translateY(-1px);
+}
+
+.flagBadge {
+  min-width: 42px;
+  padding: 0 8px;
+  border-color: rgba(112, 176, 236, 0.78);
+  color: #d8ecff;
+}
+
+.flagBadge span {
+  font-size: 19px;
+  line-height: 1;
 }
 
 .aegisBadge {

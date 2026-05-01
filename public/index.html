@@ -85,9 +85,20 @@
             <label>Скрытие поиска<select id="queueMode"><option value="partial">Только области поиска</option><option value="full">Фуллскрин</option></select></label>
             <label class="check"><input type="checkbox" id="matchIntelEnabled"> Match intel overlay</label>
             <label class="check"><input type="checkbox" id="showPlayerRanks"> Top player ranks</label>
+            <label class="check"><input type="checkbox" id="showPlayerFlags"> Player flags</label>
             <label class="check"><input type="checkbox" id="showAegisRoshan"> Aegis / Roshan</label>
             <label id="rankDisplayModeWrap">Rank display<select id="rankDisplayMode"><option value="minutes">First N minutes</option><option value="full_game">Full game</option></select></label>
             <label id="rankDisplayMinutesWrap">Rank display minutes<input id="rankDisplayMinutes" type="number" min="1" max="30" step="1"></label>
+            <div class="notable-players" id="customNotablePlayersWrap">
+              <div class="notable-players-head" id="customNotablePlayersTitle">Custom notable players</div>
+              <div class="notable-player-form">
+                <label id="notablePlayerIdWrap">Dota ID<input id="notablePlayerId" inputmode="numeric" maxlength="20"></label>
+                <label id="notablePlayerNameWrap">Nickname<input id="notablePlayerName" maxlength="40"></label>
+                <label id="notablePlayerCountryWrap">Country code<input id="notablePlayerCountry" maxlength="2"></label>
+                <button id="addNotablePlayer" type="button">Add</button>
+              </div>
+              <div class="notable-player-rows" id="customNotablePlayersRows"></div>
+            </div>
           </div>
           <div class="button-row">
             <button id="manualDraft">Draft</button>

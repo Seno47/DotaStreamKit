@@ -13,11 +13,22 @@ const els = {
   queueMode: document.querySelector('#queueMode'),
   matchIntelEnabled: document.querySelector('#matchIntelEnabled'),
   showPlayerRanks: document.querySelector('#showPlayerRanks'),
+  showPlayerFlags: document.querySelector('#showPlayerFlags'),
   showAegisRoshan: document.querySelector('#showAegisRoshan'),
   rankDisplayModeWrap: document.querySelector('#rankDisplayModeWrap'),
   rankDisplayMode: document.querySelector('#rankDisplayMode'),
   rankDisplayMinutesWrap: document.querySelector('#rankDisplayMinutesWrap'),
   rankDisplayMinutes: document.querySelector('#rankDisplayMinutes'),
+  customNotablePlayersWrap: document.querySelector('#customNotablePlayersWrap'),
+  customNotablePlayersTitle: document.querySelector('#customNotablePlayersTitle'),
+  notablePlayerIdWrap: document.querySelector('#notablePlayerIdWrap'),
+  notablePlayerId: document.querySelector('#notablePlayerId'),
+  notablePlayerNameWrap: document.querySelector('#notablePlayerNameWrap'),
+  notablePlayerName: document.querySelector('#notablePlayerName'),
+  notablePlayerCountryWrap: document.querySelector('#notablePlayerCountryWrap'),
+  notablePlayerCountry: document.querySelector('#notablePlayerCountry'),
+  addNotablePlayer: document.querySelector('#addNotablePlayer'),
+  customNotablePlayersRows: document.querySelector('#customNotablePlayersRows'),
   manualDraft: document.querySelector('#manualDraft'),
   manualMinimap: document.querySelector('#manualMinimap'),
   manualTopBar: document.querySelector('#manualTopBar'),
@@ -116,11 +127,18 @@ const translations = {
     full: 'Фуллскрин',
     matchIntelEnabled: 'Игровая аналитика в overlay',
     showPlayerRanks: 'Ранги топ-игроков',
+    showPlayerFlags: 'Флаги игроков',
     showAegisRoshan: 'Aegis и Roshan',
-    rankDisplayMode: 'Показывать ранги',
+    rankDisplayMode: 'Показывать notable players',
     rankDisplayFirstMinutes: 'Первые N минут',
     rankDisplayFullGame: 'До конца игры',
-    rankDisplayMinutes: 'Показывать ранги первые N минут',
+    rankDisplayMinutes: 'Показывать первые N минут',
+    customNotablePlayers: 'Кастомные Notable Players',
+    notablePlayerId: 'Dota ID',
+    notablePlayerName: 'Никнейм',
+    notablePlayerCountry: 'Код страны',
+    addNotablePlayer: 'Добавить',
+    removeNotablePlayer: 'Удалить',
     minimap: 'Миникарта',
     topBar: 'Верхняя панель',
     queue: 'Поиск',
@@ -311,11 +329,18 @@ const translations = {
     full: 'Fullscreen',
     matchIntelEnabled: 'Match intel overlay',
     showPlayerRanks: 'Top player ranks',
+    showPlayerFlags: 'Player flags',
     showAegisRoshan: 'Aegis and Roshan',
-    rankDisplayMode: 'Show ranks',
+    rankDisplayMode: 'Show notable players',
     rankDisplayFirstMinutes: 'First N minutes',
     rankDisplayFullGame: 'Full game',
-    rankDisplayMinutes: 'Show ranks for first N minutes',
+    rankDisplayMinutes: 'Show for first N minutes',
+    customNotablePlayers: 'Custom notable players',
+    notablePlayerId: 'Dota ID',
+    notablePlayerName: 'Nickname',
+    notablePlayerCountry: 'Country code',
+    addNotablePlayer: 'Add',
+    removeNotablePlayer: 'Remove',
     minimap: 'Minimap',
     topBar: 'Top bar',
     queue: 'Queue',
@@ -560,11 +585,17 @@ function applyLanguage(config) {
   setOptionText(els.queueMode, 'full', t('full'));
   setLabelText(els.matchIntelEnabled.closest('label'), t('matchIntelEnabled'));
   setLabelText(els.showPlayerRanks.closest('label'), t('showPlayerRanks'));
+  setLabelText(els.showPlayerFlags.closest('label'), t('showPlayerFlags'));
   setLabelText(els.showAegisRoshan.closest('label'), t('showAegisRoshan'));
   setLabelText(els.rankDisplayMode.closest('label'), t('rankDisplayMode'));
   setOptionText(els.rankDisplayMode, 'minutes', t('rankDisplayFirstMinutes'));
   setOptionText(els.rankDisplayMode, 'full_game', t('rankDisplayFullGame'));
   setLabelText(els.rankDisplayMinutes.closest('label'), t('rankDisplayMinutes'));
+  els.customNotablePlayersTitle.textContent = t('customNotablePlayers');
+  setLabelText(els.notablePlayerIdWrap, t('notablePlayerId'));
+  setLabelText(els.notablePlayerNameWrap, t('notablePlayerName'));
+  setLabelText(els.notablePlayerCountryWrap, t('notablePlayerCountry'));
+  els.addNotablePlayer.textContent = t('addNotablePlayer');
   els.manualMinimap.textContent = t('minimap');
   els.manualTopBar.textContent = t('topBar');
   els.manualQueue.textContent = t('queue');
@@ -753,9 +784,11 @@ function render(data) {
   const matchIntel = config.protection.matchIntel || {};
   els.matchIntelEnabled.checked = matchIntel.enabled !== false;
   els.showPlayerRanks.checked = matchIntel.showPlayerRanks !== false;
+  els.showPlayerFlags.checked = matchIntel.showPlayerFlags === true;
   els.showAegisRoshan.checked = matchIntel.showAegisRoshan !== false;
   els.rankDisplayMode.value = matchIntel.rankDisplayMode || 'minutes';
   setInputValue(els.rankDisplayMinutes, matchIntel.rankDisplayMinutes || 12);
+  renderCustomNotablePlayers(matchIntel.customPlayers || []);
   updateMatchIntelFieldVisibility();
   toggleButton(els.manualDraft, config.protection.manualDraft, state.protection.draft);
   toggleButton(els.manualMinimap, config.protection.manualMinimap, state.protection.minimap);
@@ -1213,6 +1246,100 @@ function renderEvents(events) {
   }
 }
 
+function renderCustomNotablePlayers(players) {
+  els.customNotablePlayersRows.innerHTML = '';
+  for (const player of Array.isArray(players) ? players : []) {
+    const accountId = String(player.accountId || '').trim();
+    if (!accountId) continue;
+    const countryCode = normalizeCountryCode(player.countryCode);
+    const row = document.createElement('div');
+    row.className = 'notable-player-row';
+    row.dataset.accountId = accountId;
+    row.dataset.name = String(player.name || '').trim();
+    row.dataset.countryCode = countryCode;
+
+    const id = document.createElement('span');
+    id.className = 'notable-player-id';
+    id.textContent = accountId;
+    const name = document.createElement('span');
+    name.className = 'notable-player-name';
+    name.textContent = row.dataset.name || '-';
+    const country = document.createElement('span');
+    country.className = 'notable-player-country';
+    country.textContent = countryCode ? `${countryFlagEmoji(countryCode)} ${countryCode}` : '-';
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'notable-player-remove';
+    remove.dataset.action = 'remove-notable-player';
+    remove.textContent = t('removeNotablePlayer');
+
+    row.append(id, name, country, remove);
+    els.customNotablePlayersRows.append(row);
+  }
+}
+
+function customNotablePlayersFromForm() {
+  return [...els.customNotablePlayersRows.querySelectorAll('.notable-player-row')]
+    .map((row) => ({
+      accountId: Number(row.dataset.accountId),
+      name: row.dataset.name || '',
+      countryCode: normalizeCountryCode(row.dataset.countryCode)
+    }))
+    .filter((player) => Number.isFinite(player.accountId) && player.accountId > 0);
+}
+
+function addCustomNotablePlayer() {
+  const accountId = normalizeDotaAccountIdInput(els.notablePlayerId.value);
+  const name = els.notablePlayerName.value.trim();
+  const countryCode = normalizeCountryCode(els.notablePlayerCountry.value);
+  if (!accountId) {
+    alert(t('notablePlayerId'));
+    return;
+  }
+  if (!name) {
+    alert(t('notablePlayerName'));
+    return;
+  }
+  if (els.notablePlayerCountry.value.trim() && !countryCode) {
+    alert(t('notablePlayerCountry'));
+    return;
+  }
+
+  const players = customNotablePlayersFromForm().filter((player) => String(player.accountId) !== accountId);
+  players.push({ accountId: Number(accountId), name, countryCode });
+  renderCustomNotablePlayers(players);
+  els.notablePlayerId.value = '';
+  els.notablePlayerName.value = '';
+  els.notablePlayerCountry.value = '';
+  saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+}
+
+function normalizeDotaAccountIdInput(value) {
+  const raw = String(value || '').trim();
+  if (!/^\d{1,20}$/.test(raw)) return '';
+  try {
+    const number = BigInt(raw);
+    if (number <= 0n) return '';
+    const steamOffset = 76561197960265728n;
+    const accountId = number > steamOffset ? number - steamOffset : number;
+    if (accountId <= 0n || accountId > 4294967295n) return '';
+    return accountId.toString();
+  } catch {
+    return '';
+  }
+}
+
+function normalizeCountryCode(value) {
+  const code = String(value || '').trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(code) ? code : '';
+}
+
+function countryFlagEmoji(code) {
+  const normalized = normalizeCountryCode(code);
+  if (!normalized) return '';
+  return [...normalized].map((char) => String.fromCodePoint(127397 + char.charCodeAt(0))).join('');
+}
+
 async function saveProtection(patch) {
   await api('/api/protection', patch);
 }
@@ -1234,12 +1361,22 @@ els.showPlayerRanks.addEventListener('change', () => {
   updateMatchIntelFieldVisibility();
   saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
 });
+els.showPlayerFlags.addEventListener('change', () => {
+  updateMatchIntelFieldVisibility();
+  saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+});
 els.showAegisRoshan.addEventListener('change', () => saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert));
 els.rankDisplayMode.addEventListener('change', () => {
   updateMatchIntelFieldVisibility();
   saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
 });
 els.rankDisplayMinutes.addEventListener('change', () => saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert));
+els.addNotablePlayer.addEventListener('click', addCustomNotablePlayer);
+els.customNotablePlayersRows.addEventListener('click', (event) => {
+  if (!event.target.matches('[data-action="remove-notable-player"]')) return;
+  event.target.closest('.notable-player-row')?.remove();
+  saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+});
 els.manualDraft.addEventListener('click', () => saveProtection({ manualDraft: nextManualProtectionState('manualDraft', 'draft') }).catch(alert));
 els.manualMinimap.addEventListener('click', () => saveProtection({ manualMinimap: nextManualProtectionState('manualMinimap', 'minimap') }).catch(alert));
 els.manualTopBar.addEventListener('click', () => saveProtection({ manualTopBar: nextManualProtectionState('manualTopBar', 'topBar') }).catch(alert));
@@ -1249,19 +1386,23 @@ function protectionMatchIntelFromForm() {
   return {
     enabled: els.matchIntelEnabled.checked,
     showPlayerRanks: els.showPlayerRanks.checked,
+    showPlayerFlags: els.showPlayerFlags.checked,
     showAegisRoshan: els.showAegisRoshan.checked,
     rankDisplayMode: els.rankDisplayMode.value,
-    rankDisplayMinutes: Number(els.rankDisplayMinutes.value)
+    rankDisplayMinutes: Number(els.rankDisplayMinutes.value),
+    customPlayers: customNotablePlayersFromForm()
   };
 }
 
 function updateMatchIntelFieldVisibility() {
   const matchIntelEnabled = els.matchIntelEnabled.checked;
-  const ranksEnabled = matchIntelEnabled && els.showPlayerRanks.checked;
+  const notablePlayersEnabled = matchIntelEnabled && (els.showPlayerRanks.checked || els.showPlayerFlags.checked);
   els.showPlayerRanks.closest('label').hidden = !matchIntelEnabled;
+  els.showPlayerFlags.closest('label').hidden = !matchIntelEnabled;
   els.showAegisRoshan.closest('label').hidden = !matchIntelEnabled;
-  els.rankDisplayModeWrap.hidden = !ranksEnabled;
-  els.rankDisplayMinutesWrap.hidden = !ranksEnabled || els.rankDisplayMode.value === 'full_game';
+  els.rankDisplayModeWrap.hidden = !notablePlayersEnabled;
+  els.rankDisplayMinutesWrap.hidden = !notablePlayersEnabled || els.rankDisplayMode.value === 'full_game';
+  els.customNotablePlayersWrap.hidden = !notablePlayersEnabled;
 }
 
 function nextManualProtectionState(configKey, stateKey) {

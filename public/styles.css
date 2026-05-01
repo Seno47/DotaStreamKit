@@ -442,6 +442,64 @@ dd {
   min-height: 46px;
 }
 
+.notable-players {
+  flex: 1 1 100%;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #293240;
+  border-radius: 7px;
+  background: #11161d;
+}
+
+.notable-players-head {
+  color: #f2f4f8;
+  font-weight: 700;
+}
+
+.notable-player-form,
+.notable-player-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) minmax(140px, 1.4fr) minmax(92px, 0.8fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.notable-player-form button,
+.notable-player-row button {
+  min-height: 42px;
+}
+
+.notable-player-rows {
+  display: grid;
+  gap: 8px;
+}
+
+.notable-player-row {
+  align-items: center;
+  padding: 8px;
+  border: 1px solid #26303d;
+  border-radius: 6px;
+  background: #0f141b;
+}
+
+.notable-player-id,
+.notable-player-name,
+.notable-player-country {
+  min-width: 0;
+  overflow: hidden;
+  color: #dbe3ee;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notable-player-id,
+.notable-player-country {
+  color: #9aa5b5;
+  font-size: 13px;
+}
+
 .section-head {
   display: flex;
   justify-content: space-between;
@@ -672,6 +730,8 @@ code {
   .prediction-types,
   .prediction-type-grid,
   .variable-grid,
+  .notable-player-form,
+  .notable-player-row,
   .facts {
     grid-template-columns: 1fr;
   }

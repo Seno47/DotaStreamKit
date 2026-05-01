@@ -215,7 +215,9 @@ function applyMatchIntel(slots, reference, settings, state) {
   const clockTime = Number(state.gsi?.clockTime);
   const rankCutoff = Number(settings.rankDisplayMinutes || 12) * 60;
   const fullGameRanks = settings.rankDisplayMode === 'full_game';
-  const showRanks = enabled && settings.showPlayerRanks !== false && (fullGameRanks || (Number.isFinite(clockTime) && clockTime >= 0 && clockTime <= rankCutoff));
+  const withinNotableWindow = fullGameRanks || (Number.isFinite(clockTime) && clockTime >= 0 && clockTime <= rankCutoff);
+  const showRanks = enabled && settings.showPlayerRanks !== false && withinNotableWindow;
+  const showFlags = enabled && settings.showPlayerFlags === true && withinNotableWindow;
   const ranksBySlot = new Map((intel.notablePlayers || []).map((player) => [Number(player.slot), player]));
   const aegis = intel.aegis || null;
   const showAegis = enabled && settings.showAegisRoshan !== false && aegis && Number(aegis.expiresAt) > clockTime;
@@ -231,11 +233,18 @@ function applyMatchIntel(slots, reference, settings, state) {
       height: 72
     }, reference);
     el.innerHTML = '';
-    if (showRanks && rank) {
+    if (showRanks && rank?.leaderboardRank) {
       const rankBadge = document.createElement('div');
       rankBadge.className = 'rankBadge';
       rankBadge.innerHTML = `<img src="/assets/rank-immortal.png?v=${version}" alt=""><span>#${escapeHtml(rank.leaderboardRank)}</span>`;
       el.append(rankBadge);
+    }
+    const flag = countryFlagEmoji(rank?.countryCode);
+    if (showFlags && flag) {
+      const flagBadge = document.createElement('div');
+      flagBadge.className = 'flagBadge';
+      flagBadge.innerHTML = `<span>${flag}</span>`;
+      el.append(flagBadge);
     }
     if (hasAegis) {
       const remaining = Math.max(0, Math.ceil(Number(aegis.expiresAt) - clockTime));
@@ -248,6 +257,12 @@ function applyMatchIntel(slots, reference, settings, state) {
   });
 
   applyRoshanIntel(reference, settings, state, version);
+}
+
+function countryFlagEmoji(code) {
+  const normalized = String(code || '').trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(normalized)) return '';
+  return [...normalized].map((char) => String.fromCodePoint(127397 + char.charCodeAt(0))).join('');
 }
 
 function applyRoshanIntel(reference, settings, state, version) {

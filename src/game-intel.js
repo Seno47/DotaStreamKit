@@ -65,21 +65,44 @@ export function updateMatchIntel(previousIntel, payload, gsi, players) {
   };
 }
 
-export function notablePlayersFromRankCache(players, getCachedRank) {
+export function notablePlayersFromRankCache(players, getCachedRank, customPlayers = []) {
+  const customByAccountId = normalizeCustomNotablePlayers(customPlayers);
   return players
     .map((player) => {
       const rank = player.accountId ? getCachedRank(String(player.accountId)) : null;
-      if (!rank?.leaderboardRank) return null;
+      const custom = player.accountId ? customByAccountId.get(String(player.accountId)) : null;
+      if (!rank?.leaderboardRank && !custom) return null;
       return {
         slot: player.slot,
         accountId: player.accountId,
-        name: rank.name || player.name,
-        leaderboardRank: rank.leaderboardRank,
-        rankTier: rank.rankTier || null
+        name: custom?.name || rank?.name || player.name,
+        leaderboardRank: rank?.leaderboardRank || null,
+        rankTier: rank?.rankTier || null,
+        countryCode: normalizeCountryCode(custom?.countryCode || rank?.countryCode)
       };
     })
     .filter(Boolean)
     .sort((left, right) => left.slot - right.slot);
+}
+
+function normalizeCustomNotablePlayers(customPlayers) {
+  const byAccountId = new Map();
+  for (const row of Array.isArray(customPlayers) ? customPlayers : []) {
+    if (!row || typeof row !== 'object') continue;
+    const accountId = normalizeAccountId(row.accountId ?? row.dotaId ?? row.id);
+    if (!accountId) continue;
+    byAccountId.set(String(accountId), {
+      accountId,
+      name: String(row.name || row.nickname || '').trim().slice(0, 40),
+      countryCode: normalizeCountryCode(row.countryCode)
+    });
+  }
+  return byAccountId;
+}
+
+function normalizeCountryCode(value) {
+  const code = String(value || '').trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(code) ? code : null;
 }
 
 export function normalizeAccountId(value) {
