@@ -114,6 +114,18 @@ const direTeamSlotPriority = collectMatchPlayers({
 });
 assert.equal(direTeamSlotPriority[0].slot, 5);
 
+const disruptorRosterSlot = collectMatchPlayers({
+  allplayers: {
+    player4: {
+      team_name: 'dire',
+      team_slot: 1,
+      accountid: 444,
+      hero_name: 'npc_dota_hero_disruptor'
+    }
+  }
+});
+assert.equal(disruptorRosterSlot[0].slot, 6);
+
 const singlePlayerPayload = collectMatchPlayers({
   players: {
     player9: { player_slot: 1, accountid: 333, name: 'Streamer' }
