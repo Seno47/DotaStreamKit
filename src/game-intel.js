@@ -164,19 +164,14 @@ function normalizeCurrentMatchPlayer(payload, forceVisualFirst = false) {
 
 function currentPlayerTopbarSlot(player, forceVisualFirst) {
   const team = String(player.team_name || player.team || '').toLowerCase();
-  if (player.player_slot !== undefined || player.playerSlot !== undefined) {
-    const slot = normalizePlayerSlot(player.player_slot ?? player.playerSlot, player);
-    if (slot !== null) return slot;
-  }
-  if (player.team_slot !== undefined || player.teamSlot !== undefined) {
-    const slot = normalizePlayerSlot(player.team_slot ?? player.teamSlot, player);
-    if (slot !== null) return slot;
-  }
   if (forceVisualFirst) {
     if (team.includes('dire') || team.includes('bad')) return 5;
     if (team.includes('radiant') || team.includes('good')) return 0;
   }
-  return null;
+  if (player.player_slot !== undefined || player.playerSlot !== undefined) {
+    return normalizePlayerSlot(player.player_slot ?? player.playerSlot, player);
+  }
+  return normalizePlayerSlot(player.team_slot ?? player.teamSlot, player);
 }
 
 function upsertCurrentPlayer(players, currentPlayer) {
