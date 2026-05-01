@@ -8,14 +8,14 @@ import {
 const payload = {
   map: { clock_time: 1200 },
   allplayers: {
-    player0: {
+    player1: {
       player_slot: 0,
       accountid: 111,
       name: 'Mid',
       hero_name: 'npc_dota_hero_nevermore',
       items: { slot0: { name: 'item_blink' } }
     },
-    player1: {
+    player2: {
       player_slot: 128,
       accountid: 222,
       name: 'Carry',
@@ -29,6 +29,23 @@ assert.equal(players.length, 2);
 assert.equal(players[0].slot, 0);
 assert.equal(players[1].slot, 5);
 assert.equal(players[1].hasAegis, true);
+
+const ignoredRosterZero = collectMatchPlayers({
+  allplayers: {
+    player0: {
+      player_slot: 0,
+      accountid: 999,
+      name: 'Ghost'
+    },
+    player1: {
+      player_slot: 0,
+      accountid: 111,
+      name: 'Mid'
+    }
+  }
+});
+assert.equal(ignoredRosterZero.length, 1);
+assert.equal(ignoredRosterZero[0].name, 'Mid');
 
 const intel = updateMatchIntel(null, payload, { clockTime: 1200, activeMatchId: 42 }, players);
 assert.equal(intel.aegis.slot, 5);
@@ -98,17 +115,18 @@ assert.equal(singlePlayerPayload[0].slot, 1);
 const rosterHeroMatch = collectMatchPlayers({
   allplayers: {
     player0: { accountid: 111, hero_name: 'npc_dota_hero_omniknight' },
-    player1: { team_name: 'dire', hero_name: 'npc_dota_hero_lina' },
-    player2: { accountid: 333, hero_name: 'npc_dota_hero_axe' }
+    player1: { team_name: 'radiant', hero_name: 'npc_dota_hero_omniknight' },
+    player6: { team_name: 'dire', hero_name: 'npc_dota_hero_lina' },
+    player7: { accountid: 333, hero_name: 'npc_dota_hero_axe' }
   },
   player: { team_name: 'dire', name: 'Streamer' },
   hero: { name: 'npc_dota_hero_lina' }
 });
-assert.equal(rosterHeroMatch.find((player) => player.name === 'Streamer')?.slot, 6);
+assert.equal(rosterHeroMatch.find((player) => player.name === 'Streamer')?.slot, 5);
 
 const currentItemsOverride = collectMatchPlayers({
   allplayers: {
-    player0: {
+    player1: {
       player_slot: 0,
       accountid: 444,
       items: { slot0: { name: 'item_aegis' } }

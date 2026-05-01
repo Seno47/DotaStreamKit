@@ -9,6 +9,7 @@ const roshanRespawnPattern = /roshan.*(respawn|spawn|alive|up)|(?:respawn|spawn|
 export function collectMatchPlayers(payload) {
   const source = payload?.allplayers || payload?.players || {};
   const players = Object.entries(source)
+    .filter(([key]) => !isIgnoredRosterKey(key))
     .map(([key, player]) => normalizeMatchPlayer(key, player))
     .filter(Boolean)
     .sort((left, right) => left.slot - right.slot);
@@ -131,6 +132,7 @@ export function normalizeAccountId(value) {
 }
 
 function normalizeMatchPlayer(key, player) {
+  if (isIgnoredRosterKey(key)) return null;
   if (!player || typeof player !== 'object') return null;
   const slot = normalizePlayerSlot(player.player_slot ?? player.playerSlot ?? player.team_slot ?? player.teamSlot ?? key, player);
   if (slot === null) return null;
@@ -193,6 +195,7 @@ function inferRosterSlot(payload, player) {
   let heroMatch = null;
 
   for (const [key, rosterPlayer] of Object.entries(source)) {
+    if (isIgnoredRosterKey(key)) continue;
     if (!rosterPlayer || typeof rosterPlayer !== 'object') continue;
     const slot = normalizePlayerSlot(rosterPlayer.player_slot ?? rosterPlayer.playerSlot ?? rosterPlayer.team_slot ?? rosterPlayer.teamSlot ?? key, rosterPlayer);
     if (slot === null) continue;
@@ -259,13 +262,8 @@ function normalizePlayerSlot(rawSlot, player) {
   const keyMatch = String(rawSlot || '').match(/(?:player)?(\d+)$/i);
   if (keyMatch) {
     const index = Number(keyMatch[1]);
-    if (Number.isFinite(index) && index >= 0 && index <= 9) {
-      if (index <= 4) {
-        if (team.includes('dire') || team.includes('bad')) return Math.trunc(index + 5);
-        if (team.includes('radiant') || team.includes('good')) return Math.trunc(index);
-      }
-      return Math.trunc(index);
-    }
+    if (Number.isFinite(index) && index > 0 && index <= 10) return Math.trunc(index - 1);
+    return null;
   }
 
   const teamSlot = Number(player?.team_slot ?? player?.teamSlot);
@@ -275,6 +273,11 @@ function normalizePlayerSlot(rawSlot, player) {
   }
 
   return null;
+}
+
+function isIgnoredRosterKey(key) {
+  const normalized = String(key || '').trim().toLowerCase();
+  return normalized === '0' || normalized === 'player0';
 }
 
 function hasAegisItem(value) {
