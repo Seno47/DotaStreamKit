@@ -229,8 +229,9 @@ body {
   pointer-events: none;
   align-items: center;
   justify-content: center;
-  flex-direction: column;
-  gap: 0;
+  grid-template-columns: auto auto;
+  column-gap: 8px;
+  row-gap: 0;
   color: #f6f0d8;
   font-family: "Arial Narrow", "Roboto Condensed", "Segoe UI Condensed", "Segoe UI", Arial, Helvetica, sans-serif;
   font-size: 19px;
@@ -243,14 +244,16 @@ body {
 }
 
 #streamerStats.visible {
-  display: flex;
+  display: grid;
 }
 
 .streamerStatsMedalWrap {
+  grid-column: 2;
+  justify-self: center;
   position: relative;
   width: 70px;
   height: 70px;
-  margin-bottom: 0;
+  margin-bottom: -2px;
 }
 
 .streamerStatsMedal {
@@ -272,38 +275,44 @@ body {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.85));
 }
 
-.streamerStatsText {
+.streamerStatsLeaderboard {
+  grid-column: 2;
+  justify-self: center;
+  color: #fff3bd;
+  font-size: 18px;
+  line-height: 1;
+  margin-top: -7px;
+  margin-bottom: 0;
+}
+
+.streamerStatsMmrLine {
+  grid-column: 2;
+  grid-row: 3;
   display: inline-flex;
-  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin-top: -10px;
-}
-
-#streamerStats.hasLeaderboard .streamerStatsText {
-  margin-top: 1px;
-}
-
-.streamerStatsLeaderboard {
-  color: #fff3bd;
-  font-size: 20px;
-  line-height: 1;
-  margin-top: -10px;
-  margin-bottom: 1px;
+  gap: 5px;
+  min-height: 22px;
 }
 
 .streamerStatsMmr {
   color: #fff5c8;
-  font-size: 20px;
+  font-size: 19px;
+  font-family: inherit;
+  line-height: 1;
 }
 
 .streamerStatsWinLoss {
+  grid-column: 1;
+  grid-row: 3;
   display: inline-flex;
+  align-items: center;
   justify-content: center;
   gap: 2px;
   color: #ffffff;
   font-size: 19px;
+  font-family: inherit;
+  line-height: 1;
 }
 
 .streamerStatsWinNumber,
@@ -326,6 +335,7 @@ body {
 .streamerStatsLastChange {
   font-size: 14px;
   color: #94f2a8;
+  line-height: 1;
 }
 
 .streamerStatsLastChange.loss {
