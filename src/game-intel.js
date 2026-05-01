@@ -148,7 +148,7 @@ function normalizeMatchPlayer(key, player) {
 function normalizeCurrentMatchPlayer(payload, forceVisualFirst = false) {
   const player = payload?.player;
   if (!player || typeof player !== 'object') return null;
-  const slot = currentPlayerTopbarSlot(player, forceVisualFirst);
+  const slot = currentPlayerTopbarSlot(payload, player, forceVisualFirst);
   if (slot === null) return null;
   const hero = payload?.hero || {};
   return {
@@ -162,16 +162,53 @@ function normalizeCurrentMatchPlayer(payload, forceVisualFirst = false) {
   };
 }
 
-function currentPlayerTopbarSlot(player, forceVisualFirst) {
+function currentPlayerTopbarSlot(payload, player, forceVisualFirst) {
   const team = String(player.team_name || player.team || '').toLowerCase();
+  if (player.player_slot !== undefined || player.playerSlot !== undefined) {
+    const slot = normalizePlayerSlot(player.player_slot ?? player.playerSlot, player);
+    if (slot !== null) return slot;
+  }
+  if (player.team_slot !== undefined || player.teamSlot !== undefined) {
+    const slot = normalizePlayerSlot(player.team_slot ?? player.teamSlot, player);
+    if (slot !== null) return slot;
+  }
+  const rosterSlot = inferRosterSlot(payload, player);
+  if (rosterSlot !== null) return rosterSlot;
   if (forceVisualFirst) {
     if (team.includes('dire') || team.includes('bad')) return 5;
     if (team.includes('radiant') || team.includes('good')) return 0;
   }
-  if (player.player_slot !== undefined || player.playerSlot !== undefined) {
-    return normalizePlayerSlot(player.player_slot ?? player.playerSlot, player);
+  return null;
+}
+
+function inferRosterSlot(payload, player) {
+  const source = payload?.allplayers || payload?.players;
+  if (!source || typeof source !== 'object') return null;
+  const targetAccountId = normalizeAccountId(player.accountid ?? player.account_id ?? player.accountId ?? player.steamid ?? player.steam_id);
+  const targetHero = normalizeHeroToken(payload?.hero?.name || payload?.hero?.hero_name || payload?.hero?.heroName || payload?.hero?.localized_name || player.hero_name || player.heroName || player.hero || '');
+  let heroMatch = null;
+
+  for (const [key, rosterPlayer] of Object.entries(source)) {
+    if (!rosterPlayer || typeof rosterPlayer !== 'object') continue;
+    const slot = normalizePlayerSlot(rosterPlayer.player_slot ?? rosterPlayer.playerSlot ?? rosterPlayer.team_slot ?? rosterPlayer.teamSlot ?? key, rosterPlayer);
+    if (slot === null) continue;
+    const rosterAccountId = normalizeAccountId(rosterPlayer.accountid ?? rosterPlayer.account_id ?? rosterPlayer.accountId ?? rosterPlayer.steamid ?? rosterPlayer.steam_id);
+    if (targetAccountId && rosterAccountId && targetAccountId === rosterAccountId) return slot;
+    const rosterHero = normalizeHeroToken(rosterPlayer.hero_name || rosterPlayer.heroName || rosterPlayer.hero || rosterPlayer.hero_id || '');
+    if (targetHero && rosterHero && targetHero === rosterHero && heroMatch === null) {
+      heroMatch = slot;
+    }
   }
-  return normalizePlayerSlot(player.team_slot ?? player.teamSlot, player);
+
+  return heroMatch;
+}
+
+function normalizeHeroToken(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/^npc_dota_hero_/, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
 }
 
 function upsertCurrentPlayer(players, currentPlayer) {
