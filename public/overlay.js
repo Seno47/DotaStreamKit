@@ -218,10 +218,10 @@ function applyMatchIntel(slots, reference, settings, state) {
     const rank = ranksBySlot.get(index);
     const hasAegis = showAegis && aegisSlot === index;
     applyScaledBox(el, {
-      left: slot.left + slot.width / 2 - 31,
-      top: slot.top + slot.height + 4,
-      width: 62,
-      height: 72
+      left: slot.left + slot.width / 2 - 44,
+      top: slot.top + slot.height + 5,
+      width: 88,
+      height: 58
     }, reference);
     hideBadge(el, 'rankBadge');
     setNameBadge(el, showNames && rank?.name, rank?.name || '');
@@ -370,7 +370,8 @@ function nameFontSize(name) {
   if (length > 18) return 7;
   if (length > 14) return 8;
   if (length > 10) return 9;
-  return 10;
+  if (length > 7) return 10;
+  return 11;
 }
 
 function applyRoshanIntel(reference, settings, state, version, slots) {
