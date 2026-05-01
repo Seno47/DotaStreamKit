@@ -523,9 +523,18 @@ function applyStreamerStats(reference, protection, state) {
   if (settings.showStreamerRankMedal !== false && medal?.id) {
     const src = `/assets/rank-medal-${encodeURIComponent(medal.id)}.png?v=${assetVersion(state)}`;
     if (nodes.medal.getAttribute('src') !== src) nodes.medal.src = src;
-    nodes.medal.hidden = false;
+    nodes.medalWrap.hidden = false;
+    const stars = Math.max(0, Math.min(5, Number(medal.stars || 0)));
+    if (stars > 0) {
+      const pipsSrc = `/assets/rank-pip-${stars}.png?v=${assetVersion(state)}`;
+      if (nodes.pips.getAttribute('src') !== pipsSrc) nodes.pips.src = pipsSrc;
+      nodes.pips.hidden = false;
+    } else {
+      nodes.pips.hidden = true;
+    }
   } else {
-    nodes.medal.hidden = true;
+    nodes.medalWrap.hidden = true;
+    nodes.pips.hidden = true;
   }
 
   const mmr = Number(stats.currentMmr || settings.streamerMmr || 0);
@@ -551,7 +560,7 @@ function applyStreamerStats(reference, protection, state) {
     nodes.lastChange.hidden = true;
   }
   nodes.text.hidden = nodes.mmr.hidden && nodes.winLoss.hidden && nodes.lastChange.hidden;
-  if (nodes.medal.hidden && nodes.text.hidden) {
+  if (nodes.medalWrap.hidden && nodes.text.hidden) {
     setVisible(streamerStatsEl, false);
     return;
   }
@@ -578,7 +587,9 @@ function shouldShowStreamerStatsInOverlay(state) {
 
 function ensureStreamerStatsNodes() {
   if (streamerStatsNodes) return streamerStatsNodes;
+  const medalWrap = document.createElement('span');
   const medal = document.createElement('img');
+  const pips = document.createElement('img');
   const text = document.createElement('span');
   const mmr = document.createElement('span');
   const winLoss = document.createElement('span');
@@ -586,9 +597,13 @@ function ensureStreamerStatsNodes() {
   const dash = document.createElement('span');
   const loss = document.createElement('span');
   const lastChange = document.createElement('span');
+  medalWrap.className = 'streamerStatsMedalWrap';
   medal.className = 'streamerStatsMedal';
   medal.alt = '';
   medal.decoding = 'async';
+  pips.className = 'streamerStatsPips';
+  pips.alt = '';
+  pips.decoding = 'async';
   text.className = 'streamerStatsText';
   mmr.className = 'streamerStatsMmr';
   winLoss.className = 'streamerStatsWinLoss';
@@ -598,9 +613,10 @@ function ensureStreamerStatsNodes() {
   lastChange.className = 'streamerStatsLastChange';
   dash.textContent = '-';
   winLoss.append(win, dash, loss);
+  medalWrap.append(medal, pips);
   text.append(mmr, winLoss, lastChange);
-  streamerStatsEl.replaceChildren(medal, text);
-  streamerStatsNodes = { medal, text, mmr, winLoss, win, loss, lastChange };
+  streamerStatsEl.replaceChildren(medalWrap, text);
+  streamerStatsNodes = { medalWrap, medal, pips, text, mmr, winLoss, win, loss, lastChange };
   return streamerStatsNodes;
 }
 

@@ -40,6 +40,9 @@ node (Join-Path $root "scripts\extract-vpk-file.js") $pak "materials/overviews/d
 for ($rank = 0; $rank -le 8; $rank++) {
   node (Join-Path $root "scripts\extract-vpk-file.js") $pak "panorama/images/rank_tier_icons/rank$($rank)_psd" $extracted
 }
+for ($pip = 1; $pip -le 5; $pip++) {
+  node (Join-Path $root "scripts\extract-vpk-file.js") $pak "panorama/images/rank_tier_icons/pip$($pip)_psd" $extracted
+}
 node (Join-Path $root "scripts\extract-vpk-file.js") $pak "panorama/images/items/aegis_png" $extracted
 node (Join-Path $root "scripts\extract-vpk-file.js") $pak "panorama/images/heroes/npc_dota_hero_roshan_png" $extracted
 
@@ -92,6 +95,18 @@ for ($rank = 0; $rank -le 8; $rank++) {
   }
 }
 
+for ($pip = 1; $pip -le 5; $pip++) {
+  $pipVtex = Join-Path $extracted "panorama__images__rank_tier_icons__pip$($pip)_psd.vtex_c"
+  $pipPng = Join-Path $extracted "panorama__images__rank_tier_icons__pip$($pip)_psd.png"
+  if (Test-Path -LiteralPath $pipVtex) {
+    & $vrf -i $pipVtex -o $extracted -d
+    if (Test-Path -LiteralPath $pipPng) {
+      Copy-Item -LiteralPath $pipPng -Destination (Join-Path $assetDir "rank-pip-$($pip).png") -Force
+      Copy-Item -LiteralPath $pipPng -Destination (Join-Path $root "public\default-assets\rank-pip-$($pip).png") -Force
+    }
+  }
+}
+
 if (Test-Path -LiteralPath $aegisVtex) {
   & $vrf -i $aegisVtex -o $extracted -d
   if (Test-Path -LiteralPath $aegisPng) {
@@ -124,6 +139,10 @@ if (Test-Path -LiteralPath (Join-Path $assetDir "sentry-eye.png")) {
 if (Test-Path -LiteralPath (Join-Path $assetDir "rank-medal-8.png")) {
   Write-Host "Extracted Dota rank medals:"
   Write-Host "  $(Join-Path $assetDir "rank-medal-0.png") .. $(Join-Path $assetDir "rank-medal-8.png")"
+}
+if (Test-Path -LiteralPath (Join-Path $assetDir "rank-pip-5.png")) {
+  Write-Host "Extracted Dota rank stars:"
+  Write-Host "  $(Join-Path $assetDir "rank-pip-1.png") .. $(Join-Path $assetDir "rank-pip-5.png")"
 }
 if (Test-Path -LiteralPath (Join-Path $assetDir "aegis.png")) {
   Write-Host "Extracted Dota Aegis icon:"

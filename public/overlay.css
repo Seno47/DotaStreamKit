@@ -246,11 +246,29 @@ body {
   display: flex;
 }
 
+.streamerStatsMedalWrap {
+  position: relative;
+  width: 70px;
+  height: 70px;
+}
+
 .streamerStatsMedal {
   width: 70px;
   height: 70px;
   object-fit: contain;
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.85));
+}
+
+.streamerStatsPips {
+  position: absolute;
+  left: -12px;
+  right: -12px;
+  bottom: -9px;
+  width: 94px;
+  height: 94px;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.85));
 }
 
 .streamerStatsText {

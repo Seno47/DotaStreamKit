@@ -9,12 +9,21 @@ import {
 
 assert.equal(rankMedalFromMmr(0).medal, 0);
 assert.equal(rankMedalFromMmr(1).medal, 1);
+assert.equal(rankMedalFromMmr(1).stars, 1);
+assert.equal(rankMedalFromMmr(153).stars, 1);
+assert.equal(rankMedalFromMmr(154).stars, 2);
+assert.equal(rankMedalFromMmr(769).stars, 5);
 assert.equal(rankMedalFromMmr(770).medal, 2);
+assert.equal(rankMedalFromMmr(770).stars, 1);
 assert.equal(rankMedalFromMmr(4619).medal, 6);
 assert.equal(rankMedalFromMmr(4620).medal, 7);
+assert.equal(rankMedalFromMmr(4820).stars, 2);
 assert.equal(rankMedalFromMmr(5620).medal, 8);
+assert.equal(rankMedalFromMmr(5620).stars, 0);
 assert.equal(rankMedalFromRankTier(75).medal, 7);
+assert.equal(rankMedalFromRankTier(75).stars, 5);
 assert.equal(rankMedalFromRankTier(80).medal, 8);
+assert.equal(rankMedalFromRankTier(80).stars, 0);
 
 const config = {
   showStreamerStats: true,

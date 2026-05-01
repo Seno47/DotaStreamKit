@@ -1243,6 +1243,7 @@ function assetNames() {
     'fake-minimap-vision-simple.png',
     'fake-minimap-vision-empty.png',
     ...Array.from({ length: 9 }, (_, index) => `rank-medal-${index}.png`),
+    ...Array.from({ length: 5 }, (_, index) => `rank-pip-${index + 1}.png`),
     'rank-immortal.png',
     'aegis.png',
     'roshan.png',
@@ -1258,6 +1259,7 @@ function defaultSeedAssetNames() {
     'ward-eye.png',
     'sentry-eye.png',
     ...Array.from({ length: 9 }, (_, index) => `rank-medal-${index}.png`),
+    ...Array.from({ length: 5 }, (_, index) => `rank-pip-${index + 1}.png`),
     'rank-immortal.png',
     'aegis.png',
     'roshan.png',
@@ -1299,6 +1301,7 @@ function publicStreamerStats() {
       id: medal.medal,
       name: medal.name,
       minMmr: medal.minMmr,
+      stars: medal.stars || 0,
       source: settings.streamerMedalSource === 'mmr'
         ? 'mmr'
         : stats.accountRankTier && settings.streamerMedalSource !== 'mmr'

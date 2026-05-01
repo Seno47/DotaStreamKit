@@ -1,15 +1,15 @@
 export const streamOfflineGraceMs = 2 * 60 * 60 * 1000;
 
 export const rankMedalThresholds = [
-  { medal: 0, name: 'Unranked', minMmr: 0 },
-  { medal: 1, name: 'Herald', minMmr: 0 },
-  { medal: 2, name: 'Guardian', minMmr: 770 },
-  { medal: 3, name: 'Crusader', minMmr: 1540 },
-  { medal: 4, name: 'Archon', minMmr: 2310 },
-  { medal: 5, name: 'Legend', minMmr: 3080 },
-  { medal: 6, name: 'Ancient', minMmr: 3850 },
-  { medal: 7, name: 'Divine', minMmr: 4620 },
-  { medal: 8, name: 'Immortal', minMmr: 5620 }
+  { medal: 0, name: 'Unranked', minMmr: 0, starStep: 0 },
+  { medal: 1, name: 'Herald', minMmr: 0, starStep: 154 },
+  { medal: 2, name: 'Guardian', minMmr: 770, starStep: 154 },
+  { medal: 3, name: 'Crusader', minMmr: 1540, starStep: 154 },
+  { medal: 4, name: 'Archon', minMmr: 2310, starStep: 154 },
+  { medal: 5, name: 'Legend', minMmr: 3080, starStep: 154 },
+  { medal: 6, name: 'Ancient', minMmr: 3850, starStep: 154 },
+  { medal: 7, name: 'Divine', minMmr: 4620, starStep: 200 },
+  { medal: 8, name: 'Immortal', minMmr: 5620, starStep: 0 }
 ];
 
 export function normalizeStreamerStatsConfig(config) {
@@ -52,15 +52,16 @@ export function rankMedalFromMmr(mmr) {
   for (const threshold of rankMedalThresholds.slice(1)) {
     if (value >= threshold.minMmr) current = threshold;
   }
-  return { ...current };
+  return { ...current, stars: starsFromMmr(value, current) };
 }
 
 export function rankMedalFromRankTier(rankTier) {
   const tier = Number(rankTier);
   if (!Number.isFinite(tier) || tier <= 0) return null;
   const medal = Math.min(8, Math.max(1, Math.trunc(tier / 10)));
+  const stars = medal >= 8 ? 0 : clampInt(tier % 10 || 1, 1, 5, 1);
   const threshold = rankMedalThresholds.find((item) => item.medal === medal);
-  return threshold ? { ...threshold } : null;
+  return threshold ? { ...threshold, stars } : null;
 }
 
 export function selectStreamerMedal({ source, accountRankTier, mmr }) {
@@ -199,6 +200,11 @@ function normalizePreviousSession(value) {
     lastMatchId: stringOrNull(value.lastMatchId),
     lastResult: ['win', 'lose'].includes(value.lastResult) ? value.lastResult : null
   };
+}
+
+function starsFromMmr(mmr, medal) {
+  if (!medal?.starStep || medal.medal <= 0 || medal.medal >= 8) return 0;
+  return clampInt(Math.floor((Number(mmr) - medal.minMmr) / medal.starStep) + 1, 1, 5, 1);
 }
 
 function normalizePositiveInt(value) {
