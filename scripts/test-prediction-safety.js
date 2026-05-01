@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {
   hasCompletePredictionOutcomePoints,
   hasPointsOnEveryPredictionOutcome,
+  isLeftActiveGameViewCancelSignal,
   isPredictionUncontested,
   predictionOutcomePoints
 } from '../src/prediction-safety.js';
@@ -31,5 +32,25 @@ assert.equal(hasPointsOnEveryPredictionOutcome({ outcomes: [{ channelPoints: '3'
 
 assert.equal(hasCompletePredictionOutcomePoints(prediction([10])), false);
 assert.equal(isPredictionUncontested(prediction([10])), false);
+
+assert.equal(isLeftActiveGameViewCancelSignal(
+  { activeMatchId: 'lobby-1', gameState: 'DOTA_GAMERULES_STATE_GAME_IN_PROGRESS', inGameScreen: true, clockTime: 90 },
+  { activeMatchId: 'lobby-1', gameState: null, leftGameView: true }
+), true);
+
+assert.equal(isLeftActiveGameViewCancelSignal(
+  { activeMatchId: 'match-1', gameState: 'DOTA_GAMERULES_STATE_GAME_IN_PROGRESS', inGameScreen: true, clockTime: 90 },
+  { activeMatchId: 'match-1', gameState: 'DOTA_GAMERULES_STATE_DISCONNECT', leftGameView: true }
+), false);
+
+assert.equal(isLeftActiveGameViewCancelSignal(
+  { activeMatchId: null, gameState: null, inGameScreen: false, clockTime: null },
+  { activeMatchId: null, gameState: null, leftGameView: true }
+), false);
+
+assert.equal(isLeftActiveGameViewCancelSignal(
+  { activeMatchId: 'stale-match', gameState: null, inGameScreen: false, clockTime: null },
+  { activeMatchId: 'stale-match', gameState: null, leftGameView: true }
+), false);
 
 console.log('Prediction safety checks passed');

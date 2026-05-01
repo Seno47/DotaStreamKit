@@ -26,3 +26,20 @@ export function isPredictionUncontested(prediction) {
   const points = predictionOutcomePoints(prediction);
   return Boolean(points && points.some((value) => value <= 0));
 }
+
+export function isLeftActiveGameViewCancelSignal(previous, gsi) {
+  if (!gsi?.leftGameView) return false;
+  const state = String(gsi.gameState || '');
+  if (/POST_GAME|DISCONNECT/i.test(state)) return false;
+  const matchId = gsi.activeMatchId || gsi.matchId || previous?.activeMatchId || previous?.matchId;
+  if (!matchId) return false;
+  const previousState = String(previous?.gameState || '');
+  const previousHasClockTime = previous?.clockTime !== null && previous?.clockTime !== undefined;
+  const previousClockTime = Number(previous?.clockTime);
+  return Boolean(
+    previous?.inGameScreen
+    || /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS/i.test(previousState)
+    || /PRE_GAME|GAME_IN_PROGRESS/i.test(state)
+    || (previousHasClockTime && Number.isFinite(previousClockTime) && previousClockTime >= 0)
+  );
+}

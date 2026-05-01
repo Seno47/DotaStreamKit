@@ -10,6 +10,7 @@ import sharp from 'sharp';
 import {
   hasCompletePredictionOutcomePoints,
   hasPointsOnEveryPredictionOutcome,
+  isLeftActiveGameViewCancelSignal,
   isPredictionUncontested
 } from './prediction-safety.js';
 import {
@@ -48,6 +49,7 @@ const queueAutoOffDelayMs = 2500;
 const queueAutoStaleKeepMs = 10 * 60 * 1000;
 const autoPredictionRetryMs = 30000;
 const activePredictionSyncMs = 15000;
+const leftGameViewPredictionCancelDelaySeconds = 60;
 const playerRankCacheTtlMs = 12 * 60 * 60 * 1000;
 const playerRankFailureTtlMs = 15 * 60 * 1000;
 const inGameStatePattern = /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS|POST_GAME/i;
@@ -2401,6 +2403,14 @@ function inferPredictionCancelCandidate(previous, gsi) {
       delaySeconds: 0,
       protectContested: true,
       matchId: predictionMatchId
+    };
+  }
+
+  if (isLeftActiveGameViewCancelSignal(previous, gsi)) {
+    return {
+      reason: 'streamer left the active game view before prediction was resolved',
+      delaySeconds: leftGameViewPredictionCancelDelaySeconds,
+      matchId: predictionMatchId || currentMatchId
     };
   }
 
