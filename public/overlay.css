@@ -243,6 +243,7 @@ body {
   box-sizing: border-box;
   transform: none;
   transform-origin: top center;
+  --streamer-medal-gap-offset: 0px;
 }
 
 #streamerStats.visible {
@@ -299,6 +300,11 @@ body {
   justify-content: center;
   gap: 5px;
   min-height: 22px;
+}
+
+#streamerStats:not(.hasLeaderboard) .streamerStatsMmrLine,
+#streamerStats:not(.hasLeaderboard) .streamerStatsWinLoss {
+  margin-top: calc(var(--streamer-medal-gap-offset) * -1);
 }
 
 .streamerStatsMmr {

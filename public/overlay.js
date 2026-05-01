@@ -525,6 +525,7 @@ function applyStreamerStats(reference, protection, state) {
     const src = `/assets/rank-medal-${encodeURIComponent(medal.id)}.png?v=${assetVersion(state)}`;
     if (nodes.medal.getAttribute('src') !== src) nodes.medal.src = src;
     nodes.medalWrap.hidden = false;
+    streamerStatsEl.style.setProperty('--streamer-medal-gap-offset', `${streamerMedalGapOffset(medal.id)}px`);
     const stars = Math.max(0, Math.min(5, Number(medal.stars || 0)));
     if (stars > 0) {
       const pipsSrc = `/assets/rank-pip-${stars}.png?v=${assetVersion(state)}`;
@@ -536,6 +537,7 @@ function applyStreamerStats(reference, protection, state) {
   } else {
     nodes.medalWrap.hidden = true;
     nodes.pips.hidden = true;
+    streamerStatsEl.style.setProperty('--streamer-medal-gap-offset', '0px');
   }
 
   if (!hideDraftSummary && settings.showStreamerWinLoss !== false) {
@@ -596,6 +598,22 @@ function shouldHideStreamerSummaryDuringDraft(state, gameState) {
   return state.protection?.draft === true
     || state.protection?.topBar === true
     || /HERO_SELECTION|DRAFT/i.test(gameState);
+}
+
+function streamerMedalGapOffset(medalId) {
+  const transparentBottomByMedal = {
+    0: 23,
+    1: 23,
+    2: 23,
+    3: 23,
+    4: 9,
+    5: 5,
+    6: 1,
+    7: 14,
+    8: 1,
+    calibration: 0
+  };
+  return Math.max(0, (transparentBottomByMedal[String(medalId)] || 0) - 16);
 }
 
 function ensureStreamerStatsNodes() {
