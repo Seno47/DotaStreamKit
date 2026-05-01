@@ -255,6 +255,11 @@ body {
   transform: scale(0.6666667);
 }
 
+#streamerStats.liveGameScale {
+  transform: scale(0.85);
+  transform-origin: bottom center;
+}
+
 .streamerStatsMedalWrap {
   grid-column: 2;
   justify-self: center;

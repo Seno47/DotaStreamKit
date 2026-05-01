@@ -576,6 +576,7 @@ function applyStreamerStats(reference, protection, state) {
   const minimapSide = protection.minimapSide === 'right' ? 'right' : 'left';
   const inLiveGame = /PRE_GAME|GAME_IN_PROGRESS/i.test(gameState);
   streamerStatsEl.classList.toggle('mainMenuScale', !inLiveGame);
+  streamerStatsEl.classList.toggle('liveGameScale', inLiveGame);
   const left = inLiveGame
     ? minimapSide === 'right' ? 302 : 1390
     : minimapSide === 'right' ? 1500 : 1276;
