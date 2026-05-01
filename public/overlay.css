@@ -228,6 +228,7 @@ body {
   z-index: 2147483647;
   pointer-events: none;
   align-items: center;
+  align-content: center;
   justify-content: center;
   grid-template-columns: auto auto;
   column-gap: 8px;
