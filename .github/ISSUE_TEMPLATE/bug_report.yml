@@ -1,0 +1,83 @@
+name: Bug report
+description: Report something that is broken or unreliable.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please do not paste Twitch tokens, client secrets, local config files, or private screenshots.
+
+        Security issues should be reported privately through the Security policy, not here.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the problem in plain language.
+      placeholder: The overlay stayed visible after leaving a match...
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Write the exact steps that trigger the issue.
+      placeholder: |
+        1. Start DotaStreamKit
+        2. Connect Twitch
+        3. Enter a match
+        4. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should DotaStreamKit have done?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What did DotaStreamKit do instead?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: DotaStreamKit version
+      placeholder: "1.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - Linux
+        - macOS
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: obs
+    attributes:
+      label: OBS canvas size
+      placeholder: "1920x1080"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Add logs or screenshots if useful. Remove secrets before posting.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I removed tokens, secrets, and private local data from this report.
+          required: true
+        - label: I searched existing issues before opening this one.
+          required: true

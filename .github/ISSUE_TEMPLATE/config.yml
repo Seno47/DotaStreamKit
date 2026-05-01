@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/Seno47/DotaStreamKit/security/advisories/new
+    about: Report vulnerabilities privately. Do not post exploit details in public issues.
+  - name: Developer Telegram
+    url: https://t.me/ivagakura_projects
+    about: Project updates and maintainer contact.

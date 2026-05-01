@@ -1,0 +1,55 @@
+name: Feature request
+description: Suggest a practical improvement for DotaStreamKit.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem should this solve?
+      description: Describe the streamer workflow or pain point.
+      placeholder: It is hard to know when...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should DotaStreamKit do?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - OBS overlay
+        - Stream protection
+        - Match Intel
+        - Streamer stats
+        - Twitch predictions
+        - Twitch setup
+        - Dota GSI
+        - Release packaging
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: If you already work around this problem, describe how.
+  - type: textarea
+    id: context
+    attributes:
+      label: Extra context
+      description: Add screenshots, examples, or links if they help.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues before opening this one.
+          required: true
