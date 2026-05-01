@@ -1505,7 +1505,7 @@ async function handleGsi(req, res) {
 }
 
 function buildMatchIntel(payload, gsi, players) {
-  if (!runtime.config.protection.matchIntel?.enabled) {
+  if (!runtime.config.protection.matchIntel?.enabled || isMatchIntelFinished(gsi)) {
     return {
       matchId: gsi.activeMatchId || gsi.matchId || null,
       players,
@@ -1540,6 +1540,7 @@ function getCachedPlayerRank(accountId) {
 
 async function refreshNotablePlayerRanks(players) {
   if (!shouldShowNotablePlayers()) return;
+  if (isMatchIntelFinished(runtime.state.gsi)) return;
   const clockTime = Number(runtime.state.gsi.clockTime);
   const rankCutoff = Number(runtime.config.protection.matchIntel.rankDisplayMinutes || 12) * 60;
   const fullGameRanks = runtime.config.protection.matchIntel.rankDisplayMode === 'full_game';
@@ -1562,6 +1563,10 @@ async function refreshNotablePlayerRanks(players) {
     await persistState();
     broadcast();
   }
+}
+
+function isMatchIntelFinished(gsi) {
+  return /POST_GAME|GAME_END|DISCONNECT/i.test(String(gsi?.gameState || ''));
 }
 
 function shouldShowNotablePlayers() {

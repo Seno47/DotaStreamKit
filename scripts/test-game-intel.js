@@ -42,13 +42,16 @@ assert.equal(windowIntel.roshanStatus.phase, 'window');
 assert.equal(windowIntel.roshanStatus.latestRemaining, 170);
 
 const possibleIntel = updateMatchIntel(windowIntel, {}, { clockTime: 1860, activeMatchId: 42 }, players);
-assert.equal(possibleIntel.roshanStatus.phase, 'possible');
+assert.equal(possibleIntel.roshanStatus, null);
 
 const repeatedRoshanEvent = updateMatchIntel(intel, { events: { roshan_killed: true } }, { clockTime: 1205, activeMatchId: 42 }, players);
 assert.equal(repeatedRoshanEvent.roshan.killedAt, 1195);
 
 const hiddenAegisItems = updateMatchIntel(intel, {}, { clockTime: 1230, activeMatchId: 42 }, players.map((player) => ({ ...player, hasAegis: false })));
-assert.equal(hiddenAegisItems.aegis.slot, 5);
+assert.equal(hiddenAegisItems.aegis, null);
+
+const sparseAegisItems = updateMatchIntel(intel, {}, { clockTime: 1230, activeMatchId: 42 }, players.map((player) => ({ ...player, hasAegis: false, hasItemData: false })));
+assert.equal(sparseAegisItems.aegis.slot, 5);
 
 const notable = notablePlayersFromRankCache(players, (accountId) => accountId === '111'
   ? { leaderboardRank: 123, rankTier: 80, name: 'Top Mid', countryCode: 'ua' }
@@ -69,6 +72,7 @@ assert.deepEqual(fallbackPlayers, [{
   accountId: 333,
   name: 'Streamer',
   hero: 'npc_dota_hero_axe',
+  hasItemData: true,
   hasAegis: true
 }]);
 

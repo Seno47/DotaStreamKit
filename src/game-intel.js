@@ -45,7 +45,7 @@ export function updateMatchIntel(previousIntel, payload, gsi, players) {
       expiresAt: pickedAt + aegisDurationSeconds
     };
   } else if (aegis && Number.isFinite(clockTime)) {
-    if (clockTime >= Number(aegis.expiresAt || 0)) {
+    if (clockTime >= Number(aegis.expiresAt || 0) || players.some((player) => player.hasItemData)) {
       aegis = null;
     }
   }
@@ -134,6 +134,7 @@ function normalizeMatchPlayer(key, player) {
     accountId,
     name: String(player.name || player.player_name || player.personaname || '').slice(0, 40),
     hero: String(player.hero_name || player.heroName || player.hero || '').slice(0, 60),
+    hasItemData: hasInspectableItemData(player),
     hasAegis: hasAegisItem(player)
   };
 }
@@ -150,6 +151,7 @@ function normalizeCurrentMatchPlayer(payload, forceVisualFirst = false) {
     accountId: normalizeAccountId(player.accountid ?? player.account_id ?? player.accountId ?? player.steamid ?? player.steam_id),
     name: String(player.name || player.player_name || player.personaname || '').slice(0, 40),
     hero: String(hero.name || hero.hero_name || hero.heroName || hero.localized_name || '').slice(0, 60),
+    hasItemData: hasInspectableItemData(player) || hasInspectableItemData(payload.items),
     hasAegis: hasAegisItem(player) || hasAegisItem(payload.items)
   };
 }
@@ -214,6 +216,19 @@ function hasAegisItem(value) {
   return itemNames(value).some((name) => aegisItemPattern.test(name.replace(/^item_/, '')));
 }
 
+function hasInspectableItemData(value, depth = 0) {
+  if (!value || depth > 4 || typeof value !== 'object') return false;
+  if (Array.isArray(value)) return value.some((item) => hasInspectableItemData(item, depth + 1));
+  return Object.entries(value).some(([key, item]) => {
+    const normalizedKey = String(key || '').toLowerCase();
+    if (/^(items?|item\d+|slot\d+|inventory|backpack|stash|neutral)/.test(normalizedKey)) return true;
+    if (/item|inventory|backpack|stash|neutral/.test(normalizedKey) && item && typeof item === 'object') {
+      return hasInspectableItemData(item, depth + 1);
+    }
+    return false;
+  });
+}
+
 function itemNames(value, depth = 0) {
   if (!value || depth > 4) return [];
   if (typeof value === 'string') return [value.toLowerCase()];
@@ -260,9 +275,5 @@ function formatRoshanStatus(roshan, clockTime) {
       latestRemaining: Math.ceil(latest - clockTime)
     };
   }
-  return {
-    phase: 'possible',
-    earliestRemaining: 0,
-    latestRemaining: 0
-  };
+  return null;
 }

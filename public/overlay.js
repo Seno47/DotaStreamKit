@@ -252,9 +252,9 @@ function applyMatchIntel(slots, reference, settings, state) {
 function isMatchIntelActive(settings, state) {
   if (settings.enabled === false || !state.gsi?.connected) return false;
   const gameState = String(state.gsi?.gameState || '');
-  return /PRE_GAME|GAME_IN_PROGRESS|POST_GAME/i.test(gameState)
-    || Boolean(state.gsi?.activeMatchId || state.gsi?.matchId)
-    || Number.isFinite(Number(state.gsi?.clockTime));
+  if (/POST_GAME|GAME_END|DISCONNECT/i.test(gameState)) return false;
+  if (gameState) return /GAME_IN_PROGRESS/i.test(gameState);
+  return Number.isFinite(Number(state.gsi?.clockTime)) && Number(state.gsi?.clockTime) >= 0;
 }
 
 function setImageBadge(parent, className, visible, src, text) {
@@ -311,7 +311,7 @@ function applyRoshanIntel(reference, settings, state, version, slots) {
   if (!roshanIntelEl) return;
   const intel = state.matchIntel || {};
   const status = intel.roshanStatus;
-  const enabled = isMatchIntelActive(settings, state) && settings.showRoshanTimer !== false && settings.showAegisRoshan !== false && status;
+  const enabled = isMatchIntelActive(settings, state) && settings.showRoshanTimer !== false && settings.showAegisRoshan !== false && status && status.phase !== 'possible';
   if (!enabled) {
     setVisible(roshanIntelEl, false);
     return;
