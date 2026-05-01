@@ -81,6 +81,7 @@ body {
   text-align: center;
 }
 
+.nameBadge,
 .rankBadge,
 .flagBadge,
 .aegisBadge {
@@ -102,6 +103,29 @@ body {
   text-shadow: 0 1px 2px #000;
 }
 
+.nameBadge {
+  box-sizing: border-box;
+  width: 92px;
+  min-width: 0;
+  max-width: 92px;
+  height: 21px;
+  padding: 0 5px;
+  border-color: rgba(90, 184, 218, 0.7);
+  background: rgba(4, 8, 12, 0.68);
+  color: #f5fbff;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.nameBadge span {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1;
+}
+
 .rankBadge img {
   width: 30px;
   height: 30px;
@@ -111,15 +135,21 @@ body {
 }
 
 .flagBadge {
-  min-width: 42px;
-  padding: 0 8px;
-  border-color: rgba(112, 176, 236, 0.78);
-  color: #d8ecff;
+  min-width: 0;
+  width: 28px;
+  height: 20px;
+  padding: 0;
+  border-color: rgba(255, 255, 255, 0.55);
+  background: rgba(3, 6, 10, 0.42);
+  overflow: hidden;
 }
 
-.flagBadge span {
-  font-size: 19px;
-  line-height: 1;
+.flagBadge img {
+  width: 24px;
+  height: 16px;
+  object-fit: cover;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
 
 .aegisBadge {

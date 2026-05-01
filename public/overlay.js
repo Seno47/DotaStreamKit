@@ -221,7 +221,7 @@ function applyMatchIntel(slots, reference, settings, state) {
   const preGameOnlyRanks = settings.rankDisplayMode === 'pre_game_only';
   const gameClockStarted = Number.isFinite(clockTime) && clockTime >= 0;
   const withinNotableWindow = preGameState || (!preGameOnlyRanks && gameClockStarted && (fullGameRanks || clockTime <= rankCutoff));
-  const showRanks = enabled && settings.showPlayerRanks !== false && withinNotableWindow;
+  const showNames = enabled && settings.showPlayerRanks !== false && withinNotableWindow;
   const showFlags = enabled && settings.showPlayerFlags === true && withinNotableWindow;
   const playersByAccountId = new Map((intel.players || []).filter((player) => player?.accountId).map((player) => [String(player.accountId), player]));
   const ranksBySlot = new Map((intel.notablePlayers || []).map((player) => [Number(player.slot), player]));
@@ -239,9 +239,9 @@ function applyMatchIntel(slots, reference, settings, state) {
       width: 96,
       height: 72
     }, reference);
-    setImageBadge(el, 'rankBadge', showRanks && rank?.leaderboardRank, `/assets/rank-immortal.png?v=${version}`, `#${rank?.leaderboardRank || ''}`);
-    const flag = countryFlagEmoji(rank?.countryCode);
-    setTextBadge(el, 'flagBadge', showFlags && flag, flag);
+    hideBadge(el, 'rankBadge');
+    setNameBadge(el, showNames && rank?.name, rank?.name || '');
+    setFlagBadge(el, showFlags && rank?.countryCode, rank?.countryCode || '');
     if (hasAegis) {
       const remaining = Math.max(0, Math.ceil(Number(aegis.expiresAt) - clockTime));
       setImageBadge(el, 'aegisBadge', true, `/assets/aegis.png?v=${version}`, formatClock(remaining));
@@ -305,6 +305,45 @@ function setTextBadge(parent, className, visible, text) {
   badge.hidden = !visible;
 }
 
+function setNameBadge(parent, visible, text) {
+  const badge = ensureBadge(parent, 'nameBadge');
+  let span = badge.querySelector('span');
+  if (!span) {
+    span = document.createElement('span');
+    badge.append(span);
+  }
+  const name = String(text || '').trim();
+  span.textContent = name;
+  span.style.fontSize = `${nameFontSize(name)}px`;
+  badge.title = name;
+  badge.hidden = !visible || !name;
+}
+
+function hideBadge(parent, className) {
+  const badge = parent.querySelector(`:scope > .${className}`);
+  if (badge) badge.hidden = true;
+}
+
+function setFlagBadge(parent, visible, countryCode) {
+  const badge = ensureBadge(parent, 'flagBadge');
+  for (const child of [...badge.children]) {
+    if (child.tagName !== 'IMG') child.remove();
+  }
+  let img = badge.querySelector('img');
+  if (!img) {
+    img = document.createElement('img');
+    img.alt = '';
+    img.decoding = 'async';
+    badge.append(img);
+  }
+  const code = normalizeCountryCode(countryCode);
+  const src = code ? countryFlagUrl(code) : '';
+  if (src && img.getAttribute('src') !== src) img.src = src;
+  img.alt = code ? `${code} flag` : '';
+  badge.title = code || '';
+  badge.hidden = !visible || !code;
+}
+
 function ensureBadge(parent, className) {
   let badge = parent.querySelector(`:scope > .${className}`);
   if (!badge) {
@@ -319,10 +358,35 @@ function hasVisibleBadge(parent) {
   return [...parent.children].some((child) => !child.hidden);
 }
 
-function countryFlagEmoji(code) {
+function normalizeCountryCode(code) {
   const normalized = String(code || '').trim().toUpperCase();
-  if (!/^[A-Z]{2}$/.test(normalized)) return '';
-  return [...normalized].map((char) => String.fromCodePoint(127397 + char.charCodeAt(0))).join('');
+  return /^[A-Z]{2}$/.test(normalized) ? normalized : '';
+}
+
+function countryFlagUrl(code) {
+  const normalized = normalizeCountryCode(code).toLowerCase();
+  if (!normalized) return '';
+  return localFlagSvgDataUrl(normalized) || `https://flagcdn.com/w40/${normalized}.png`;
+}
+
+function localFlagSvgDataUrl(code) {
+  const svg = {
+    by: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 20"><path fill="#c8313e" d="M0 0h30v13.2H0z"/><path fill="#4aa657" d="M0 13.2h30V20H0z"/><path fill="#fff" d="M0 0h6v20H0z"/><path fill="#c8313e" d="M1 1h1v2H1zm2 2h1v2H3zM1 5h1v2H1zm2 2h1v2H3zM1 9h1v2H1zm2 2h1v2H3zm-2 4h1v2H1zm2 2h1v2H3z"/></svg>',
+    ru: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 20"><path fill="#fff" d="M0 0h30v20H0z"/><path fill="#1f4ba8" d="M0 6.67h30v6.66H0z"/><path fill="#d52b1e" d="M0 13.33h30V20H0z"/></svg>',
+    ua: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 20"><path fill="#005bbb" d="M0 0h30v10H0z"/><path fill="#ffd500" d="M0 10h30v10H0z"/></svg>',
+    se: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 20"><path fill="#006aa7" d="M0 0h30v20H0z"/><path fill="#fecc00" d="M0 8h30v4H0z"/><path fill="#fecc00" d="M9 0h4v20H9z"/></svg>',
+    us: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 20"><path fill="#b22234" d="M0 0h30v20H0z"/><path stroke="#fff" stroke-width="1.54" d="M0 2.31h30M0 5.38h30M0 8.46h30M0 11.54h30M0 14.62h30M0 17.69h30"/><path fill="#3c3b6e" d="M0 0h12.4v10.8H0z"/></svg>',
+    kz: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 20"><path fill="#00afca" d="M0 0h30v20H0z"/><circle cx="15" cy="9" r="3.2" fill="#f6c400"/><path fill="#f6c400" d="M14 12h2l-1 3zM4 0h1.6v20H4z"/></svg>'
+  }[code];
+  return svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}` : '';
+}
+
+function nameFontSize(name) {
+  const length = String(name || '').trim().length;
+  if (length > 18) return 10;
+  if (length > 14) return 11;
+  if (length > 10) return 12;
+  return 13;
 }
 
 function applyRoshanIntel(reference, settings, state, version, slots) {
