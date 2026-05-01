@@ -520,7 +520,8 @@ function applyStreamerStats(reference, protection, state) {
 
   const nodes = ensureStreamerStatsNodes();
   const medal = stats.medal;
-  if (settings.showStreamerRankMedal !== false && medal?.id) {
+  const hideDraftSummary = shouldHideStreamerSummaryDuringDraft(state, gameState);
+  if (!hideDraftSummary && settings.showStreamerRankMedal !== false && medal?.id) {
     const src = `/assets/rank-medal-${encodeURIComponent(medal.id)}.png?v=${assetVersion(state)}`;
     if (nodes.medal.getAttribute('src') !== src) nodes.medal.src = src;
     nodes.medalWrap.hidden = false;
@@ -537,7 +538,7 @@ function applyStreamerStats(reference, protection, state) {
     nodes.pips.hidden = true;
   }
 
-  if (settings.showStreamerWinLoss !== false) {
+  if (!hideDraftSummary && settings.showStreamerWinLoss !== false) {
     setTextContent(nodes.winNumber, Math.max(0, Number(stats.wins || 0)));
     setTextContent(nodes.lossNumber, Math.max(0, Number(stats.losses || 0)));
     nodes.winLoss.hidden = false;
@@ -589,6 +590,12 @@ function shouldShowStreamerStatsInOverlay(state) {
   if (state.gsi?.connected && !state.gsi?.leftGameView) return true;
   if (state.protection?.queue || state.protection?.draft || state.protection?.topBar) return true;
   return state.dota?.processRunning !== false;
+}
+
+function shouldHideStreamerSummaryDuringDraft(state, gameState) {
+  return state.protection?.draft === true
+    || state.protection?.topBar === true
+    || /HERO_SELECTION|DRAFT/i.test(gameState);
 }
 
 function ensureStreamerStatsNodes() {
