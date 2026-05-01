@@ -44,6 +44,14 @@ assert.equal(windowIntel.roshanStatus.latestRemaining, 170);
 const possibleIntel = updateMatchIntel(windowIntel, {}, { clockTime: 1860, activeMatchId: 42 }, players);
 assert.equal(possibleIntel.roshanStatus, null);
 
+const respawnIntel = updateMatchIntel(windowIntel, { events: { roshan_respawned: true } }, { clockTime: 1700, activeMatchId: 42 }, players);
+assert.equal(respawnIntel.roshan, null);
+assert.equal(respawnIntel.roshanStatus, null);
+
+const newRoshanKill = updateMatchIntel(respawnIntel, { events: { roshan_killed: true } }, { clockTime: 1710, activeMatchId: 42 }, players);
+assert.equal(newRoshanKill.roshan.killedAt, 1710);
+assert.equal(newRoshanKill.roshanStatus.phase, 'waiting');
+
 const repeatedRoshanEvent = updateMatchIntel(intel, { events: { roshan_killed: true } }, { clockTime: 1205, activeMatchId: 42 }, players);
 assert.equal(repeatedRoshanEvent.roshan.killedAt, 1195);
 
@@ -85,5 +93,19 @@ const singlePlayerPayload = collectMatchPlayers({
 });
 assert.equal(singlePlayerPayload.length, 1);
 assert.equal(singlePlayerPayload[0].slot, 0);
+
+const currentItemsOverride = collectMatchPlayers({
+  allplayers: {
+    player0: {
+      player_slot: 0,
+      accountid: 444,
+      items: { slot0: { name: 'item_aegis' } }
+    }
+  },
+  player: { team_name: 'radiant', player_slot: 0, accountid: 444, name: 'Streamer' },
+  items: { slot0: { name: 'item_blink' } }
+});
+assert.equal(currentItemsOverride[0].hasItemData, true);
+assert.equal(currentItemsOverride[0].hasAegis, false);
 
 console.log('Game intel checks passed');

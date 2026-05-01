@@ -4,6 +4,7 @@ export const roshanRespawnMaxSeconds = 11 * 60;
 
 const aegisItemPattern = /(^|_)aegis($|_)/i;
 const roshanKillPattern = /roshan.*(kill|death|dead|slain)|(?:kill|death|dead|slain).*roshan|roshan_killed/i;
+const roshanRespawnPattern = /roshan.*(respawn|spawn|alive|up)|(?:respawn|spawn|alive).*roshan/i;
 
 export function collectMatchPlayers(payload) {
   const source = payload?.allplayers || payload?.players || {};
@@ -22,8 +23,13 @@ export function updateMatchIntel(previousIntel, payload, gsi, players) {
   const base = matchChanged ? {} : previous;
   const aegisHolder = players.find((player) => player.hasAegis) || null;
   const roshanKilled = hasRoshanKillEvent(payload);
+  const roshanRespawned = hasRoshanRespawnEvent(payload);
   let roshan = base.roshan ? { ...base.roshan } : null;
   let aegis = base.aegis ? { ...base.aegis } : null;
+
+  if (roshanRespawned && !roshanKilled) {
+    roshan = null;
+  }
 
   if (Number.isFinite(clockTime) && shouldStartRoshanTimer({ roshan, roshanKilled, aegisHolder, aegis, clockTime })) {
     const killedAt = roshanKilled ? clockTime : Math.max(0, clockTime - 5);
@@ -183,7 +189,10 @@ function upsertCurrentPlayer(players, currentPlayer) {
     accountId: merged[existingIndex].accountId || currentPlayer.accountId,
     name: merged[existingIndex].name || currentPlayer.name,
     hero: merged[existingIndex].hero || currentPlayer.hero,
-    hasAegis: merged[existingIndex].hasAegis || currentPlayer.hasAegis
+    hasItemData: merged[existingIndex].hasItemData || currentPlayer.hasItemData,
+    hasAegis: currentPlayer.hasItemData
+      ? currentPlayer.hasAegis
+      : merged[existingIndex].hasAegis || currentPlayer.hasAegis
   };
   return merged;
 }
@@ -250,6 +259,13 @@ function hasRoshanKillEvent(value, depth = 0) {
   if (typeof value !== 'object') return roshanKillPattern.test(String(value));
   if (Array.isArray(value)) return value.some((item) => hasRoshanKillEvent(item, depth + 1));
   return Object.entries(value).some(([key, item]) => roshanKillPattern.test(key) || hasRoshanKillEvent(item, depth + 1));
+}
+
+function hasRoshanRespawnEvent(value, depth = 0) {
+  if (!value || depth > 5) return false;
+  if (typeof value !== 'object') return roshanRespawnPattern.test(String(value));
+  if (Array.isArray(value)) return value.some((item) => hasRoshanRespawnEvent(item, depth + 1));
+  return Object.entries(value).some(([key, item]) => roshanRespawnPattern.test(key) || hasRoshanRespawnEvent(item, depth + 1));
 }
 
 function normalizedClock(value) {
