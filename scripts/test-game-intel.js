@@ -59,17 +59,27 @@ assert.deepEqual(notable, [
 ]);
 
 const fallbackPlayers = collectMatchPlayers({
-  player: { team_name: 'radiant', team_slot: 2, accountid: 333, name: 'Streamer' },
+  player: { team_name: 'radiant', player_slot: 2, team_slot: 2, accountid: 333, name: 'Streamer' },
   hero: { name: 'npc_dota_hero_axe' },
   items: { slot0: { name: 'item_aegis' } }
 });
 assert.deepEqual(fallbackPlayers, [{
-  slot: 2,
+  slot: 0,
   team: 'radiant',
   accountId: 333,
   name: 'Streamer',
   hero: 'npc_dota_hero_axe',
   hasAegis: true
 }]);
+
+const singlePlayerPayload = collectMatchPlayers({
+  players: {
+    player1: { player_slot: 1, accountid: 333, name: 'Streamer' }
+  },
+  player: { team_name: 'radiant', player_slot: 1, accountid: 333, name: 'Streamer' },
+  hero: { name: 'npc_dota_hero_morphling' }
+});
+assert.equal(singlePlayerPayload.length, 1);
+assert.equal(singlePlayerPayload[0].slot, 0);
 
 console.log('Game intel checks passed');

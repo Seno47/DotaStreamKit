@@ -11,7 +11,7 @@ export function collectMatchPlayers(payload) {
     .map(([key, player]) => normalizeMatchPlayer(key, player))
     .filter(Boolean)
     .sort((left, right) => left.slot - right.slot);
-  return upsertCurrentPlayer(players, normalizeCurrentMatchPlayer(payload));
+  return upsertCurrentPlayer(players, normalizeCurrentMatchPlayer(payload, players.length <= 1));
 }
 
 export function updateMatchIntel(previousIntel, payload, gsi, players) {
@@ -138,10 +138,10 @@ function normalizeMatchPlayer(key, player) {
   };
 }
 
-function normalizeCurrentMatchPlayer(payload) {
+function normalizeCurrentMatchPlayer(payload, forceVisualFirst = false) {
   const player = payload?.player;
   if (!player || typeof player !== 'object') return null;
-  const slot = normalizePlayerSlot(player.player_slot ?? player.playerSlot ?? player.team_slot ?? player.teamSlot, player);
+  const slot = currentPlayerTopbarSlot(player, forceVisualFirst);
   if (slot === null) return null;
   const hero = payload?.hero || {};
   return {
@@ -154,13 +154,30 @@ function normalizeCurrentMatchPlayer(payload) {
   };
 }
 
+function currentPlayerTopbarSlot(player, forceVisualFirst) {
+  const team = String(player.team_name || player.team || '').toLowerCase();
+  if (forceVisualFirst) {
+    if (team.includes('dire') || team.includes('bad')) return 5;
+    if (team.includes('radiant') || team.includes('good')) return 0;
+  }
+  if (player.player_slot !== undefined || player.playerSlot !== undefined) {
+    return normalizePlayerSlot(player.player_slot ?? player.playerSlot, player);
+  }
+  return normalizePlayerSlot(player.team_slot ?? player.teamSlot, player);
+}
+
 function upsertCurrentPlayer(players, currentPlayer) {
   if (!currentPlayer) return players;
-  const existingIndex = players.findIndex((player) => player.slot === currentPlayer.slot);
+  const existingIndex = players.findIndex((player) => (
+    (currentPlayer.accountId && player.accountId === currentPlayer.accountId)
+    || player.slot === currentPlayer.slot
+  ));
   if (existingIndex === -1) return [...players, currentPlayer].sort((left, right) => left.slot - right.slot);
   const merged = [...players];
   merged[existingIndex] = {
     ...merged[existingIndex],
+    slot: currentPlayer.slot,
+    team: currentPlayer.team || merged[existingIndex].team,
     accountId: merged[existingIndex].accountId || currentPlayer.accountId,
     name: merged[existingIndex].name || currentPlayer.name,
     hero: merged[existingIndex].hero || currentPlayer.hero,
