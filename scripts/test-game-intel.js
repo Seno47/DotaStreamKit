@@ -44,6 +44,12 @@ assert.equal(windowIntel.roshanStatus.latestRemaining, 170);
 const possibleIntel = updateMatchIntel(windowIntel, {}, { clockTime: 1860, activeMatchId: 42 }, players);
 assert.equal(possibleIntel.roshanStatus.phase, 'possible');
 
+const repeatedRoshanEvent = updateMatchIntel(intel, { events: { roshan_killed: true } }, { clockTime: 1205, activeMatchId: 42 }, players);
+assert.equal(repeatedRoshanEvent.roshan.killedAt, 1195);
+
+const hiddenAegisItems = updateMatchIntel(intel, {}, { clockTime: 1230, activeMatchId: 42 }, players.map((player) => ({ ...player, hasAegis: false })));
+assert.equal(hiddenAegisItems.aegis.slot, 5);
+
 const notable = notablePlayersFromRankCache(players, (accountId) => accountId === '111'
   ? { leaderboardRank: 123, rankTier: 80, name: 'Top Mid', countryCode: 'ua' }
   : null, [{ accountId: 222, name: 'Custom Carry', countryCode: 'se' }]);
@@ -51,5 +57,19 @@ assert.deepEqual(notable, [
   { slot: 0, accountId: 111, name: 'Top Mid', leaderboardRank: 123, rankTier: 80, countryCode: 'UA' },
   { slot: 5, accountId: 222, name: 'Custom Carry', leaderboardRank: null, rankTier: null, countryCode: 'SE' }
 ]);
+
+const fallbackPlayers = collectMatchPlayers({
+  player: { team_name: 'radiant', team_slot: 2, accountid: 333, name: 'Streamer' },
+  hero: { name: 'npc_dota_hero_axe' },
+  items: { slot0: { name: 'item_aegis' } }
+});
+assert.deepEqual(fallbackPlayers, [{
+  slot: 2,
+  team: 'radiant',
+  accountId: 333,
+  name: 'Streamer',
+  hero: 'npc_dota_hero_axe',
+  hasAegis: true
+}]);
 
 console.log('Game intel checks passed');

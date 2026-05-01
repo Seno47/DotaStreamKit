@@ -7,10 +7,11 @@ const roshanKillPattern = /roshan.*(kill|death|dead|slain)|(?:kill|death|dead|sl
 
 export function collectMatchPlayers(payload) {
   const source = payload?.allplayers || payload?.players || {};
-  return Object.entries(source)
+  const players = Object.entries(source)
     .map(([key, player]) => normalizeMatchPlayer(key, player))
     .filter(Boolean)
     .sort((left, right) => left.slot - right.slot);
+  return upsertCurrentPlayer(players, normalizeCurrentMatchPlayer(payload));
 }
 
 export function updateMatchIntel(previousIntel, payload, gsi, players) {
@@ -24,7 +25,7 @@ export function updateMatchIntel(previousIntel, payload, gsi, players) {
   let roshan = base.roshan ? { ...base.roshan } : null;
   let aegis = base.aegis ? { ...base.aegis } : null;
 
-  if ((roshanKilled || (aegisHolder && !aegis)) && Number.isFinite(clockTime)) {
+  if (Number.isFinite(clockTime) && shouldStartRoshanTimer({ roshan, roshanKilled, aegisHolder, aegis, clockTime })) {
     const killedAt = roshanKilled ? clockTime : Math.max(0, clockTime - 5);
     roshan = {
       killedAt,
@@ -46,8 +47,6 @@ export function updateMatchIntel(previousIntel, payload, gsi, players) {
   } else if (aegis && Number.isFinite(clockTime)) {
     if (clockTime >= Number(aegis.expiresAt || 0)) {
       aegis = null;
-    } else {
-      aegis.consumedAt = clockTime;
     }
   }
 
@@ -61,8 +60,20 @@ export function updateMatchIntel(previousIntel, payload, gsi, players) {
     notablePlayers: Array.isArray(base.notablePlayers) ? base.notablePlayers : [],
     roshan,
     roshanStatus,
-    aegis: aegis && !aegis.consumedAt ? aegis : null
+    aegis
   };
+}
+
+function shouldStartRoshanTimer({ roshan, roshanKilled, aegisHolder, aegis, clockTime }) {
+  if (roshanKilled) {
+    const killedAt = Number(roshan?.killedAt);
+    const latestRespawnAt = Number(roshan?.latestRespawnAt);
+    return !roshan
+      || !Number.isFinite(killedAt)
+      || clockTime < killedAt - 30
+      || (Number.isFinite(latestRespawnAt) && clockTime > latestRespawnAt + 30);
+  }
+  return Boolean(aegisHolder && !aegis && !roshan);
 }
 
 export function notablePlayersFromRankCache(players, getCachedRank, customPlayers = []) {
@@ -125,6 +136,37 @@ function normalizeMatchPlayer(key, player) {
     hero: String(player.hero_name || player.heroName || player.hero || '').slice(0, 60),
     hasAegis: hasAegisItem(player)
   };
+}
+
+function normalizeCurrentMatchPlayer(payload) {
+  const player = payload?.player;
+  if (!player || typeof player !== 'object') return null;
+  const slot = normalizePlayerSlot(player.player_slot ?? player.playerSlot ?? player.team_slot ?? player.teamSlot, player);
+  if (slot === null) return null;
+  const hero = payload?.hero || {};
+  return {
+    slot,
+    team: slot < 5 ? 'radiant' : 'dire',
+    accountId: normalizeAccountId(player.accountid ?? player.account_id ?? player.accountId ?? player.steamid ?? player.steam_id),
+    name: String(player.name || player.player_name || player.personaname || '').slice(0, 40),
+    hero: String(hero.name || hero.hero_name || hero.heroName || hero.localized_name || '').slice(0, 60),
+    hasAegis: hasAegisItem(player) || hasAegisItem(payload.items)
+  };
+}
+
+function upsertCurrentPlayer(players, currentPlayer) {
+  if (!currentPlayer) return players;
+  const existingIndex = players.findIndex((player) => player.slot === currentPlayer.slot);
+  if (existingIndex === -1) return [...players, currentPlayer].sort((left, right) => left.slot - right.slot);
+  const merged = [...players];
+  merged[existingIndex] = {
+    ...merged[existingIndex],
+    accountId: merged[existingIndex].accountId || currentPlayer.accountId,
+    name: merged[existingIndex].name || currentPlayer.name,
+    hero: merged[existingIndex].hero || currentPlayer.hero,
+    hasAegis: merged[existingIndex].hasAegis || currentPlayer.hasAegis
+  };
+  return merged;
 }
 
 function normalizePlayerSlot(rawSlot, player) {

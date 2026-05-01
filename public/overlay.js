@@ -211,7 +211,7 @@ function shouldHideDraftSlot(index, state) {
 function applyMatchIntel(slots, reference, settings, state) {
   const intel = state.matchIntel || {};
   const version = assetVersion(state);
-  const enabled = settings.enabled !== false && state.gsi?.connected && /PRE_GAME|GAME_IN_PROGRESS|POST_GAME/i.test(String(state.gsi?.gameState || ''));
+  const enabled = isMatchIntelActive(settings, state);
   const clockTime = Number(state.gsi?.clockTime);
   const rankCutoff = Number(settings.rankDisplayMinutes || 12) * 60;
   const fullGameRanks = settings.rankDisplayMode === 'full_game';
@@ -220,7 +220,7 @@ function applyMatchIntel(slots, reference, settings, state) {
   const showFlags = enabled && settings.showPlayerFlags === true && withinNotableWindow;
   const ranksBySlot = new Map((intel.notablePlayers || []).map((player) => [Number(player.slot), player]));
   const aegis = intel.aegis || null;
-  const showAegis = enabled && settings.showAegisRoshan !== false && aegis && Number(aegis.expiresAt) > clockTime;
+  const showAegis = enabled && settings.showAegisTimer !== false && settings.showAegisRoshan !== false && aegis && Number(aegis.expiresAt) > clockTime;
 
   slots.forEach((slot, index) => {
     const el = matchIntelSlotEls[index];
@@ -232,31 +232,71 @@ function applyMatchIntel(slots, reference, settings, state) {
       width: 96,
       height: 72
     }, reference);
-    el.innerHTML = '';
-    if (showRanks && rank?.leaderboardRank) {
-      const rankBadge = document.createElement('div');
-      rankBadge.className = 'rankBadge';
-      rankBadge.innerHTML = `<img src="/assets/rank-immortal.png?v=${version}" alt=""><span>#${escapeHtml(rank.leaderboardRank)}</span>`;
-      el.append(rankBadge);
-    }
+    setImageBadge(el, 'rankBadge', showRanks && rank?.leaderboardRank, `/assets/rank-immortal.png?v=${version}`, `#${rank?.leaderboardRank || ''}`);
     const flag = countryFlagEmoji(rank?.countryCode);
-    if (showFlags && flag) {
-      const flagBadge = document.createElement('div');
-      flagBadge.className = 'flagBadge';
-      flagBadge.innerHTML = `<span>${flag}</span>`;
-      el.append(flagBadge);
-    }
+    setTextBadge(el, 'flagBadge', showFlags && flag, flag);
     if (hasAegis) {
       const remaining = Math.max(0, Math.ceil(Number(aegis.expiresAt) - clockTime));
-      const aegisBadge = document.createElement('div');
-      aegisBadge.className = 'aegisBadge';
-      aegisBadge.innerHTML = `<img src="/assets/aegis.png?v=${version}" alt=""><span>${formatClock(remaining)}</span>`;
-      el.append(aegisBadge);
+      setImageBadge(el, 'aegisBadge', true, `/assets/aegis.png?v=${version}`, formatClock(remaining));
+    } else {
+      setImageBadge(el, 'aegisBadge', false, `/assets/aegis.png?v=${version}`, '');
     }
-    setVisible(el, enabled && (el.children.length > 0));
+    setVisible(el, enabled && hasVisibleBadge(el));
   });
 
-  applyRoshanIntel(reference, settings, state, version);
+  applyRoshanIntel(reference, settings, state, version, slots);
+}
+
+function isMatchIntelActive(settings, state) {
+  if (settings.enabled === false || !state.gsi?.connected) return false;
+  const gameState = String(state.gsi?.gameState || '');
+  return /PRE_GAME|GAME_IN_PROGRESS|POST_GAME/i.test(gameState)
+    || Boolean(state.gsi?.activeMatchId || state.gsi?.matchId)
+    || Number.isFinite(Number(state.gsi?.clockTime));
+}
+
+function setImageBadge(parent, className, visible, src, text) {
+  const badge = ensureBadge(parent, className);
+  let img = badge.querySelector('img');
+  let span = badge.querySelector('span');
+  if (!img) {
+    img = document.createElement('img');
+    img.alt = '';
+    img.decoding = 'async';
+    badge.append(img);
+  }
+  if (!span) {
+    span = document.createElement('span');
+    badge.append(span);
+  }
+  if (img.getAttribute('src') !== src) img.src = src;
+  span.textContent = text || '';
+  badge.hidden = !visible;
+}
+
+function setTextBadge(parent, className, visible, text) {
+  const badge = ensureBadge(parent, className);
+  let span = badge.querySelector('span');
+  if (!span) {
+    span = document.createElement('span');
+    badge.append(span);
+  }
+  span.textContent = text || '';
+  badge.hidden = !visible;
+}
+
+function ensureBadge(parent, className) {
+  let badge = parent.querySelector(`:scope > .${className}`);
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.className = className;
+    parent.append(badge);
+  }
+  return badge;
+}
+
+function hasVisibleBadge(parent) {
+  return [...parent.children].some((child) => !child.hidden);
 }
 
 function countryFlagEmoji(code) {
@@ -265,20 +305,37 @@ function countryFlagEmoji(code) {
   return [...normalized].map((char) => String.fromCodePoint(127397 + char.charCodeAt(0))).join('');
 }
 
-function applyRoshanIntel(reference, settings, state, version) {
+function applyRoshanIntel(reference, settings, state, version, slots) {
   if (!roshanIntelEl) return;
   const intel = state.matchIntel || {};
   const status = intel.roshanStatus;
-  const enabled = settings.enabled !== false && settings.showAegisRoshan !== false && state.gsi?.connected && status;
+  const enabled = isMatchIntelActive(settings, state) && settings.showRoshanTimer !== false && settings.showAegisRoshan !== false && status;
   if (!enabled) {
     setVisible(roshanIntelEl, false);
     return;
   }
 
   const text = roshanText(status);
-  roshanIntelEl.innerHTML = `<img src="/assets/roshan.png?v=${version}" alt=""><span>${text}</span>`;
-  roshanIntelEl.style.left = '50vw';
-  roshanIntelEl.style.top = `${toPercent(82, reference.height)}vh`;
+  let img = roshanIntelEl.querySelector('img');
+  let span = roshanIntelEl.querySelector('span');
+  if (!img) {
+    img = document.createElement('img');
+    img.alt = '';
+    img.decoding = 'async';
+    roshanIntelEl.append(img);
+  }
+  if (!span) {
+    span = document.createElement('span');
+    roshanIntelEl.append(span);
+  }
+  const src = `/assets/roshan.png?v=${version}`;
+  if (img.getAttribute('src') !== src) img.src = src;
+  span.textContent = text;
+  const firstSlot = slots.reduce((leftmost, slot) => !leftmost || Number(slot.left) < Number(leftmost.left) ? slot : leftmost, null);
+  const box = firstSlot
+    ? { left: Math.max(0, Number(firstSlot.left) - 72), top: Number(firstSlot.top || 0) + 8, width: 66, height: 36 }
+    : { left: 132, top: 8, width: 66, height: 36 };
+  applyScaledBox(roshanIntelEl, box, reference);
   setVisible(roshanIntelEl, true);
 }
 
@@ -373,9 +430,9 @@ function toPercent(value, total) {
 }
 
 function roshanText(status) {
-  if (status.phase === 'possible') return 'ROSHAN UP?';
-  if (status.phase === 'window') return `ROSHAN 0:00-${formatClock(status.latestRemaining)}`;
-  return `ROSHAN ${formatClock(status.earliestRemaining)}-${formatClock(status.latestRemaining)}`;
+  if (status.phase === 'possible') return 'UP?';
+  if (status.phase === 'window') return `0:00-${formatClock(status.latestRemaining)}`;
+  return `${formatClock(status.earliestRemaining)}-${formatClock(status.latestRemaining)}`;
 }
 
 function formatClock(totalSeconds) {

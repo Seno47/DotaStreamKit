@@ -123,42 +123,42 @@ body {
 }
 
 .aegisBadge {
-  border-color: rgba(255, 129, 72, 0.82);
+  min-width: 58px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
   color: #ffd0a7;
+  opacity: 0.78;
+  padding: 0;
 }
 
 .aegisBadge img {
-  width: 24px;
-  height: 24px;
+  width: 25px;
+  height: 25px;
   object-fit: contain;
-  margin-right: 4px;
+  margin-right: 3px;
 }
 
 .roshanIntel {
   z-index: 19;
-  transform: translateX(-50%);
-  min-width: 142px;
-  height: 34px;
-  padding: 0 10px 0 6px;
-  border: 1px solid rgba(167, 112, 77, 0.82);
-  border-radius: 4px;
-  background: rgba(8, 11, 14, 0.78);
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  background: transparent;
   color: #f1d0b5;
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 800;
-  line-height: 34px;
-  text-align: center;
   text-shadow: 0 1px 2px #000;
   white-space: nowrap;
 }
 
+.roshanIntel.visible {
+  display: flex;
+}
+
 .roshanIntel img {
-  width: 31px;
-  height: 31px;
-  object-fit: cover;
-  vertical-align: middle;
-  margin-right: 6px;
-  border-radius: 3px;
+  width: 27px;
+  height: 27px;
+  object-fit: contain;
 }

@@ -16,7 +16,8 @@ const els = {
   matchIntelEnabled: document.querySelector('#matchIntelEnabled'),
   showPlayerRanks: document.querySelector('#showPlayerRanks'),
   showPlayerFlags: document.querySelector('#showPlayerFlags'),
-  showAegisRoshan: document.querySelector('#showAegisRoshan'),
+  showAegisTimer: document.querySelector('#showAegisTimer'),
+  showRoshanTimer: document.querySelector('#showRoshanTimer'),
   rankDisplayModeWrap: document.querySelector('#rankDisplayModeWrap'),
   rankDisplayMode: document.querySelector('#rankDisplayMode'),
   rankDisplayMinutesWrap: document.querySelector('#rankDisplayMinutesWrap'),
@@ -144,7 +145,8 @@ const translations = {
     matchIntelEnabled: 'Игровая аналитика в overlay',
     showPlayerRanks: 'Ранги топ-игроков',
     showPlayerFlags: 'Флаги игроков',
-    showAegisRoshan: 'Aegis и Roshan',
+    showAegisTimer: 'Таймер Aegis',
+    showRoshanTimer: 'Таймер Roshan',
     rankDisplayMode: 'Показывать notable players',
     rankDisplayFirstMinutes: 'Первые N минут',
     rankDisplayFullGame: 'До конца игры',
@@ -358,7 +360,8 @@ const translations = {
     matchIntelEnabled: 'Match intel overlay',
     showPlayerRanks: 'Top player ranks',
     showPlayerFlags: 'Player flags',
-    showAegisRoshan: 'Aegis and Roshan',
+    showAegisTimer: 'Aegis timer',
+    showRoshanTimer: 'Roshan timer',
     rankDisplayMode: 'Show notable players',
     rankDisplayFirstMinutes: 'First N minutes',
     rankDisplayFullGame: 'Full game',
@@ -637,7 +640,8 @@ function applyLanguage(config) {
   setLabelText(els.matchIntelEnabled.closest('label'), t('matchIntelEnabled'));
   setLabelText(els.showPlayerRanks.closest('label'), t('showPlayerRanks'));
   setLabelText(els.showPlayerFlags.closest('label'), t('showPlayerFlags'));
-  setLabelText(els.showAegisRoshan.closest('label'), t('showAegisRoshan'));
+  setLabelText(els.showAegisTimer.closest('label'), t('showAegisTimer'));
+  setLabelText(els.showRoshanTimer.closest('label'), t('showRoshanTimer'));
   setLabelText(els.rankDisplayMode.closest('label'), t('rankDisplayMode'));
   setOptionText(els.rankDisplayMode, 'minutes', t('rankDisplayFirstMinutes'));
   setOptionText(els.rankDisplayMode, 'full_game', t('rankDisplayFullGame'));
@@ -857,7 +861,8 @@ function render(data) {
   els.matchIntelEnabled.checked = matchIntel.enabled !== false;
   els.showPlayerRanks.checked = matchIntel.showPlayerRanks !== false;
   els.showPlayerFlags.checked = matchIntel.showPlayerFlags === true;
-  els.showAegisRoshan.checked = matchIntel.showAegisRoshan !== false;
+  els.showAegisTimer.checked = matchIntel.showAegisTimer !== false && matchIntel.showAegisRoshan !== false;
+  els.showRoshanTimer.checked = matchIntel.showRoshanTimer !== false && matchIntel.showAegisRoshan !== false;
   els.rankDisplayMode.value = matchIntel.rankDisplayMode || 'minutes';
   setInputValue(els.rankDisplayMinutes, matchIntel.rankDisplayMinutes || 12);
   renderCustomNotablePlayers(matchIntel.customPlayers || []);
@@ -1477,7 +1482,8 @@ els.showPlayerFlags.addEventListener('change', () => {
   updateMatchIntelFieldVisibility();
   saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
 });
-els.showAegisRoshan.addEventListener('change', () => saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert));
+els.showAegisTimer.addEventListener('change', () => saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert));
+els.showRoshanTimer.addEventListener('change', () => saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert));
 els.rankDisplayMode.addEventListener('change', () => {
   updateMatchIntelFieldVisibility();
   saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
@@ -1511,7 +1517,8 @@ function protectionMatchIntelFromForm() {
     enabled: els.matchIntelEnabled.checked,
     showPlayerRanks: els.showPlayerRanks.checked,
     showPlayerFlags: els.showPlayerFlags.checked,
-    showAegisRoshan: els.showAegisRoshan.checked,
+    showAegisTimer: els.showAegisTimer.checked,
+    showRoshanTimer: els.showRoshanTimer.checked,
     rankDisplayMode: els.rankDisplayMode.value,
     rankDisplayMinutes: Number(els.rankDisplayMinutes.value),
     customPlayers: customNotablePlayersFromForm()
@@ -1523,7 +1530,8 @@ function updateMatchIntelFieldVisibility() {
   const notablePlayersEnabled = matchIntelEnabled && (els.showPlayerRanks.checked || els.showPlayerFlags.checked);
   els.showPlayerRanks.closest('label').hidden = !matchIntelEnabled;
   els.showPlayerFlags.closest('label').hidden = !matchIntelEnabled;
-  els.showAegisRoshan.closest('label').hidden = !matchIntelEnabled;
+  els.showAegisTimer.closest('label').hidden = !matchIntelEnabled;
+  els.showRoshanTimer.closest('label').hidden = !matchIntelEnabled;
   els.rankDisplayModeWrap.hidden = !notablePlayersEnabled;
   els.rankDisplayMinutesWrap.hidden = !notablePlayersEnabled || els.rankDisplayMode.value === 'full_game';
   els.customNotablePlayersWrap.hidden = !notablePlayersEnabled;

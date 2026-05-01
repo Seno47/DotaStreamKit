@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>DotaStreamKit</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260429">
-    <link rel="stylesheet" href="/styles.css?v=20260501-pages">
+    <link rel="stylesheet" href="/styles.css?v=20260501-intel-timers">
   </head>
   <body>
     <main class="shell">
@@ -115,7 +115,8 @@
             <label class="check"><input type="checkbox" id="matchIntelEnabled"> Match intel overlay</label>
             <label class="check"><input type="checkbox" id="showPlayerRanks"> Top player ranks</label>
             <label class="check"><input type="checkbox" id="showPlayerFlags"> Player flags</label>
-            <label class="check"><input type="checkbox" id="showAegisRoshan"> Aegis / Roshan</label>
+            <label class="check"><input type="checkbox" id="showAegisTimer"> Aegis timer</label>
+            <label class="check"><input type="checkbox" id="showRoshanTimer"> Roshan timer</label>
             <label id="rankDisplayModeWrap">Rank display<select id="rankDisplayMode"><option value="minutes">First N minutes</option><option value="full_game">Full game</option></select></label>
             <label id="rankDisplayMinutesWrap">Rank display minutes<input id="rankDisplayMinutes" type="number" min="1" max="30" step="1"></label>
             <div class="notable-players" id="customNotablePlayersWrap">
@@ -266,6 +267,6 @@
         </article>
       </section>
     </main>
-    <script src="/app.js?v=20260501-pages"></script>
+    <script src="/app.js?v=20260501-intel-timers"></script>
   </body>
 </html>

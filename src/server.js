@@ -267,7 +267,8 @@ const defaultConfig = {
       enabled: true,
       showPlayerRanks: true,
       showPlayerFlags: false,
-      showAegisRoshan: true,
+      showAegisTimer: true,
+      showRoshanTimer: true,
       rankDisplayMode: 'minutes',
       rankDisplayMinutes: 12,
       customPlayers: []
@@ -734,7 +735,12 @@ async function migrateConfig(config) {
     changed = true;
   } else {
     const beforeMatchIntel = JSON.stringify(config.protection.matchIntel);
-    config.protection.matchIntel = merge(structuredClone(defaultConfig.protection.matchIntel), config.protection.matchIntel);
+    const rawMatchIntel = config.protection.matchIntel;
+    const hadAegisTimer = Object.prototype.hasOwnProperty.call(rawMatchIntel, 'showAegisTimer');
+    const hadRoshanTimer = Object.prototype.hasOwnProperty.call(rawMatchIntel, 'showRoshanTimer');
+    config.protection.matchIntel = merge(structuredClone(defaultConfig.protection.matchIntel), rawMatchIntel);
+    if (!hadAegisTimer && rawMatchIntel.showAegisRoshan === false) config.protection.matchIntel.showAegisTimer = false;
+    if (!hadRoshanTimer && rawMatchIntel.showAegisRoshan === false) config.protection.matchIntel.showRoshanTimer = false;
     normalizeMatchIntelConfig(config.protection.matchIntel);
     if (JSON.stringify(config.protection.matchIntel) !== beforeMatchIntel) changed = true;
   }
@@ -1500,9 +1506,11 @@ function buildMatchIntel(payload, gsi, players) {
   } else {
     intel.notablePlayers = [];
   }
-  if (!runtime.config.protection.matchIntel.showAegisRoshan) {
+  if (!runtime.config.protection.matchIntel.showRoshanTimer) {
     intel.roshan = null;
     intel.roshanStatus = null;
+  }
+  if (!runtime.config.protection.matchIntel.showAegisTimer) {
     intel.aegis = null;
   }
   return intel;
@@ -2313,7 +2321,10 @@ function normalizeMatchIntelConfig(config) {
   config.enabled = config.enabled !== false;
   config.showPlayerRanks = config.showPlayerRanks !== false;
   config.showPlayerFlags = config.showPlayerFlags === true;
-  config.showAegisRoshan = config.showAegisRoshan !== false;
+  const legacyAegisRoshan = config.showAegisRoshan;
+  config.showAegisTimer = config.showAegisTimer !== false && legacyAegisRoshan !== false;
+  config.showRoshanTimer = config.showRoshanTimer !== false && legacyAegisRoshan !== false;
+  delete config.showAegisRoshan;
   if (!['minutes', 'full_game'].includes(config.rankDisplayMode)) config.rankDisplayMode = 'minutes';
   config.rankDisplayMinutes = clampInt(config.rankDisplayMinutes, 1, 30);
   config.customPlayers = normalizeCustomNotablePlayers(config.customPlayers);
