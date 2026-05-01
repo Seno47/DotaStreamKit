@@ -24,7 +24,7 @@ setInterval(() => {
 
 function renderOverlay({ config, state }) {
   const reference = normalizeReference(config.protection.referenceSize);
-  const draftParts = config.protection.draftMaskParts || [];
+  const draftParts = effectiveDraftParts(config.protection.draftMaskParts || [], reference, config.protection, state);
   const queueParts = queueMaskParts(config.protection, reference);
   const slots = config.protection.topBarSlots || [];
   ensureQueueParts(queueParts.length);
@@ -54,6 +54,38 @@ function queueMaskParts(protection, reference) {
     { left: chatRight, top: chat.top, width: reference.width - chatRight, height: chat.height },
     { left: profileRight, top: chatBottom, width: reference.width - profileRight, height: reference.height - chatBottom }
   ].filter((part) => part.width > 0 && part.height > 0);
+}
+
+function effectiveDraftParts(parts, reference, protection, state) {
+  if ((protection.draftHideMode || 'all') !== 'streamer_team') return parts;
+  const team = String(state.gsi?.playerTeam || '').toLowerCase();
+  if (!['radiant', 'dire'].includes(team)) return parts;
+  const side = team === 'radiant'
+    ? { left: 0, top: 0, width: reference.width / 2, height: reference.height }
+    : { left: reference.width / 2, top: 0, width: reference.width / 2, height: reference.height };
+  return parts.map((part) => intersectBoxes(part, side, reference)).filter(Boolean);
+}
+
+function intersectBoxes(part, clip, reference) {
+  const box = normalizePartBox(part, reference);
+  const left = Math.max(box.left, clip.left);
+  const top = Math.max(box.top, clip.top);
+  const right = Math.min(box.left + box.width, clip.left + clip.width);
+  const bottom = Math.min(box.top + box.height, clip.top + clip.height);
+  const width = right - left;
+  const height = bottom - top;
+  if (width <= 0 || height <= 0) return null;
+  return { left, top, width, height };
+}
+
+function normalizePartBox(part, reference) {
+  const left = Number(part.left || 0);
+  const width = Number(part.width || 0);
+  const height = Number(part.height || 0);
+  const top = part.bottom !== undefined
+    ? reference.height - Number(part.bottom || 0) - height
+    : Number(part.top || 0);
+  return { left, top, width, height };
 }
 
 function normalizeReference(reference) {
@@ -163,8 +195,17 @@ function applyTopBarSlots(slots, reference, state) {
     const el = topBarSlotEls[index];
     applyScaledBox(el, slot, reference);
     el.style.backgroundImage = `url('/assets/${encodeURIComponent(slot.asset)}?v=${version}')`;
-    setVisible(el, visible);
+    setVisible(el, visible && shouldHideDraftSlot(index, state));
   });
+}
+
+function shouldHideDraftSlot(index, state) {
+  const protection = lastOverlaySnapshot?.config?.protection || {};
+  if ((protection.draftHideMode || 'all') !== 'streamer_team') return true;
+  const team = String(state.gsi?.playerTeam || '').toLowerCase();
+  if (team === 'radiant') return index < 5;
+  if (team === 'dire') return index >= 5;
+  return true;
 }
 
 function applyMatchIntel(slots, reference, settings, state) {

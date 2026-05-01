@@ -235,6 +235,7 @@ const defaultConfig = {
     autoDraft: true,
     autoMinimap: true,
     autoQueue: true,
+    draftHideMode: 'all',
     manualDraft: false,
     manualMinimap: false,
     manualTopBar: false,
@@ -638,6 +639,10 @@ async function migrateConfig(config) {
   }
   if (!['normal', 'large'].includes(config.protection.minimapSize)) {
     config.protection.minimapSize = defaultConfig.protection.minimapSize;
+    changed = true;
+  }
+  if (!['all', 'streamer_team'].includes(config.protection.draftHideMode)) {
+    config.protection.draftHideMode = defaultConfig.protection.draftHideMode;
     changed = true;
   }
   if (!['left', 'right'].includes(config.protection.minimapSide)) {
@@ -1377,6 +1382,9 @@ async function updateProtection(req, res) {
   }
   if (['realistic', 'simple', 'empty'].includes(body.minimapStyle)) {
     runtime.config.protection.minimapStyle = body.minimapStyle;
+  }
+  if (['all', 'streamer_team'].includes(body.draftHideMode)) {
+    runtime.config.protection.draftHideMode = body.draftHideMode;
   }
   if (body.matchIntel && typeof body.matchIntel === 'object') {
     runtime.config.protection.matchIntel = merge(

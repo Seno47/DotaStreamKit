@@ -6,6 +6,7 @@ const els = {
   autoMinimap: document.querySelector('#autoMinimap'),
   autoQueue: document.querySelector('#autoQueue'),
   queueAutoMode: document.querySelector('#queueAutoMode'),
+  draftHideMode: document.querySelector('#draftHideMode'),
   minimapSize: document.querySelector('#minimapSize'),
   minimapSide: document.querySelector('#minimapSide'),
   minimapStyle: document.querySelector('#minimapStyle'),
@@ -108,6 +109,9 @@ const translations = {
     queueAutoMode: 'Режим автопоиска',
     queueAutoSearch: 'Только поиск',
     queueAutoMenuSearch: 'Меню + поиск',
+    draftHideMode: 'Скрытие пиков',
+    draftHideAll: 'Все пики',
+    draftHideStreamerTeam: 'Только сторона стримера',
     partial: 'Только области поиска',
     full: 'Фуллскрин',
     matchIntelEnabled: 'Игровая аналитика в overlay',
@@ -300,6 +304,9 @@ const translations = {
     queueAutoMode: 'Queue auto mode',
     queueAutoSearch: 'Search only',
     queueAutoMenuSearch: 'Menu + search',
+    draftHideMode: 'Pick hiding',
+    draftHideAll: 'All picks',
+    draftHideStreamerTeam: 'Streamer team only',
     partial: 'Queue areas only',
     full: 'Fullscreen',
     matchIntelEnabled: 'Match intel overlay',
@@ -545,6 +552,9 @@ function applyLanguage(config) {
   setLabelText(els.queueAutoMode.closest('label'), t('queueAutoMode'));
   setOptionText(els.queueAutoMode, 'search', t('queueAutoSearch'));
   setOptionText(els.queueAutoMode, 'menu_search', t('queueAutoMenuSearch'));
+  setLabelText(els.draftHideMode.closest('label'), t('draftHideMode'));
+  setOptionText(els.draftHideMode, 'all', t('draftHideAll'));
+  setOptionText(els.draftHideMode, 'streamer_team', t('draftHideStreamerTeam'));
   setLabelText(els.queueMode.closest('label'), t('queueMode'));
   setOptionText(els.queueMode, 'partial', t('partial'));
   setOptionText(els.queueMode, 'full', t('full'));
@@ -738,6 +748,7 @@ function render(data) {
   els.minimapSide.value = config.protection.minimapSide || 'left';
   els.minimapStyle.value = config.protection.minimapStyle || 'realistic';
   els.queueAutoMode.value = config.protection.queueAutoMode || 'menu_search';
+  els.draftHideMode.value = config.protection.draftHideMode || 'all';
   els.queueMode.value = config.protection.queueMode || 'partial';
   const matchIntel = config.protection.matchIntel || {};
   els.matchIntelEnabled.checked = matchIntel.enabled !== false;
@@ -1210,6 +1221,7 @@ els.autoDraft.addEventListener('change', () => saveProtection({ autoDraft: els.a
 els.autoMinimap.addEventListener('change', () => saveProtection({ autoMinimap: els.autoMinimap.checked }).catch(alert));
 els.autoQueue.addEventListener('change', () => saveProtection({ autoQueue: els.autoQueue.checked }).catch(alert));
 els.queueAutoMode.addEventListener('change', () => saveProtection({ queueAutoMode: els.queueAutoMode.value }).catch(alert));
+els.draftHideMode.addEventListener('change', () => saveProtection({ draftHideMode: els.draftHideMode.value }).catch(alert));
 els.minimapSize.addEventListener('change', () => saveProtection({ minimapSize: els.minimapSize.value }).catch(alert));
 els.minimapSide.addEventListener('change', () => saveProtection({ minimapSide: els.minimapSide.value }).catch(alert));
 els.minimapStyle.addEventListener('change', () => saveProtection({ minimapStyle: els.minimapStyle.value }).catch(alert));
