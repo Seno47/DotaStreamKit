@@ -380,6 +380,26 @@ const defaultConfig = {
   }
 };
 
+defaultConfig.spectatorPredictions = {
+  ...structuredClone(defaultConfig.predictions),
+  titleTemplate: 'Ставка на просматриваемую игру?',
+  types: {
+    ...structuredClone(defaultConfig.predictions.types),
+    win_loss: { enabled: true, weight: 3, titleTemplate: 'Победа выбранной стороны?', yesTitle: 'Победа', noTitle: 'Поражение' },
+    streamer_kills: { enabled: true, weight: 2, min: 5, max: 12, titleTemplate: '{hero}: {target}+ киллов?', yesTitle: 'Да', noTitle: 'Нет' },
+    streamer_deaths: { enabled: true, weight: 1, min: 4, max: 9, titleTemplate: '{hero}: {target}+ смертей?', yesTitle: 'Да', noTitle: 'Нет' },
+    streamer_assists: { enabled: true, weight: 2, min: 8, max: 20, titleTemplate: '{hero}: {target}+ ассистов?', yesTitle: 'Да', noTitle: 'Нет' },
+    no_death_until: { enabled: true, weight: 1, minMinute: 8, maxMinute: 15, titleTemplate: '{hero} не умрет до {minute}:00?', yesTitle: 'Не умрет', noTitle: 'Умрет' },
+    last_hits_by_minute: { enabled: true, weight: 2, min: 45, max: 85, minMinute: 10, maxMinute: 10, titleTemplate: '{hero}: {target}+ ластхитов к {minute}:00?', yesTitle: 'Да', noTitle: 'Нет' }
+  },
+  customTemplates: []
+};
+
+defaultConfig.protection.spectatorMatchIntel = {
+  ...structuredClone(defaultConfig.protection.matchIntel),
+  showStreamerStats: false
+};
+
 const runtime = {
   clients: new Set(),
   oauthStates: new Set(),
@@ -683,8 +703,13 @@ async function migrateConfig(config) {
 
   const beforePredictions = JSON.stringify(config.predictions || {});
   config.predictions = merge(structuredClone(defaultConfig.predictions), config.predictions || {});
-  normalizePredictionSettings(config.predictions);
+  normalizePredictionSettings(config.predictions, defaultConfig.predictions);
   if (JSON.stringify(config.predictions) !== beforePredictions) changed = true;
+
+  const beforeSpectatorPredictions = JSON.stringify(config.spectatorPredictions || {});
+  config.spectatorPredictions = merge(structuredClone(defaultConfig.spectatorPredictions), config.spectatorPredictions || {});
+  normalizePredictionSettings(config.spectatorPredictions, defaultConfig.spectatorPredictions);
+  if (JSON.stringify(config.spectatorPredictions) !== beforeSpectatorPredictions) changed = true;
 
   const beforeUpdates = JSON.stringify(config.updates || {});
   config.updates = merge(structuredClone(defaultConfig.updates), config.updates || {});
@@ -844,6 +869,15 @@ async function migrateConfig(config) {
     if (!hadRoshanTimer && rawMatchIntel.showAegisRoshan === false) config.protection.matchIntel.showRoshanTimer = false;
     normalizeMatchIntelConfig(config.protection.matchIntel);
     if (JSON.stringify(config.protection.matchIntel) !== beforeMatchIntel) changed = true;
+  }
+  if (!config.protection.spectatorMatchIntel || typeof config.protection.spectatorMatchIntel !== 'object') {
+    config.protection.spectatorMatchIntel = structuredClone(defaultConfig.protection.spectatorMatchIntel);
+    changed = true;
+  } else {
+    const beforeSpectatorMatchIntel = JSON.stringify(config.protection.spectatorMatchIntel);
+    config.protection.spectatorMatchIntel = merge(structuredClone(defaultConfig.protection.spectatorMatchIntel), config.protection.spectatorMatchIntel);
+    normalizeMatchIntelConfig(config.protection.spectatorMatchIntel);
+    if (JSON.stringify(config.protection.spectatorMatchIntel) !== beforeSpectatorMatchIntel) changed = true;
   }
 
   if (changed) await persistConfig();
@@ -1444,7 +1478,7 @@ function sanitizeConfig(config) {
 }
 
 function backupSectionKeys() {
-  return ['ui', 'deployment', 'twitch', 'dota', 'updates', 'protection', 'predictions', 'streamerStats', 'customAssets'];
+  return ['ui', 'deployment', 'twitch', 'dota', 'updates', 'protection', 'predictions', 'spectatorPredictions', 'streamerStats', 'customAssets'];
 }
 
 async function buildBackup(sections) {
@@ -1456,7 +1490,7 @@ async function buildBackup(sections) {
     version: appVersion,
     sections: {}
   };
-  for (const key of ['ui', 'deployment', 'twitch', 'dota', 'updates', 'protection', 'predictions']) {
+  for (const key of ['ui', 'deployment', 'twitch', 'dota', 'updates', 'protection', 'predictions', 'spectatorPredictions']) {
     if (selected.has(key)) backup.sections[key] = structuredClone(runtime.config[key] || {});
   }
   if (selected.has('streamerStats')) {
@@ -1475,9 +1509,9 @@ async function applyBackup(backup, sections) {
   const imported = [];
   const nextConfig = structuredClone(runtime.config);
 
-  for (const key of ['ui', 'deployment', 'twitch', 'dota', 'updates', 'protection', 'predictions']) {
+  for (const key of ['ui', 'deployment', 'twitch', 'dota', 'updates', 'protection', 'predictions', 'spectatorPredictions']) {
     if (!selected.has(key) || source[key] === undefined) continue;
-    nextConfig[key] = key === 'protection' || key === 'predictions'
+    nextConfig[key] = key === 'protection' || key === 'predictions' || key === 'spectatorPredictions'
       ? merge(structuredClone(defaultConfig[key]), source[key])
       : merge(structuredClone(nextConfig[key] || defaultConfig[key]), source[key]);
     imported.push(key);
@@ -1487,8 +1521,10 @@ async function applyBackup(backup, sections) {
   normalizeUiConfig(nextConfig.ui);
   normalizeTwitchConfig(nextConfig.twitch);
   normalizeUpdateConfig(nextConfig.updates);
-  normalizePredictionSettings(nextConfig.predictions);
+  normalizePredictionSettings(nextConfig.predictions, defaultConfig.predictions);
+  normalizePredictionSettings(nextConfig.spectatorPredictions, defaultConfig.spectatorPredictions);
   if (nextConfig.protection?.matchIntel) normalizeMatchIntelConfig(nextConfig.protection.matchIntel);
+  if (nextConfig.protection?.spectatorMatchIntel) normalizeMatchIntelConfig(nextConfig.protection.spectatorMatchIntel);
   runtime.config = nextConfig;
 
   if (selected.has('streamerStats') && source.streamerStats !== undefined) {
@@ -1727,7 +1763,13 @@ async function updateConfig(req, res) {
   next.predictions.windowSeconds = clampInt(next.predictions.windowSeconds, 30, 1800);
   next.predictions.autoLockAtGameSeconds = clampInt(next.predictions.autoLockAtGameSeconds, 0, 3600);
   next.predictions.autoCancelDisconnectSeconds = clampInt(next.predictions.autoCancelDisconnectSeconds, 300, 1800);
-  normalizePredictionSettings(next.predictions);
+  normalizePredictionSettings(next.predictions, defaultConfig.predictions);
+  next.spectatorPredictions.windowSeconds = clampInt(next.spectatorPredictions.windowSeconds, 30, 1800);
+  next.spectatorPredictions.autoLockAtGameSeconds = clampInt(next.spectatorPredictions.autoLockAtGameSeconds, 0, 3600);
+  next.spectatorPredictions.autoCancelDisconnectSeconds = clampInt(next.spectatorPredictions.autoCancelDisconnectSeconds, 300, 1800);
+  normalizePredictionSettings(next.spectatorPredictions, defaultConfig.spectatorPredictions);
+  if (next.protection?.matchIntel) normalizeMatchIntelConfig(next.protection.matchIntel);
+  if (next.protection?.spectatorMatchIntel) normalizeMatchIntelConfig(next.protection.spectatorMatchIntel);
   runtime.config = next;
   if (body.twitch?.channelMode || body.twitch?.targetChannelLogin) {
     resetTwitchStreamStatus();
@@ -1837,6 +1879,14 @@ async function updateProtection(req, res) {
       body.matchIntel
     );
     normalizeMatchIntelConfig(runtime.config.protection.matchIntel);
+    runtime.state.matchIntel = buildMatchIntel({}, runtime.state.gsi, runtime.state.matchIntel?.players || []);
+  }
+  if (body.spectatorMatchIntel && typeof body.spectatorMatchIntel === 'object') {
+    runtime.config.protection.spectatorMatchIntel = merge(
+      structuredClone(runtime.config.protection.spectatorMatchIntel || defaultConfig.protection.spectatorMatchIntel),
+      body.spectatorMatchIntel
+    );
+    normalizeMatchIntelConfig(runtime.config.protection.spectatorMatchIntel);
     runtime.state.matchIntel = buildMatchIntel({}, runtime.state.gsi, runtime.state.matchIntel?.players || []);
   }
   runtime.state.protection = computeProtection(runtime.config, runtime.state.gsi);
@@ -2096,9 +2146,10 @@ async function refreshNotablePlayerRanks(players) {
   const preGameState = /PRE_GAME/i.test(gameState);
   const spectatingMatch = isSpectatingMatch(runtime.state.gsi, players);
   const clockTime = Number(runtime.state.gsi.clockTime);
-  const rankCutoff = Number(runtime.config.protection.matchIntel.rankDisplayMinutes || 12) * 60;
-  const fullGameRanks = runtime.config.protection.matchIntel.rankDisplayMode === 'full_game';
-  const preGameOnlyRanks = runtime.config.protection.matchIntel.rankDisplayMode === 'pre_game_only';
+  const settings = matchIntelSettingsForGsi(runtime.state.gsi);
+  const rankCutoff = Number(settings.rankDisplayMinutes || 12) * 60;
+  const fullGameRanks = settings.rankDisplayMode === 'full_game';
+  const preGameOnlyRanks = settings.rankDisplayMode === 'pre_game_only';
   if (preGameOnlyRanks && !preGameState) return;
   if (!preGameState && (!Number.isFinite(clockTime) || clockTime < 0) && !spectatingMatch) return;
   if (!preGameState && !fullGameRanks && Number.isFinite(clockTime) && clockTime > rankCutoff) return;
@@ -2134,8 +2185,18 @@ function isSpectatingMatch(gsi, players = []) {
     && players.some((player) => player?.accountId);
 }
 
+function isSpectatingGsi(gsi) {
+  return String(gsi?.playerActivity || '').toLowerCase() === 'spectating';
+}
+
+function matchIntelSettingsForGsi(gsi) {
+  return isSpectatingGsi(gsi)
+    ? runtime.config.protection.spectatorMatchIntel || runtime.config.protection.matchIntel
+    : runtime.config.protection.matchIntel;
+}
+
 function shouldShowNotablePlayers() {
-  const settings = runtime.config.protection.matchIntel;
+  const settings = matchIntelSettingsForGsi(runtime.state.gsi);
   return Boolean(settings?.enabled && (settings.showPlayerRanks || settings.showPlayerFlags));
 }
 
@@ -2224,15 +2285,16 @@ function normalizeCountryCode(value) {
 function computeProtection(config, gsi) {
   const gameState = String(gsi.gameState || '');
   const connected = Boolean(gsi.connected);
+  const spectating = isSpectatingGsi(gsi);
   const heroSelection = connected && /HERO_SELECTION/i.test(gameState);
-  const draftByState = heroSelection && !gsi.ownPickPhaseEnded;
-  const topBarByState = heroSelection && gsi.ownPickPhaseEnded;
-  const gameByState = connected && !gsi.leftGameView && /PRE_GAME|GAME_IN_PROGRESS/i.test(gameState);
+  const draftByState = !spectating && heroSelection && !gsi.ownPickPhaseEnded;
+  const topBarByState = !spectating && heroSelection && gsi.ownPickPhaseEnded;
+  const gameByState = !spectating && connected && !gsi.leftGameView && /PRE_GAME|GAME_IN_PROGRESS/i.test(gameState);
   const queueByState = stableQueueAutoState(config, gsi);
   return {
-    draft: Boolean(config.protection.manualDraft || (config.protection.autoDraft && draftByState)),
-    minimap: Boolean(config.protection.manualMinimap || (config.protection.autoMinimap && gameByState)),
-    topBar: Boolean(config.protection.manualTopBar || (config.protection.autoDraft && topBarByState)),
+    draft: !spectating && Boolean(config.protection.manualDraft || (config.protection.autoDraft && draftByState)),
+    minimap: !spectating && Boolean(config.protection.manualMinimap || (config.protection.autoMinimap && gameByState)),
+    topBar: !spectating && Boolean(config.protection.manualTopBar || (config.protection.autoDraft && topBarByState)),
     queue: Boolean(config.protection.manualQueue || (config.protection.autoQueue && queueByState))
   };
 }
@@ -2449,20 +2511,22 @@ function inferLeftGameView({ connected, activeMatchId, gameState, playerActivity
 }
 
 async function maybeAutomatePrediction(previous, gsi) {
-  const settings = runtime.config.predictions;
+  const profile = predictionProfileForGsi(gsi);
+  const settings = predictionSettingsForProfile(profile);
   if (!runtime.state.twitchToken?.accessToken) return;
 
   syncActivePredictionMatchId(gsi);
   await syncOwnedActivePredictionFromTwitch();
   const active = runtime.state.activePrediction;
   if (active && ['ACTIVE', 'LOCKED'].includes(active.status)) {
-    if (settings.autoCancelInvalidGame) {
+    const activeSettings = predictionSettingsForProfile(predictionProfileFromMeta(runtime.state.activePredictionMeta));
+    if (activeSettings.autoCancelInvalidGame) {
       await maybeCancelPredictionForInvalidGame(previous, gsi);
     }
 
     const latestAfterCancel = runtime.state.activePrediction;
     if (latestAfterCancel && ['ACTIVE', 'LOCKED'].includes(latestAfterCancel.status)) {
-      if (latestAfterCancel.status === 'ACTIVE' && settings.autoLockAtGameSeconds > 0 && gsi.clockTime >= settings.autoLockAtGameSeconds) {
+      if (latestAfterCancel.status === 'ACTIVE' && activeSettings.autoLockAtGameSeconds > 0 && gsi.clockTime >= activeSettings.autoLockAtGameSeconds) {
         try {
           await twitchEndPrediction(latestAfterCancel.id, 'LOCKED');
           logEvent('twitch', 'Prediction locked automatically');
@@ -2472,9 +2536,9 @@ async function maybeAutomatePrediction(previous, gsi) {
       }
 
       const result = inferPredictionResult(gsi);
-      if (settings.autoResolve && result) {
+      if (activeSettings.autoResolve && result) {
         let latestActive = runtime.state.activePrediction || latestAfterCancel;
-        if (settings.cancelUncontestedPrediction) {
+        if (activeSettings.cancelUncontestedPrediction) {
           try {
             latestActive = await refreshActivePredictionFromTwitch(latestActive);
             if (isPredictionUncontested(latestActive)) {
@@ -2504,8 +2568,8 @@ async function maybeAutomatePrediction(previous, gsi) {
     clearPredictionCancelCandidate();
   }
 
-  if (settings.autoCreate && !runtime.state.activePrediction && shouldAutoCreatePredictionAfterPick(previous, gsi) && shouldRetryAutoPrediction(gsi)) {
-    markAutoPredictionAttempt(gsi);
+  if (settings.autoCreate && !runtime.state.activePrediction && shouldAutoCreatePrediction(previous, gsi, profile) && shouldRetryAutoPrediction(gsi, profile)) {
+    markAutoPredictionAttempt(gsi, profile);
     try {
       const isLive = settings.forceStreamOnline || await isBroadcasterLive();
       if (!isLive) {
@@ -2514,13 +2578,27 @@ async function maybeAutomatePrediction(previous, gsi) {
         if (settings.forceStreamOnline) {
           logEvent('twitch', 'Auto prediction stream status override is enabled');
         }
-        if (await suppressAutoPredictionWhenExternalPredictionExists(gsi)) return;
-        await createPredictionFromSettings({}, { automatic: true });
+        if (await suppressAutoPredictionWhenExternalPredictionExists(gsi, profile)) return;
+        await createPredictionFromSettings({}, { automatic: true, profile });
       }
     } catch (error) {
       logEvent('twitch', `Auto prediction failed: ${error.message}`);
     }
   }
+}
+
+function predictionProfileForGsi(gsi) {
+  return isSpectatingGsi(gsi) ? 'spectator' : 'own';
+}
+
+function predictionProfileFromMeta(meta) {
+  return meta?.profile === 'spectator' ? 'spectator' : 'own';
+}
+
+function predictionSettingsForProfile(profile) {
+  return profile === 'spectator'
+    ? runtime.config.spectatorPredictions || runtime.config.predictions
+    : runtime.config.predictions;
 }
 
 function inferPredictionResult(gsi) {
@@ -2615,8 +2693,20 @@ function shouldAutoCreatePredictionAfterPick(previous, gsi) {
   return /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS/i.test(state);
 }
 
-function shouldRetryAutoPrediction(gsi) {
-  const key = autoPredictionKey(gsi);
+function shouldAutoCreatePrediction(previous, gsi, profile) {
+  if (profile === 'spectator') return shouldAutoCreateSpectatorPrediction(gsi);
+  return shouldAutoCreatePredictionAfterPick(previous, gsi);
+}
+
+function shouldAutoCreateSpectatorPrediction(gsi) {
+  if (!isSpectatingGsi(gsi) || gsi.leftGameView) return false;
+  const state = String(gsi.gameState || '');
+  if (!/PRE_GAME|GAME_IN_PROGRESS/i.test(state)) return false;
+  return Boolean(gsi.activeMatchId || gsi.matchId || Number.isFinite(Number(gsi.clockTime)));
+}
+
+function shouldRetryAutoPrediction(gsi, profile = predictionProfileForGsi(gsi)) {
+  const key = autoPredictionKey(gsi, profile);
   if (runtime.state.autoPredictionCreatedKey === key) return false;
   if (runtime.state.autoPredictionSuppressedKey === key) return false;
   const attempt = runtime.state.lastAutoPredictionAttempt;
@@ -2625,33 +2715,34 @@ function shouldRetryAutoPrediction(gsi) {
   return !Number.isFinite(attemptedAt) || Date.now() - attemptedAt >= autoPredictionRetryMs;
 }
 
-async function suppressAutoPredictionWhenExternalPredictionExists(gsi) {
+async function suppressAutoPredictionWhenExternalPredictionExists(gsi, profile = predictionProfileForGsi(gsi)) {
   const external = await fetchActiveTwitchPrediction();
   if (!external || isCurrentOwnedPredictionId(external.id)) return false;
 
-  runtime.state.autoPredictionSuppressedKey = autoPredictionKey(gsi);
+  runtime.state.autoPredictionSuppressedKey = autoPredictionKey(gsi, profile);
   await persistState();
   logEvent('twitch', `Auto prediction skipped: another Twitch prediction is already active (${external.title || external.id})`);
   return true;
 }
 
-function markAutoPredictionAttempt(gsi) {
+function markAutoPredictionAttempt(gsi, profile = predictionProfileForGsi(gsi)) {
   runtime.state.lastAutoPredictionAttempt = {
-    key: autoPredictionKey(gsi),
+    key: autoPredictionKey(gsi, profile),
+    profile,
     matchId: gsi.activeMatchId || gsi.matchId || null,
     draftCycle: Number(gsi.draftCycle || 0),
     at: new Date().toISOString()
   };
 }
 
-function markAutoPredictionCreated(gsi) {
-  runtime.state.autoPredictionCreatedKey = autoPredictionKey(gsi);
+function markAutoPredictionCreated(gsi, profile = predictionProfileForGsi(gsi)) {
+  runtime.state.autoPredictionCreatedKey = autoPredictionKey(gsi, profile);
 }
 
-function autoPredictionKey(gsi) {
+function autoPredictionKey(gsi, profile = predictionProfileForGsi(gsi)) {
   const matchId = gsi.activeMatchId || gsi.matchId;
-  if (matchId) return `match:${matchId}`;
-  return `draft:${Number(gsi.draftCycle || 0)}`;
+  if (matchId) return `${profile}:match:${matchId}`;
+  return `${profile}:draft:${Number(gsi.draftCycle || 0)}`;
 }
 
 function syncActivePredictionMatchId(gsi) {
@@ -2749,8 +2840,8 @@ async function maybeCancelPredictionForInvalidGame(previous, gsi) {
 }
 
 async function maybeCancelPredictionForGsiTimeout() {
-  const settings = runtime.config.predictions;
   const active = runtime.state.activePrediction;
+  const settings = predictionSettingsForProfile(predictionProfileFromMeta(runtime.state.activePredictionMeta));
   if (!settings.autoCancelInvalidGame || !active || !['ACTIVE', 'LOCKED'].includes(active.status)) return false;
   if (!runtime.state.gsi.activeMatchId && !runtime.state.activePredictionMatchId) return false;
   const candidate = {
@@ -2766,7 +2857,7 @@ function inferPredictionCancelCandidate(previous, gsi) {
   const active = runtime.state.activePrediction;
   if (!active) return null;
 
-  const settings = runtime.config.predictions;
+  const settings = predictionSettingsForProfile(predictionProfileFromMeta(runtime.state.activePredictionMeta));
   const state = String(gsi.gameState || '');
   const currentMatchId = gsi.activeMatchId || gsi.matchId || null;
   const predictionMatchId = runtime.state.activePredictionMatchId;
@@ -3066,17 +3157,17 @@ function resetTwitchStreamStatus() {
   runtime.twitchStreamStatus = { broadcasterId: null, checkedAt: 0, isLive: null, streamId: null, gameName: null, title: null };
 }
 
-function normalizePredictionSettings(settings) {
+function normalizePredictionSettings(settings, defaults = defaultConfig.predictions) {
   if (!['selected', 'random'].includes(settings.selectionMode)) settings.selectionMode = 'selected';
   settings.forceStreamOnline = settings.forceStreamOnline === true;
   settings.cancelUncontestedPrediction = settings.cancelUncontestedPrediction === true;
-  settings.titleTemplate = predictionTextOrDefault(settings.titleTemplate, defaultConfig.predictions.titleTemplate, 120);
-  settings.winTitle = predictionTextOrDefault(settings.winTitle, defaultConfig.predictions.winTitle, 25);
-  settings.loseTitle = predictionTextOrDefault(settings.loseTitle, defaultConfig.predictions.loseTitle, 25);
-  settings.types = merge(structuredClone(defaultConfig.predictions.types), settings.types || {});
+  settings.titleTemplate = predictionTextOrDefault(settings.titleTemplate, defaults.titleTemplate, 120);
+  settings.winTitle = predictionTextOrDefault(settings.winTitle, defaults.winTitle, 25);
+  settings.loseTitle = predictionTextOrDefault(settings.loseTitle, defaults.loseTitle, 25);
+  settings.types = merge(structuredClone(defaults.types), settings.types || {});
   delete settings.types.custom_condition;
   for (const type of Object.keys(settings.types)) {
-    if (!defaultConfig.predictions.types[type]) delete settings.types[type];
+    if (!defaults.types[type]) delete settings.types[type];
   }
   settings.customTemplates = normalizeCustomPredictionTemplates(settings.customTemplates);
   if (!allPredictionTypes(settings)[settings.selectedType]) settings.selectedType = 'win_loss';
@@ -3091,10 +3182,10 @@ function normalizePredictionSettings(settings) {
       config.minMinute = clampInt(config.minMinute, 1, 180);
       config.maxMinute = clampInt(config.maxMinute, config.minMinute, 180);
     }
-    const defaults = defaultConfig.predictions.types[type] || {};
-    config.titleTemplate = predictionTextOrDefault(config.titleTemplate, defaults.titleTemplate || '', 120);
-    config.yesTitle = predictionTextOrDefault(config.yesTitle, defaults.yesTitle || 'Да', 25);
-    config.noTitle = predictionTextOrDefault(config.noTitle, defaults.noTitle || 'Нет', 25);
+    const typeDefaults = defaults.types[type] || {};
+    config.titleTemplate = predictionTextOrDefault(config.titleTemplate, typeDefaults.titleTemplate || '', 120);
+    config.yesTitle = predictionTextOrDefault(config.yesTitle, typeDefaults.yesTitle || 'Да', 25);
+    config.noTitle = predictionTextOrDefault(config.noTitle, typeDefaults.noTitle || 'Нет', 25);
   }
 }
 
@@ -3455,15 +3546,18 @@ async function createPrediction(req, res) {
 }
 
 async function createPredictionFromSettings(overrides = {}, options = {}) {
+  const profile = options.profile || (overrides.profile === 'spectator' ? 'spectator' : predictionProfileForGsi(runtime.state.gsi));
+  const settings = predictionSettingsForProfile(profile);
   await syncOwnedActivePredictionFromTwitch({ force: true });
   if (runtime.state.activePrediction && ['ACTIVE', 'LOCKED'].includes(runtime.state.activePrediction.status)) {
     throw new Error('A prediction is already active or locked');
   }
   const broadcaster = requireTwitchTargetBroadcaster();
   if (!broadcaster) throw new Error('Twitch is not authenticated. Connect Twitch from the dashboard.');
-  const draft = buildPredictionDraft(overrides);
-  const predictionWindow = clampInt(overrides.windowSeconds ?? runtime.config.predictions.windowSeconds, 30, 1800);
+  const draft = buildPredictionDraft(overrides, settings, profile);
+  const predictionWindow = clampInt(overrides.windowSeconds ?? settings.windowSeconds, 30, 1800);
   draft.meta.predictionWindowSeconds = predictionWindow;
+  draft.meta.profile = profile;
   const body = {
     broadcaster_id: broadcaster,
     title: draft.title,
@@ -3479,30 +3573,30 @@ async function createPredictionFromSettings(overrides = {}, options = {}) {
   rememberOwnedPrediction(runtime.state.activePrediction, draft.meta);
   runtime.state.predictionCancelCandidate = null;
   runtime.state.activePredictionSyncedAt = new Date().toISOString();
-  if (options.automatic) markAutoPredictionCreated(runtime.state.gsi);
+  if (options.automatic) markAutoPredictionCreated(runtime.state.gsi, profile);
   await persistState();
   logEvent('twitch', `Prediction created: ${draft.title}`);
   broadcast();
   return runtime.state.activePrediction;
 }
 
-function buildPredictionDraft(overrides = {}) {
+function buildPredictionDraft(overrides = {}, settings = runtime.config.predictions, profile = 'own') {
   if (overrides.title) {
-    const yesTitle = String(overrides.winTitle || runtime.config.predictions.winTitle || 'Да').slice(0, 25);
-    const noTitle = String(overrides.loseTitle || runtime.config.predictions.loseTitle || 'Нет').slice(0, 25);
+    const yesTitle = String(overrides.winTitle || settings.winTitle || 'Да').slice(0, 25);
+    const noTitle = String(overrides.loseTitle || settings.loseTitle || 'Нет').slice(0, 25);
     return {
       title: String(overrides.title).slice(0, 45),
       yesTitle,
       noTitle,
       meta: {
         type: 'manual',
+        profile,
         variables: predictionVariables(),
         outcomes: { yesTitle, noTitle }
       }
     };
   }
 
-  const settings = runtime.config.predictions;
   const type = choosePredictionType(settings);
   const typeConfig = allPredictionTypes(settings)[type] || defaultConfig.predictions.types.win_loss;
   const target = randomRange(typeConfig.min, typeConfig.max);
@@ -3517,6 +3611,7 @@ function buildPredictionDraft(overrides = {}) {
     noTitle,
     meta: {
       type: typeConfig.baseType || type,
+      profile,
       typeId: type,
       typeLabel: typeConfig.label || null,
       condition: typeConfig.condition || null,
@@ -3671,8 +3766,9 @@ function isMissingTwitchPredictionError(error) {
 }
 
 function normalizePrediction(item, yesTitle = runtime.config.predictions.winTitle, noTitle = runtime.config.predictions.loseTitle, meta = null) {
+  const settings = predictionSettingsForProfile(predictionProfileFromMeta(meta));
   const predictionWindowSeconds = clampInt(
-    item.prediction_window ?? item.predictionWindow ?? meta?.predictionWindowSeconds ?? meta?.windowSeconds ?? runtime.config.predictions.windowSeconds,
+    item.prediction_window ?? item.predictionWindow ?? meta?.predictionWindowSeconds ?? meta?.windowSeconds ?? settings.windowSeconds,
     30,
     1800
   );
@@ -3683,6 +3779,7 @@ function normalizePrediction(item, yesTitle = runtime.config.predictions.winTitl
     createdAt: item.created_at,
     lockedAt: item.locked_at,
     predictionWindowSeconds,
+    profile: predictionProfileFromMeta(meta),
     type: meta?.typeLabel || meta?.typeId || meta?.type || null,
     target: meta?.target || null,
     minute: meta?.minute || null,

@@ -1,3 +1,46 @@
+cloneSpectatorPredictionPanel();
+
+function cloneSpectatorPredictionPanel() {
+  const source = document.querySelector('[data-page="predictions"]');
+  const grid = source?.parentElement;
+  if (!source || !grid || document.querySelector('[data-page="spectatorPredictions"]')) return;
+  const clone = source.cloneNode(true);
+  clone.classList.remove('active-page');
+  clone.dataset.page = 'spectatorPredictions';
+  clone.dataset.predictionProfile = 'spectator';
+  source.dataset.predictionProfile = 'own';
+  for (const element of clone.querySelectorAll('[id]')) {
+    element.id = `spectator${element.id[0].toUpperCase()}${element.id.slice(1)}`;
+  }
+  const heading = clone.querySelector('h2');
+  if (heading) heading.textContent = 'Ставки при просмотре игр';
+  const summary = document.createElement('p');
+  summary.className = 'muted spectator-prediction-note';
+  summary.textContent = 'Отдельные автоставки для режима просмотра чужих игр. Защитные маски в этом режиме не включаются.';
+  clone.insertBefore(summary, clone.querySelector('details')?.nextSibling || clone.firstElementChild?.nextSibling || null);
+  const intel = document.createElement('section');
+  intel.className = 'custom-builder spectator-intel-settings';
+  intel.innerHTML = `
+    <div class="section-head">
+      <div>
+        <h3 id="spectatorIntelTitle">Match Intel при просмотре</h3>
+        <p id="spectatorIntelHelp">Отдельные настройки подсказок для чужих игр.</p>
+      </div>
+    </div>
+    <div class="control-row">
+      <label class="check"><input type="checkbox" id="spectatorMatchIntelEnabled"> Match intel overlay</label>
+      <label class="check"><input type="checkbox" id="spectatorShowPlayerRanks"> Notable players</label>
+      <label class="check"><input type="checkbox" id="spectatorShowPlayerFlags"> Флаги игроков</label>
+      <label class="check"><input type="checkbox" id="spectatorShowAegisTimer"> Aegis timer</label>
+      <label class="check"><input type="checkbox" id="spectatorShowRoshanTimer"> Roshan timer</label>
+      <label id="spectatorRankDisplayModeWrap">Когда показывать notable players<select id="spectatorRankDisplayMode"><option value="minutes">Первые N минут</option><option value="full_game">До конца игры</option><option value="pre_game_only">Только до начала игры</option></select></label>
+      <label id="spectatorRankDisplayMinutesWrap">Показывать первые N минут<input id="spectatorRankDisplayMinutes" type="number" min="1" max="30"></label>
+    </div>
+  `;
+  clone.insertBefore(intel, clone.querySelector(`#spectatorPredictionForm`));
+  grid.insertBefore(clone, source.nextSibling);
+}
+
 const els = {
   gsiStatus: document.querySelector('#gsiStatus'),
   twitchStatus: document.querySelector('#twitchStatus'),
@@ -145,6 +188,48 @@ const els = {
   resolveWin: document.querySelector('#resolveWin'),
   resolveLose: document.querySelector('#resolveLose'),
   activePrediction: document.querySelector('#activePrediction'),
+  spectatorPredictionForm: document.querySelector('#spectatorPredictionForm'),
+  spectatorPredictionTypeForm: document.querySelector('#spectatorPredictionTypeForm'),
+  spectatorPredictionWindow: document.querySelector('#spectatorPredictionWindow'),
+  spectatorAutoCreate: document.querySelector('#spectatorAutoCreate'),
+  spectatorForceStreamOnline: document.querySelector('#spectatorForceStreamOnline'),
+  spectatorForceStreamOnlineHint: document.querySelector('#spectatorForceStreamOnlineHint'),
+  spectatorAutoResolve: document.querySelector('#spectatorAutoResolve'),
+  spectatorCancelUncontestedPrediction: document.querySelector('#spectatorCancelUncontestedPrediction'),
+  spectatorCancelUncontestedHint: document.querySelector('#spectatorCancelUncontestedHint'),
+  spectatorAutoCancelInvalidGame: document.querySelector('#spectatorAutoCancelInvalidGame'),
+  spectatorPredictionSelectionMode: document.querySelector('#spectatorPredictionSelectionMode'),
+  spectatorSelectedPredictionType: document.querySelector('#spectatorSelectedPredictionType'),
+  spectatorSelectedPredictionTypeWrap: document.querySelector('#spectatorSelectedPredictionTypeWrap'),
+  spectatorPredictionTypes: document.querySelector('#spectatorPredictionTypes'),
+  spectatorCustomPredictionForm: document.querySelector('#spectatorCustomPredictionForm'),
+  spectatorCustomPredictionName: document.querySelector('#spectatorCustomPredictionName'),
+  spectatorCustomPredictionCondition: document.querySelector('#spectatorCustomPredictionCondition'),
+  spectatorCustomPredictionMetric: document.querySelector('#spectatorCustomPredictionMetric'),
+  spectatorCustomPredictionMin: document.querySelector('#spectatorCustomPredictionMin'),
+  spectatorCustomPredictionMax: document.querySelector('#spectatorCustomPredictionMax'),
+  spectatorCustomPredictionMinMinute: document.querySelector('#spectatorCustomPredictionMinMinute'),
+  spectatorCustomPredictionMaxMinute: document.querySelector('#spectatorCustomPredictionMaxMinute'),
+  spectatorCustomPredictionTitle: document.querySelector('#spectatorCustomPredictionTitle'),
+  spectatorCustomPredictionYes: document.querySelector('#spectatorCustomPredictionYes'),
+  spectatorCustomPredictionNo: document.querySelector('#spectatorCustomPredictionNo'),
+  spectatorIntelTitle: document.querySelector('#spectatorIntelTitle'),
+  spectatorIntelHelp: document.querySelector('#spectatorIntelHelp'),
+  spectatorMatchIntelEnabled: document.querySelector('#spectatorMatchIntelEnabled'),
+  spectatorShowPlayerRanks: document.querySelector('#spectatorShowPlayerRanks'),
+  spectatorShowPlayerFlags: document.querySelector('#spectatorShowPlayerFlags'),
+  spectatorShowAegisTimer: document.querySelector('#spectatorShowAegisTimer'),
+  spectatorShowRoshanTimer: document.querySelector('#spectatorShowRoshanTimer'),
+  spectatorRankDisplayModeWrap: document.querySelector('#spectatorRankDisplayModeWrap'),
+  spectatorRankDisplayMode: document.querySelector('#spectatorRankDisplayMode'),
+  spectatorRankDisplayMinutesWrap: document.querySelector('#spectatorRankDisplayMinutesWrap'),
+  spectatorRankDisplayMinutes: document.querySelector('#spectatorRankDisplayMinutes'),
+  spectatorCreatePrediction: document.querySelector('#spectatorCreatePrediction'),
+  spectatorLockPrediction: document.querySelector('#spectatorLockPrediction'),
+  spectatorCancelPrediction: document.querySelector('#spectatorCancelPrediction'),
+  spectatorResolveWin: document.querySelector('#spectatorResolveWin'),
+  spectatorResolveLose: document.querySelector('#spectatorResolveLose'),
+  spectatorActivePrediction: document.querySelector('#spectatorActivePrediction'),
   dotaPath: document.querySelector('#dotaPath'),
   detectDota: document.querySelector('#detectDota'),
   installGsi: document.querySelector('#installGsi'),
@@ -168,6 +253,7 @@ const els = {
 let snapshot = null;
 let lastTemplateInput = null;
 let predictionConfigSaveTimer = null;
+const predictionConfigSaveTimers = { own: null, spectator: null };
 let overlayPositionSaveTimer = null;
 let activePage = localStorage.getItem('dsk.activePage') || 'protection';
 let editingNotablePlayerAccountId = '';
@@ -247,6 +333,7 @@ const translations = {
     pageProtection: 'Защита',
     pageIntel: 'Match intel',
     pagePredictions: 'Прогнозы',
+    pageSpectatorPredictions: 'Ставки просмотра',
     pageTwitch: 'Twitch',
     pageSetup: 'Настройка',
     pageEvents: 'Журнал',
@@ -371,6 +458,8 @@ const translations = {
     disconnect: 'Отключить',
     bindChannel: 'Привязать канал',
     predictions: 'Ставка за баллы канала',
+    spectatorPredictions: 'Ставки при просмотре игр',
+    spectatorProfileShort: 'просмотр',
     variablesTitle: 'Переменные шаблонов',
     variablesHelp: 'Нажми на переменную, чтобы вставить ее в активное поле заголовка.',
     varHero: 'герой стримера',
@@ -531,6 +620,7 @@ const translations = {
     pageProtection: 'Protection',
     pageIntel: 'Match intel',
     pagePredictions: 'Predictions',
+    pageSpectatorPredictions: 'Spectator bets',
     pageTwitch: 'Twitch',
     pageSetup: 'Setup',
     pageEvents: 'Log',
@@ -655,6 +745,8 @@ const translations = {
     disconnect: 'Disconnect',
     bindChannel: 'Bind channel',
     predictions: 'Channel Points prediction',
+    spectatorPredictions: 'Spectator game bets',
+    spectatorProfileShort: 'spectator',
     variablesTitle: 'Template variables',
     variablesHelp: 'Click a variable to insert it into the active title field.',
     varHero: 'streamer hero',
@@ -818,10 +910,13 @@ const builtinPredictionTypeDefs = [
   { type: 'last_hits_by_minute', labelKey: 'typeLastHits', descriptionKey: 'descLastHits', ranges: ['min', 'max', 'minMinute', 'maxMinute'] }
 ];
 
-let predictionTypeDefs = [...builtinPredictionTypeDefs];
-let predictionTypeControlKey = '';
+const predictionEditorStates = {
+  own: { defs: [...builtinPredictionTypeDefs], controlKey: '' },
+  spectator: { defs: [...builtinPredictionTypeDefs], controlKey: '' }
+};
 
-buildPredictionTypeControls();
+buildPredictionTypeControls('own');
+buildPredictionTypeControls('spectator');
 setActivePage(activePage);
 syncBackupSectionToggles();
 
@@ -1017,28 +1112,73 @@ function applyLanguage(config) {
   setOptionText(els.predictionSelectionMode, 'random', t('randomMode'));
   setLabelText(els.selectedPredictionTypeWrap, t('selectedType'));
   els.predictionTypeForm.querySelector('button[type="submit"]').textContent = t('saveSettings');
-  setText('.custom-builder h3', 'customBuilderTitle');
-  setText('.custom-builder .section-head p', 'customBuilderHelp');
-  setLabelText(els.customPredictionName.closest('label'), t('customName'));
-  els.customPredictionName.placeholder = t('customNamePlaceholder');
-  setLabelText(els.customPredictionCondition.closest('label'), t('condition'));
-  setLabelText(els.customPredictionMetric.closest('label'), t('metric'));
-  setLabelText(els.customPredictionMin.closest('label'), t('targetFrom'));
-  setLabelText(els.customPredictionMax.closest('label'), t('targetTo'));
-  setLabelText(els.customPredictionMinMinute.closest('label'), t('minuteFrom'));
-  setLabelText(els.customPredictionMaxMinute.closest('label'), t('minuteTo'));
-  setLabelText(els.customPredictionTitle.closest('label'), t('title'));
-  setLabelText(els.customPredictionYes.closest('label'), t('yesOutcome'));
-  setLabelText(els.customPredictionNo.closest('label'), t('noOutcome'));
-  els.customPredictionForm.querySelector('button[type="submit"]').textContent = t('saveTemplate');
-  applyConditionOptions(els.customPredictionCondition);
-  applyMetricOptions(els.customPredictionMetric);
-  updateCustomBuilderFieldVisibility();
+  const spectatorArticle = els.spectatorPredictionForm?.closest('article');
+  if (spectatorArticle) {
+    setText(spectatorArticle.querySelector('h2'), 'spectatorPredictions');
+    const note = spectatorArticle.querySelector('.spectator-prediction-note');
+    if (note) note.textContent = currentLang === 'en'
+      ? 'Separate automatic bets for spectated games. Stream protection masks stay disabled in this mode.'
+      : 'Отдельные автоставки для режима просмотра чужих игр. Защитные маски в этом режиме не включаются.';
+  }
+  for (const profile of predictionProfiles()) {
+    const ctx = predictionEditor(profile);
+    if (profile === 'own') continue;
+    setLabelText(ctx.predictionWindow.closest('label'), t('windowSec'));
+    setLabelText(ctx.autoCreate.closest('label'), t('autoCreate'));
+    setLabelText(ctx.forceStreamOnline.closest('label'), t('forceStreamOnline'));
+    ctx.forceStreamOnlineHint.textContent = t('forceStreamOnlineHint');
+    setLabelText(ctx.autoResolve.closest('label'), t('autoResolve'));
+    setLabelText(ctx.cancelUncontestedPrediction.closest('label'), t('cancelUncontestedPrediction'));
+    ctx.cancelUncontestedHint.textContent = t('cancelUncontestedHint');
+    setLabelText(ctx.autoCancelInvalidGame.closest('label'), t('autoCancelInvalidGame'));
+    setLabelText(ctx.selectionMode.closest('label'), t('typeMode'));
+    setOptionText(ctx.selectionMode, 'selected', t('selectedMode'));
+    setOptionText(ctx.selectionMode, 'random', t('randomMode'));
+    setLabelText(ctx.selectedTypeWrap, t('selectedType'));
+    ctx.typeForm.querySelector('button[type="submit"]').textContent = t('saveSettings');
+  }
+  document.querySelectorAll('.custom-builder h3').forEach((item) => { item.textContent = t('customBuilderTitle'); });
+  document.querySelectorAll('.custom-builder .section-head p').forEach((item) => { item.textContent = t('customBuilderHelp'); });
+  for (const profile of predictionProfiles()) {
+    const ctx = predictionEditor(profile);
+    setLabelText(ctx.customName.closest('label'), t('customName'));
+    ctx.customName.placeholder = t('customNamePlaceholder');
+    setLabelText(ctx.customCondition.closest('label'), t('condition'));
+    setLabelText(ctx.customMetric.closest('label'), t('metric'));
+    setLabelText(ctx.customMin.closest('label'), t('targetFrom'));
+    setLabelText(ctx.customMax.closest('label'), t('targetTo'));
+    setLabelText(ctx.customMinMinute.closest('label'), t('minuteFrom'));
+    setLabelText(ctx.customMaxMinute.closest('label'), t('minuteTo'));
+    setLabelText(ctx.customTitle.closest('label'), t('title'));
+    setLabelText(ctx.customYes.closest('label'), t('yesOutcome'));
+    setLabelText(ctx.customNo.closest('label'), t('noOutcome'));
+    ctx.customForm.querySelector('button[type="submit"]').textContent = t('saveTemplate');
+    applyConditionOptions(ctx.customCondition);
+    applyMetricOptions(ctx.customMetric);
+    updateCustomBuilderFieldVisibilityForProfile(profile);
+  }
   els.createPrediction.textContent = t('create');
   els.lockPrediction.textContent = t('lock');
   els.cancelPrediction.textContent = t('cancel');
   els.resolveWin.textContent = t('resolveYes');
   els.resolveLose.textContent = t('resolveNo');
+  if (els.spectatorCreatePrediction) els.spectatorCreatePrediction.textContent = t('create');
+  if (els.spectatorLockPrediction) els.spectatorLockPrediction.textContent = t('lock');
+  if (els.spectatorCancelPrediction) els.spectatorCancelPrediction.textContent = t('cancel');
+  if (els.spectatorResolveWin) els.spectatorResolveWin.textContent = t('resolveYes');
+  if (els.spectatorResolveLose) els.spectatorResolveLose.textContent = t('resolveNo');
+  if (els.spectatorIntelTitle) els.spectatorIntelTitle.textContent = currentLang === 'en' ? 'Spectator Match Intel' : 'Match Intel при просмотре';
+  if (els.spectatorIntelHelp) els.spectatorIntelHelp.textContent = currentLang === 'en' ? 'Separate overlay intel settings for spectated games.' : 'Отдельные настройки подсказок для чужих игр.';
+  setLabelText(els.spectatorMatchIntelEnabled?.closest('label'), t('matchIntelEnabled'));
+  setLabelText(els.spectatorShowPlayerRanks?.closest('label'), t('showPlayerRanks'));
+  setLabelText(els.spectatorShowPlayerFlags?.closest('label'), t('showPlayerFlags'));
+  setLabelText(els.spectatorShowAegisTimer?.closest('label'), t('showAegisTimer'));
+  setLabelText(els.spectatorShowRoshanTimer?.closest('label'), t('showRoshanTimer'));
+  setLabelText(els.spectatorRankDisplayModeWrap, t('rankDisplayMode'));
+  setOptionText(els.spectatorRankDisplayMode, 'minutes', t('rankDisplayFirstMinutes'));
+  setOptionText(els.spectatorRankDisplayMode, 'full_game', t('rankDisplayFullGame'));
+  setOptionText(els.spectatorRankDisplayMode, 'pre_game_only', t('rankDisplayPreGameOnly'));
+  setLabelText(els.spectatorRankDisplayMinutesWrap, t('rankDisplayMinutes'));
 
   setText(els.dotaPath.closest('article').querySelector('h2'), 'dotaGsi');
   setLabelText(els.dotaPath.closest('label'), t('dotaFolder'));
@@ -1077,6 +1217,7 @@ function setPageTabLabels() {
     protection: 'pageProtection',
     intel: 'pageIntel',
     predictions: 'pagePredictions',
+    spectatorPredictions: 'pageSpectatorPredictions',
     twitch: 'pageTwitch',
     setup: 'pageSetup',
     events: 'pageEvents'
@@ -1165,7 +1306,9 @@ function render(data) {
   els.gsiStatus.textContent = state.gsi.connected ? 'Dota GSI online' : 'Dota GSI offline';
   els.gsiStatus.className = `pill ${state.gsi.connected ? 'ok' : 'bad'}`;
   const liveSuffix = state.twitch.isLive === true ? ' / live' : state.twitch.isLive === false ? ' / offline' : '';
-  const forcedStreamSuffix = config.predictions?.forceStreamOnline ? ` / ${t('streamForcedShort')}` : '';
+  const forcedStreamSuffix = (config.predictions?.forceStreamOnline || config.spectatorPredictions?.forceStreamOnline)
+    ? ` / ${t('streamForcedShort')}`
+    : '';
   const predictionChannel = state.twitch.effectiveBroadcasterLogin || state.twitch.broadcasterLogin || 'Twitch';
   els.twitchStatus.textContent = state.twitch.authenticated
     ? state.twitch.needsReconnect
@@ -1207,6 +1350,7 @@ function render(data) {
   renderStreamerStatsStatus(state.streamerStats || {}, matchIntel);
   renderCustomNotablePlayers(matchIntel.customPlayers || []);
   updateMatchIntelFieldVisibility();
+  renderSpectatorMatchIntelConfig(config.protection.spectatorMatchIntel || matchIntel);
   toggleButton(els.manualDraft, config.protection.manualDraft, state.protection.draft);
   toggleButton(els.manualMinimap, config.protection.manualMinimap, state.protection.minimap);
   toggleButton(els.manualTopBar, config.protection.manualTopBar, state.protection.topBar);
@@ -1235,20 +1379,8 @@ function render(data) {
   if (document.activeElement !== els.dotaPath) {
     els.dotaPath.value = config.dota?.installPath || '';
   }
-  setInputValue(els.predictionWindow, config.predictions.windowSeconds);
-  els.autoCreate.checked = config.predictions.autoCreate;
-  els.forceStreamOnline.checked = config.predictions.forceStreamOnline === true;
-  els.forceStreamOnlineHint.hidden = !els.forceStreamOnline.checked;
-  els.autoResolve.checked = config.predictions.autoResolve;
-  els.cancelUncontestedPrediction.checked = config.predictions.cancelUncontestedPrediction === true;
-  els.cancelUncontestedHint.hidden = !els.cancelUncontestedPrediction.checked;
-  els.autoCancelInvalidGame.checked = config.predictions.autoCancelInvalidGame ?? true;
-  els.predictionSelectionMode.value = config.predictions.selectionMode || 'selected';
-  syncPredictionTypeDefinitions(config.predictions);
-  els.selectedPredictionType.value = config.predictions.selectedType || 'win_loss';
-  renderPredictionTypes(config.predictions.types || {});
-  renderPredictionTypeVisibility();
-  renderPredictionTypePreviews();
+  renderPredictionEditorConfig('own', config.predictions);
+  renderPredictionEditorConfig('spectator', config.spectatorPredictions || config.predictions);
   els.autoCheckUpdates.checked = config.updates?.autoCheck !== false;
   els.autoInstallUpdates.checked = config.updates?.autoInstall === true;
 
@@ -1285,24 +1417,120 @@ function setInputValue(input, value) {
   if (document.activeElement !== input) input.value = value ?? '';
 }
 
+function renderPredictionEditorConfig(profile, config) {
+  const ctx = predictionEditor(profile);
+  if (!ctx.form || !config) return;
+  setInputValue(ctx.predictionWindow, config.windowSeconds);
+  ctx.autoCreate.checked = config.autoCreate;
+  ctx.forceStreamOnline.checked = config.forceStreamOnline === true;
+  ctx.forceStreamOnlineHint.hidden = !ctx.forceStreamOnline.checked;
+  ctx.autoResolve.checked = config.autoResolve;
+  ctx.cancelUncontestedPrediction.checked = config.cancelUncontestedPrediction === true;
+  ctx.cancelUncontestedHint.hidden = !ctx.cancelUncontestedPrediction.checked;
+  ctx.autoCancelInvalidGame.checked = config.autoCancelInvalidGame ?? true;
+  ctx.selectionMode.value = config.selectionMode || 'selected';
+  syncPredictionTypeDefinitions(config, profile);
+  ctx.selectedType.value = config.selectedType || 'win_loss';
+  renderPredictionTypes(config.types || {}, profile);
+  renderPredictionTypeVisibility(profile);
+  renderPredictionTypePreviews(profile);
+}
+
+function renderSpectatorMatchIntelConfig(config) {
+  if (!els.spectatorMatchIntelEnabled || !config) return;
+  els.spectatorMatchIntelEnabled.checked = config.enabled !== false;
+  els.spectatorShowPlayerRanks.checked = config.showPlayerRanks !== false;
+  els.spectatorShowPlayerFlags.checked = config.showPlayerFlags === true;
+  els.spectatorShowAegisTimer.checked = config.showAegisTimer !== false && config.showAegisRoshan !== false;
+  els.spectatorShowRoshanTimer.checked = config.showRoshanTimer !== false && config.showAegisRoshan !== false;
+  els.spectatorRankDisplayMode.value = config.rankDisplayMode || 'minutes';
+  setInputValue(els.spectatorRankDisplayMinutes, config.rankDisplayMinutes || 12);
+  updateSpectatorMatchIntelFieldVisibility();
+}
+
+function spectatorMatchIntelConfigFromForm() {
+  return {
+    enabled: els.spectatorMatchIntelEnabled.checked,
+    showPlayerRanks: els.spectatorShowPlayerRanks.checked,
+    showPlayerFlags: els.spectatorShowPlayerFlags.checked,
+    showAegisTimer: els.spectatorShowAegisTimer.checked,
+    showRoshanTimer: els.spectatorShowRoshanTimer.checked,
+    rankDisplayMode: els.spectatorRankDisplayMode.value,
+    rankDisplayMinutes: Number(els.spectatorRankDisplayMinutes.value || 12)
+  };
+}
+
+function updateSpectatorMatchIntelFieldVisibility() {
+  if (!els.spectatorRankDisplayMinutesWrap) return;
+  els.spectatorRankDisplayMinutesWrap.hidden = els.spectatorRankDisplayMode.value !== 'minutes';
+}
+
 function renderPrediction(prediction) {
+  const targets = [els.activePrediction, els.spectatorActivePrediction].filter(Boolean);
   if (!prediction) {
-    els.activePrediction.textContent = t('noActivePrediction');
+    targets.forEach((target) => { target.textContent = t('noActivePrediction'); });
     return;
   }
   const outcomes = prediction.outcomes.map((item) => `${item.title}: ${item.channelPoints || 0}`).join(' | ');
   const type = prediction.type ? ` [${prediction.type}]` : '';
-  els.activePrediction.textContent = `${prediction.title}${type} (${prediction.status}) ${outcomes}`;
+  const profile = prediction.profile === 'spectator' ? ` / ${t('spectatorProfileShort')}` : '';
+  targets.forEach((target) => {
+    target.textContent = `${prediction.title}${type}${profile} (${prediction.status}) ${outcomes}`;
+  });
 }
 
-function buildPredictionTypeControls() {
-  els.selectedPredictionType.innerHTML = '';
-  els.predictionTypes.innerHTML = '';
-  for (const def of predictionTypeDefs) {
+function predictionEditor(profile = 'own') {
+  const spectator = profile === 'spectator';
+  return {
+    profile: spectator ? 'spectator' : 'own',
+    configKey: spectator ? 'spectatorPredictions' : 'predictions',
+    state: predictionEditorStates[spectator ? 'spectator' : 'own'],
+    form: spectator ? els.spectatorPredictionForm : els.predictionForm,
+    typeForm: spectator ? els.spectatorPredictionTypeForm : els.predictionTypeForm,
+    predictionWindow: spectator ? els.spectatorPredictionWindow : els.predictionWindow,
+    autoCreate: spectator ? els.spectatorAutoCreate : els.autoCreate,
+    forceStreamOnline: spectator ? els.spectatorForceStreamOnline : els.forceStreamOnline,
+    forceStreamOnlineHint: spectator ? els.spectatorForceStreamOnlineHint : els.forceStreamOnlineHint,
+    autoResolve: spectator ? els.spectatorAutoResolve : els.autoResolve,
+    cancelUncontestedPrediction: spectator ? els.spectatorCancelUncontestedPrediction : els.cancelUncontestedPrediction,
+    cancelUncontestedHint: spectator ? els.spectatorCancelUncontestedHint : els.cancelUncontestedHint,
+    autoCancelInvalidGame: spectator ? els.spectatorAutoCancelInvalidGame : els.autoCancelInvalidGame,
+    selectionMode: spectator ? els.spectatorPredictionSelectionMode : els.predictionSelectionMode,
+    selectedType: spectator ? els.spectatorSelectedPredictionType : els.selectedPredictionType,
+    selectedTypeWrap: spectator ? els.spectatorSelectedPredictionTypeWrap : els.selectedPredictionTypeWrap,
+    typesRoot: spectator ? els.spectatorPredictionTypes : els.predictionTypes,
+    customForm: spectator ? els.spectatorCustomPredictionForm : els.customPredictionForm,
+    customName: spectator ? els.spectatorCustomPredictionName : els.customPredictionName,
+    customCondition: spectator ? els.spectatorCustomPredictionCondition : els.customPredictionCondition,
+    customMetric: spectator ? els.spectatorCustomPredictionMetric : els.customPredictionMetric,
+    customMin: spectator ? els.spectatorCustomPredictionMin : els.customPredictionMin,
+    customMax: spectator ? els.spectatorCustomPredictionMax : els.customPredictionMax,
+    customMinMinute: spectator ? els.spectatorCustomPredictionMinMinute : els.customPredictionMinMinute,
+    customMaxMinute: spectator ? els.spectatorCustomPredictionMaxMinute : els.customPredictionMaxMinute,
+    customTitle: spectator ? els.spectatorCustomPredictionTitle : els.customPredictionTitle,
+    customYes: spectator ? els.spectatorCustomPredictionYes : els.customPredictionYes,
+    customNo: spectator ? els.spectatorCustomPredictionNo : els.customPredictionNo
+  };
+}
+
+function predictionProfileFromElement(element) {
+  return element?.closest?.('[data-page="spectatorPredictions"]') ? 'spectator' : 'own';
+}
+
+function predictionProfiles() {
+  return ['own', 'spectator'];
+}
+
+function buildPredictionTypeControls(profile = 'own') {
+  const ctx = predictionEditor(profile);
+  if (!ctx.selectedType || !ctx.typesRoot) return;
+  ctx.selectedType.innerHTML = '';
+  ctx.typesRoot.innerHTML = '';
+  for (const def of ctx.state.defs) {
     const option = document.createElement('option');
     option.value = def.type;
     option.textContent = def.label || t(def.labelKey);
-    els.selectedPredictionType.append(option);
+    ctx.selectedType.append(option);
 
     const card = document.createElement('section');
     card.className = 'prediction-type';
@@ -1337,12 +1565,13 @@ function buildPredictionTypeControls() {
         <label data-field-label="noTitle">${t('noOutcome')}<input data-field="noTitle" maxlength="25"></label>
       </div>
     `;
-    els.predictionTypes.append(card);
+    ctx.typesRoot.append(card);
   }
-  applyPredictionTypeLanguage();
+  applyPredictionTypeLanguage(profile);
 }
 
-function syncPredictionTypeDefinitions(predictions) {
+function syncPredictionTypeDefinitions(predictions, profile = 'own') {
+  const ctx = predictionEditor(profile);
   const customDefs = (predictions.customTemplates || []).map((template) => ({
     type: template.id,
     label: template.label || template.titleTemplate || template.id,
@@ -1352,17 +1581,21 @@ function syncPredictionTypeDefinitions(predictions) {
     savedCustom: true
   }));
   const key = customDefs.map((def) => `${def.type}:${def.label}`).join('|');
-  if (key === predictionTypeControlKey) return;
-  predictionTypeControlKey = key;
-  predictionTypeDefs = [...builtinPredictionTypeDefs, ...customDefs];
-  buildPredictionTypeControls();
+  if (key === ctx.state.controlKey) return;
+  ctx.state.controlKey = key;
+  ctx.state.defs = [...builtinPredictionTypeDefs, ...customDefs];
+  buildPredictionTypeControls(profile);
 }
 
-function applyPredictionTypeLanguage() {
-  for (const def of predictionTypeDefs) {
-    const option = els.selectedPredictionType.querySelector(`option[value="${def.type}"]`);
+function applyPredictionTypeLanguage(profile = null) {
+  const profiles = profile ? [profile] : predictionProfiles();
+  for (const currentProfile of profiles) {
+    const ctx = predictionEditor(currentProfile);
+    if (!ctx.selectedType || !ctx.typesRoot) continue;
+    for (const def of ctx.state.defs) {
+    const option = ctx.selectedType.querySelector(`option[value="${def.type}"]`);
     if (option) option.textContent = def.label || t(def.labelKey);
-    const card = els.predictionTypes.querySelector(`[data-type="${def.type}"]`);
+    const card = ctx.typesRoot.querySelector(`[data-type="${def.type}"]`);
     if (!card) continue;
     card.querySelector('[data-type-title]').textContent = def.label || t(def.labelKey);
     card.querySelector('[data-type-description]').textContent = t(def.descriptionKey);
@@ -1409,14 +1642,16 @@ function applyPredictionTypeLanguage() {
     const previewLabel = card.querySelector('[data-preview-label]');
     if (previewLabel) previewLabel.textContent = t('preview');
     updateCustomConditionFieldVisibility(card);
+    }
   }
 }
 
-function renderPredictionTypes(types) {
-  const customById = Object.fromEntries((snapshot?.config?.predictions?.customTemplates || []).map((template) => [template.id, template]));
-  for (const def of predictionTypeDefs) {
+function renderPredictionTypes(types, profile = 'own') {
+  const ctx = predictionEditor(profile);
+  const customById = Object.fromEntries((snapshot?.config?.[ctx.configKey]?.customTemplates || []).map((template) => [template.id, template]));
+  for (const def of ctx.state.defs) {
     const config = types[def.type] || customById[def.type] || {};
-    const card = els.predictionTypes.querySelector(`[data-type="${def.type}"]`);
+    const card = ctx.typesRoot.querySelector(`[data-type="${def.type}"]`);
     if (!card) continue;
     setTypeField(card, 'enabled', config.enabled !== false);
     setTypeField(card, 'weight', config.weight ?? 1);
@@ -1440,11 +1675,12 @@ function setTypeField(card, field, value) {
   else input.value = value;
 }
 
-function collectPredictionTypes() {
+function collectPredictionTypes(profile = 'own') {
+  const ctx = predictionEditor(profile);
   const types = {};
-  for (const def of predictionTypeDefs) {
+  for (const def of ctx.state.defs) {
     if (def.savedCustom) continue;
-    const card = els.predictionTypes.querySelector(`[data-type="${def.type}"]`);
+    const card = ctx.typesRoot.querySelector(`[data-type="${def.type}"]`);
     types[def.type] = {
       enabled: getTypeField(card, 'enabled'),
       weight: Number(getTypeField(card, 'weight')),
@@ -1462,9 +1698,10 @@ function collectPredictionTypes() {
   return types;
 }
 
-function collectCustomPredictionTemplates() {
-  return predictionTypeDefs.filter((def) => def.savedCustom).map((def) => {
-    const card = els.predictionTypes.querySelector(`[data-type="${def.type}"]`);
+function collectCustomPredictionTemplates(profile = 'own') {
+  const ctx = predictionEditor(profile);
+  return ctx.state.defs.filter((def) => def.savedCustom).map((def) => {
+    const card = ctx.typesRoot.querySelector(`[data-type="${def.type}"]`);
     const min = Number(getTypeField(card, 'min') || 0);
     const minMinute = Number(getTypeField(card, 'minMinute') || 10);
     return {
@@ -1485,12 +1722,13 @@ function collectCustomPredictionTemplates() {
   });
 }
 
-function removeCustomTemplate(type) {
+function removeCustomTemplate(type, profile = 'own') {
   if (!confirm(t('confirmDeleteTemplate'))) return;
-  const config = predictionConfigFromForm();
+  const ctx = predictionEditor(profile);
+  const config = predictionConfigFromForm(profile);
   config.customTemplates = config.customTemplates.filter((template) => template.id !== type);
   if (config.selectedType === type) config.selectedType = 'win_loss';
-  api('/api/config', { predictions: config }).catch(alert);
+  api('/api/config', { [ctx.configKey]: config }).catch(alert);
 }
 
 function getTypeField(card, field) {
@@ -1499,9 +1737,10 @@ function getTypeField(card, field) {
   return input.type === 'checkbox' ? input.checked : input.value;
 }
 
-function renderPredictionTypePreviews() {
-  for (const def of predictionTypeDefs) {
-    const card = els.predictionTypes.querySelector(`[data-type="${def.type}"]`);
+function renderPredictionTypePreviews(profile = 'own') {
+  const ctx = predictionEditor(profile);
+  for (const def of ctx.state.defs) {
+    const card = ctx.typesRoot.querySelector(`[data-type="${def.type}"]`);
     if (!card) continue;
     const typeConfig = typeConfigFromCard(card);
     const template = typeConfig.titleTemplate || '{hero}: {target}+?';
@@ -1516,11 +1755,12 @@ function renderPredictionTypePreviews() {
   }
 }
 
-function renderPredictionTypeVisibility() {
-  const selectedMode = els.predictionSelectionMode.value === 'selected';
-  const selectedType = els.selectedPredictionType.value || 'win_loss';
-  els.selectedPredictionTypeWrap.hidden = !selectedMode;
-  for (const card of els.predictionTypes.querySelectorAll('.prediction-type')) {
+function renderPredictionTypeVisibility(profile = 'own') {
+  const ctx = predictionEditor(profile);
+  const selectedMode = ctx.selectionMode.value === 'selected';
+  const selectedType = ctx.selectedType.value || 'win_loss';
+  ctx.selectedTypeWrap.hidden = !selectedMode;
+  for (const card of ctx.typesRoot.querySelectorAll('.prediction-type')) {
     card.hidden = selectedMode && card.dataset.type !== selectedType;
   }
 }
@@ -1557,49 +1797,65 @@ function updateCustomConditionFieldVisibility(card) {
 }
 
 function updateCustomBuilderFieldVisibility() {
-  const condition = els.customPredictionCondition.value || 'game_duration_at_least';
+  const profile = predictionProfileFromElement(document.activeElement) || 'own';
+  const ctx = predictionEditor(profile);
+  const condition = ctx.customCondition.value || 'game_duration_at_least';
   const isDuration = condition === 'game_duration_at_least';
   const usesMinute = condition === 'game_duration_at_least' || condition === 'metric_by_minute';
-  els.customPredictionMetric.closest('label').hidden = isDuration;
-  els.customPredictionMin.closest('label').hidden = isDuration;
-  els.customPredictionMax.closest('label').hidden = isDuration;
-  els.customPredictionMinMinute.closest('label').hidden = !usesMinute;
-  els.customPredictionMaxMinute.closest('label').hidden = !usesMinute;
+  ctx.customMetric.closest('label').hidden = isDuration;
+  ctx.customMin.closest('label').hidden = isDuration;
+  ctx.customMax.closest('label').hidden = isDuration;
+  ctx.customMinMinute.closest('label').hidden = !usesMinute;
+  ctx.customMaxMinute.closest('label').hidden = !usesMinute;
 }
 
-function customTemplateFromBuilder() {
-  const label = els.customPredictionName.value.trim() || els.customPredictionTitle.value.trim() || t('typeCustom');
-  const min = Number(els.customPredictionMin.value || 0);
-  const minMinute = Number(els.customPredictionMinMinute.value || 40);
+function customTemplateFromBuilder(profile = 'own') {
+  const ctx = predictionEditor(profile);
+  const label = ctx.customName.value.trim() || ctx.customTitle.value.trim() || t('typeCustom');
+  const min = Number(ctx.customMin.value || 0);
+  const minMinute = Number(ctx.customMinMinute.value || 40);
   return {
     id: `custom_${Date.now().toString(36)}`,
     label,
     enabled: true,
     weight: 1,
-    condition: els.customPredictionCondition.value || 'game_duration_at_least',
-    metric: els.customPredictionMetric.value || 'clock_minutes',
+    condition: ctx.customCondition.value || 'game_duration_at_least',
+    metric: ctx.customMetric.value || 'clock_minutes',
     min,
-    max: Number(els.customPredictionMax.value || min),
+    max: Number(ctx.customMax.value || min),
     minMinute,
-    maxMinute: Number(els.customPredictionMaxMinute.value || minMinute),
-    titleTemplate: els.customPredictionTitle.value.trim() || label,
-    yesTitle: els.customPredictionYes.value.trim() || t('yes'),
-    noTitle: els.customPredictionNo.value.trim() || t('no')
+    maxMinute: Number(ctx.customMaxMinute.value || minMinute),
+    titleTemplate: ctx.customTitle.value.trim() || label,
+    yesTitle: ctx.customYes.value.trim() || t('yes'),
+    noTitle: ctx.customNo.value.trim() || t('no')
   };
 }
 
-function resetCustomBuilder() {
-  els.customPredictionName.value = '';
-  els.customPredictionCondition.value = 'game_duration_at_least';
-  els.customPredictionMetric.value = 'clock_minutes';
-  els.customPredictionMin.value = '40';
-  els.customPredictionMax.value = '40';
-  els.customPredictionMinMinute.value = '40';
-  els.customPredictionMaxMinute.value = '40';
-  els.customPredictionTitle.value = currentLang === 'en' ? 'Will the game reach {minute}:00?' : 'Продлится ли игра {minute}:00?';
-  els.customPredictionYes.value = t('yes');
-  els.customPredictionNo.value = t('no');
-  updateCustomBuilderFieldVisibility();
+function resetCustomBuilder(profile = 'own') {
+  const ctx = predictionEditor(profile);
+  ctx.customName.value = '';
+  ctx.customCondition.value = 'game_duration_at_least';
+  ctx.customMetric.value = 'clock_minutes';
+  ctx.customMin.value = '40';
+  ctx.customMax.value = '40';
+  ctx.customMinMinute.value = '40';
+  ctx.customMaxMinute.value = '40';
+  ctx.customTitle.value = currentLang === 'en' ? 'Will the game reach {minute}:00?' : 'Продлится ли игра {minute}:00?';
+  ctx.customYes.value = t('yes');
+  ctx.customNo.value = t('no');
+  updateCustomBuilderFieldVisibilityForProfile(profile);
+}
+
+function updateCustomBuilderFieldVisibilityForProfile(profile = 'own') {
+  const ctx = predictionEditor(profile);
+  const condition = ctx.customCondition.value || 'game_duration_at_least';
+  const isDuration = condition === 'game_duration_at_least';
+  const usesMinute = condition === 'game_duration_at_least' || condition === 'metric_by_minute';
+  ctx.customMetric.closest('label').hidden = isDuration;
+  ctx.customMin.closest('label').hidden = isDuration;
+  ctx.customMax.closest('label').hidden = isDuration;
+  ctx.customMinMinute.closest('label').hidden = !usesMinute;
+  ctx.customMaxMinute.closest('label').hidden = !usesMinute;
 }
 
 function fillTemplate(template, typeConfig) {
@@ -1642,19 +1898,19 @@ function midpoint(min, max) {
 
 function rememberTemplateInput(input) {
   if (input instanceof HTMLInputElement && (
-    input.matches('#predictionTypes input[data-field="titleTemplate"]')
-    || input.matches('#predictionTypes input[data-field="yesTitle"]')
-    || input.matches('#predictionTypes input[data-field="noTitle"]')
-    || input.matches('#customPredictionTitle')
-    || input.matches('#customPredictionYes')
-    || input.matches('#customPredictionNo')
+    input.matches('#predictionTypes input[data-field="titleTemplate"], #spectatorPredictionTypes input[data-field="titleTemplate"]')
+    || input.matches('#predictionTypes input[data-field="yesTitle"], #spectatorPredictionTypes input[data-field="yesTitle"]')
+    || input.matches('#predictionTypes input[data-field="noTitle"], #spectatorPredictionTypes input[data-field="noTitle"]')
+    || input.matches('#customPredictionTitle, #spectatorCustomPredictionTitle')
+    || input.matches('#customPredictionYes, #spectatorCustomPredictionYes')
+    || input.matches('#customPredictionNo, #spectatorCustomPredictionNo')
   )) {
     lastTemplateInput = input;
   }
 }
 
 function insertVariable(variable) {
-  const target = lastTemplateInput || document.querySelector('#predictionTypes input[data-field="titleTemplate"]') || els.customPredictionTitle;
+  const target = lastTemplateInput || document.querySelector('#predictionTypes input[data-field="titleTemplate"], #spectatorPredictionTypes input[data-field="titleTemplate"]') || els.customPredictionTitle;
   if (!target) return;
   target.focus();
   const start = target.selectionStart ?? target.value.length;
@@ -1992,6 +2248,18 @@ els.rankDisplayMode.addEventListener('change', () => {
 });
 els.rankDisplayMinutes.addEventListener('change', () => saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert));
 [
+  els.spectatorMatchIntelEnabled,
+  els.spectatorShowPlayerRanks,
+  els.spectatorShowPlayerFlags,
+  els.spectatorShowAegisTimer,
+  els.spectatorShowRoshanTimer,
+  els.spectatorRankDisplayMode
+].filter(Boolean).forEach((input) => input.addEventListener('change', () => {
+  updateSpectatorMatchIntelFieldVisibility();
+  saveProtection({ spectatorMatchIntel: spectatorMatchIntelConfigFromForm() }).catch(alert);
+}));
+els.spectatorRankDisplayMinutes?.addEventListener('change', () => saveProtection({ spectatorMatchIntel: spectatorMatchIntelConfigFromForm() }).catch(alert));
+[
   els.showStreamerStats,
   els.showStreamerRankMedal,
   els.showStreamerMmr,
@@ -2147,7 +2415,7 @@ els.languageSelect.addEventListener('change', () => {
   currentLanguageSetting = els.languageSelect.value;
   currentLang = resolveLanguage(currentLanguageSetting);
   applyLanguage({ ui: { language: currentLanguageSetting } });
-  renderPredictionTypePreviews();
+  predictionProfiles().forEach((profile) => renderPredictionTypePreviews(profile));
   saveUiConfig().catch(alert);
 });
 
@@ -2190,106 +2458,126 @@ els.resolveTwitchChannel.addEventListener('click', () => api('/api/twitch/resolv
   alert(`${t('channelFound')} ${result.user.displayName} (${result.user.id})`);
 }).catch(alert));
 
-els.predictionForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  await savePredictionConfig().catch(alert);
-});
-els.predictionTypeForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  await savePredictionConfig().catch(alert);
-});
-els.customPredictionForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  try {
-    const template = customTemplateFromBuilder();
-    const config = predictionConfigFromForm();
-    config.customTemplates = [...config.customTemplates, template];
-    config.selectedType = template.id;
-    config.selectionMode = 'selected';
-    await api('/api/config', { predictions: config });
-    resetCustomBuilder();
-    alert(t('customTemplateSaved'));
-  } catch (error) {
-    alert(error);
-  }
-});
+for (const profile of predictionProfiles()) {
+  const ctx = predictionEditor(profile);
+  ctx.form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await savePredictionConfig(profile).catch(alert);
+  });
+  ctx.typeForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await savePredictionConfig(profile).catch(alert);
+  });
+  ctx.customForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    try {
+      const template = customTemplateFromBuilder(profile);
+      const config = predictionConfigFromForm(profile);
+      config.customTemplates = [...config.customTemplates, template];
+      config.selectedType = template.id;
+      config.selectionMode = 'selected';
+      await api('/api/config', { [ctx.configKey]: config });
+      resetCustomBuilder(profile);
+      alert(t('customTemplateSaved'));
+    } catch (error) {
+      alert(error);
+    }
+  });
+}
 document.addEventListener('focusin', (event) => rememberTemplateInput(event.target));
 document.addEventListener('input', (event) => {
-  if (event.target.closest?.('#predictionForm, #predictionTypeForm, #predictionTypes')) {
+  if (event.target.closest?.('#predictionForm, #predictionTypeForm, #predictionTypes, #spectatorPredictionForm, #spectatorPredictionTypeForm, #spectatorPredictionTypes')) {
+    const profile = predictionProfileFromElement(event.target);
     const card = event.target.closest('.prediction-type');
     if (card) updateCustomConditionFieldVisibility(card);
-    renderPredictionTypePreviews();
+    renderPredictionTypePreviews(profile);
   }
 });
 document.addEventListener('change', (event) => {
-  if (event.target.closest?.('#predictionForm, #predictionTypeForm, #predictionTypes')) {
+  if (event.target.closest?.('#predictionForm, #predictionTypeForm, #predictionTypes, #spectatorPredictionForm, #spectatorPredictionTypeForm, #spectatorPredictionTypes')) {
+    const profile = predictionProfileFromElement(event.target);
     const card = event.target.closest('.prediction-type');
     if (card) updateCustomConditionFieldVisibility(card);
-    renderPredictionTypePreviews();
-    schedulePredictionConfigSave();
+    renderPredictionTypePreviews(profile);
+    schedulePredictionConfigSave(profile);
   }
 });
 document.addEventListener('click', (event) => {
   const deleteButton = event.target.closest?.('[data-delete-template]');
   if (!deleteButton) return;
   const card = deleteButton.closest('.prediction-type');
-  if (card?.dataset.type) removeCustomTemplate(card.dataset.type);
+  if (card?.dataset.type) removeCustomTemplate(card.dataset.type, predictionProfileFromElement(card));
 });
-els.selectedPredictionType.addEventListener('change', () => {
-  renderPredictionTypeVisibility();
-  renderPredictionTypePreviews();
-  schedulePredictionConfigSave();
-});
-els.predictionSelectionMode.addEventListener('change', () => {
-  renderPredictionTypeVisibility();
-  renderPredictionTypePreviews();
-  schedulePredictionConfigSave();
-});
-els.forceStreamOnline.addEventListener('change', () => {
-  els.forceStreamOnlineHint.hidden = !els.forceStreamOnline.checked;
-  schedulePredictionConfigSave();
-});
-els.cancelUncontestedPrediction.addEventListener('change', () => {
-  els.cancelUncontestedHint.hidden = !els.cancelUncontestedPrediction.checked;
-  schedulePredictionConfigSave();
-});
-els.customPredictionCondition.addEventListener('change', updateCustomBuilderFieldVisibility);
+for (const profile of predictionProfiles()) {
+  const ctx = predictionEditor(profile);
+  ctx.selectedType?.addEventListener('change', () => {
+    renderPredictionTypeVisibility(profile);
+    renderPredictionTypePreviews(profile);
+    schedulePredictionConfigSave(profile);
+  });
+  ctx.selectionMode?.addEventListener('change', () => {
+    renderPredictionTypeVisibility(profile);
+    renderPredictionTypePreviews(profile);
+    schedulePredictionConfigSave(profile);
+  });
+  ctx.forceStreamOnline?.addEventListener('change', () => {
+    ctx.forceStreamOnlineHint.hidden = !ctx.forceStreamOnline.checked;
+    schedulePredictionConfigSave(profile);
+  });
+  ctx.cancelUncontestedPrediction?.addEventListener('change', () => {
+    ctx.cancelUncontestedHint.hidden = !ctx.cancelUncontestedPrediction.checked;
+    schedulePredictionConfigSave(profile);
+  });
+  ctx.customCondition?.addEventListener('change', () => updateCustomBuilderFieldVisibilityForProfile(profile));
+}
 els.variableChips.forEach((button) => {
   button.addEventListener('click', () => insertVariable(button.dataset.var));
 });
 
-async function savePredictionConfig() {
-  clearTimeout(predictionConfigSaveTimer);
+async function savePredictionConfig(profile = 'own') {
+  const ctx = predictionEditor(profile);
+  clearTimeout(predictionConfigSaveTimers[ctx.profile]);
+  predictionConfigSaveTimers[ctx.profile] = null;
   predictionConfigSaveTimer = null;
-  await api('/api/config', { predictions: predictionConfigFromForm() });
+  await api('/api/config', { [ctx.configKey]: predictionConfigFromForm(ctx.profile) });
 }
 
-function schedulePredictionConfigSave() {
-  clearTimeout(predictionConfigSaveTimer);
-  predictionConfigSaveTimer = setTimeout(() => {
-    savePredictionConfig().catch((error) => console.error('Prediction config autosave failed', error));
+function schedulePredictionConfigSave(profile = 'own') {
+  const ctx = predictionEditor(profile);
+  clearTimeout(predictionConfigSaveTimers[ctx.profile]);
+  predictionConfigSaveTimers[ctx.profile] = setTimeout(() => {
+    savePredictionConfig(ctx.profile).catch((error) => console.error('Prediction config autosave failed', error));
   }, 300);
 }
 
-function predictionConfigFromForm() {
+function predictionConfigFromForm(profile = 'own') {
+  const ctx = predictionEditor(profile);
   return {
-    windowSeconds: Number(els.predictionWindow.value),
-    autoCreate: els.autoCreate.checked,
-    forceStreamOnline: els.forceStreamOnline.checked,
-    autoResolve: els.autoResolve.checked,
-    cancelUncontestedPrediction: els.cancelUncontestedPrediction.checked,
-    autoCancelInvalidGame: els.autoCancelInvalidGame.checked,
-    selectionMode: els.predictionSelectionMode.value,
-    selectedType: els.selectedPredictionType.value,
-    types: collectPredictionTypes(),
-    customTemplates: collectCustomPredictionTemplates()
+    windowSeconds: Number(ctx.predictionWindow.value),
+    autoCreate: ctx.autoCreate.checked,
+    forceStreamOnline: ctx.forceStreamOnline.checked,
+    autoResolve: ctx.autoResolve.checked,
+    cancelUncontestedPrediction: ctx.cancelUncontestedPrediction.checked,
+    autoCancelInvalidGame: ctx.autoCancelInvalidGame.checked,
+    selectionMode: ctx.selectionMode.value,
+    selectedType: ctx.selectedType.value,
+    types: collectPredictionTypes(ctx.profile),
+    customTemplates: collectCustomPredictionTemplates(ctx.profile)
   };
 }
 
 els.createPrediction.addEventListener('click', async () => {
   try {
-    await savePredictionConfig();
+    await savePredictionConfig('own');
     await api('/api/twitch/predictions', {});
+  } catch (error) {
+    alert(error);
+  }
+});
+els.spectatorCreatePrediction?.addEventListener('click', async () => {
+  try {
+    await savePredictionConfig('spectator');
+    await api('/api/twitch/predictions', { profile: 'spectator' });
   } catch (error) {
     alert(error);
   }
@@ -2299,6 +2587,10 @@ els.lockPrediction.addEventListener('click', () => withPrediction((p) => api(`/a
 els.cancelPrediction.addEventListener('click', () => withPrediction((p) => api(`/api/twitch/predictions/${p.id}/cancel`).catch(alert)));
 els.resolveWin.addEventListener('click', () => resolveKind('win'));
 els.resolveLose.addEventListener('click', () => resolveKind('lose'));
+els.spectatorLockPrediction?.addEventListener('click', () => withPrediction((p) => api(`/api/twitch/predictions/${p.id}/lock`).catch(alert)));
+els.spectatorCancelPrediction?.addEventListener('click', () => withPrediction((p) => api(`/api/twitch/predictions/${p.id}/cancel`).catch(alert)));
+els.spectatorResolveWin?.addEventListener('click', () => resolveKind('win'));
+els.spectatorResolveLose?.addEventListener('click', () => resolveKind('lose'));
 els.detectDota.addEventListener('click', () => detectDota().catch(alert));
 els.installGsi.addEventListener('click', () => api('/api/install-gsi', {
   dotaPath: els.dotaPath.value.trim()

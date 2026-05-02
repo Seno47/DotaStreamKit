@@ -40,9 +40,16 @@ function renderOverlay({ config, state }) {
   applyQueueParts(queueParts, reference, state);
   applyDraftParts(draftParts, reference, state);
   applyTopBarSlots(slots, reference, state);
-  applyMatchIntel(matchIntelSlots, reference, config.protection.matchIntel || {}, state);
+  const spectatorView = isSpectatingMatch(state);
+  const matchIntelSettings = spectatorView
+    ? (config.protection.spectatorMatchIntel || config.protection.matchIntel || {})
+    : (config.protection.matchIntel || {});
+  const predictionSettings = state.activePrediction?.profile === 'spectator'
+    ? (config.spectatorPredictions || config.predictions || {})
+    : (config.predictions || {});
+  applyMatchIntel(matchIntelSlots, reference, matchIntelSettings, state);
   applyStreamerStats(reference, config.protection || {}, state);
-  applyPredictionOverlay(reference, config.predictions || {}, config.protection?.matchIntel || {}, state);
+  applyPredictionOverlay(reference, predictionSettings, matchIntelSettings, state);
   applyMinimap(config.protection, reference, state);
   setVisible(minimapMask, state.protection.minimap);
 }
@@ -718,7 +725,9 @@ function ensurePredictionOverlayNodes() {
 
 function applyStreamerStats(reference, protection, state) {
   if (!streamerStatsEl) return;
-  const settings = protection.matchIntel || {};
+  const settings = isSpectatingMatch(state)
+    ? (protection.spectatorMatchIntel || protection.matchIntel || {})
+    : (protection.matchIntel || {});
   const stats = state.streamerStats || {};
   const gameState = String(state.gsi?.gameState || '');
   const visibleState = shouldShowStreamerStatsInOverlay(state);
