@@ -533,7 +533,7 @@ dd {
 
 .overlay-position-editor {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 54px;
+  grid-template-columns: minmax(0, 1fr) 60px;
   gap: 10px;
   align-items: start;
 }
@@ -587,7 +587,7 @@ dd {
   grid-template-columns: auto auto;
   align-content: center;
   justify-content: center;
-  column-gap: 0.42em;
+  column-gap: 8px;
   color: #f6f0d8;
   font-family: "Arial Narrow", "Roboto Condensed", "Segoe UI Condensed", "Segoe UI", Arial, Helvetica, sans-serif;
   font-size: calc(19px * var(--preview-scale, 0.5));
@@ -610,16 +610,16 @@ dd {
 .streamer-preview-medal {
   grid-column: 2;
   justify-self: center;
-  width: 40.4%;
+  width: calc(105px * var(--preview-scale, 0.5));
   aspect-ratio: 1 / 1;
   height: auto;
-  margin-bottom: -6.9%;
+  margin-bottom: calc(-18px * var(--preview-scale, 0.5));
 }
 
 .streamer-preview.live .streamer-preview-medal {
-  width: 40.4%;
+  width: calc(105px * var(--preview-scale, 0.5));
   height: auto;
-  margin-bottom: -6.9%;
+  margin-bottom: calc(-18px * var(--preview-scale, 0.5));
 }
 
 .streamer-preview-medal img {
@@ -633,7 +633,7 @@ dd {
   display: flex;
   align-items: baseline;
   justify-content: flex-end;
-  gap: 0.15em;
+  gap: calc(3px * var(--preview-scale, 0.5));
   color: #fff;
 }
 
@@ -663,8 +663,7 @@ dd {
 }
 
 .roshan-preview img {
-  width: 18.6%;
-  max-width: 27px;
+  width: calc(27px * var(--preview-scale, 0.5));
   aspect-ratio: 1 / 1;
   height: auto;
   object-fit: contain;
@@ -672,12 +671,16 @@ dd {
 
 .overlay-position-x {
   display: grid;
-  grid-template-columns: 92px minmax(0, 1fr) 48px;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) 56px;
+  gap: 4px 8px;
   align-items: center;
   margin: 0;
   color: #dbe3ee;
   font-size: 13px;
+}
+
+.overlay-position-x span {
+  grid-column: 1 / -1;
 }
 
 .overlay-position-y {
