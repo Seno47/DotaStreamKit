@@ -23,6 +23,15 @@ const els = {
   rankDisplayMinutesWrap: document.querySelector('#rankDisplayMinutesWrap'),
   rankDisplayMinutes: document.querySelector('#rankDisplayMinutes'),
   streamerStatsWrap: document.querySelector('#streamerStatsWrap'),
+  gameIntelSectionTitle: document.querySelector('#gameIntelSectionTitle'),
+  gameIntelSectionSummary: document.querySelector('#gameIntelSectionSummary'),
+  streamerStatsSectionSummary: document.querySelector('#streamerStatsSectionSummary'),
+  overlayPositionSectionSummary: document.querySelector('#overlayPositionSectionSummary'),
+  customNotablePlayersSectionSummary: document.querySelector('#customNotablePlayersSectionSummary'),
+  intelMatchStatus: document.querySelector('#intelMatchStatus'),
+  intelNotableStatus: document.querySelector('#intelNotableStatus'),
+  intelRoshanStatus: document.querySelector('#intelRoshanStatus'),
+  intelPositionStatus: document.querySelector('#intelPositionStatus'),
   streamerStatsTitle: document.querySelector('#streamerStatsTitle'),
   streamerStatsHint: document.querySelector('#streamerStatsHint'),
   showStreamerStats: document.querySelector('#showStreamerStats'),
@@ -44,6 +53,8 @@ const els = {
   overlayPositionWrap: document.querySelector('#overlayPositionWrap'),
   overlayPositionTitle: document.querySelector('#overlayPositionTitle'),
   overlayPositionHint: document.querySelector('#overlayPositionHint'),
+  overlayPositionTargetWrap: document.querySelector('#overlayPositionTargetWrap'),
+  overlayPositionTarget: document.querySelector('#overlayPositionTarget'),
   overlayPreviewBackgroundWrap: document.querySelector('#overlayPreviewBackgroundWrap'),
   overlayPreviewBackground: document.querySelector('#overlayPreviewBackground'),
   streamerStatsMenuPositionTitle: document.querySelector('#streamerStatsMenuPositionTitle'),
@@ -66,6 +77,7 @@ const els = {
   predictionOverlayY: document.querySelector('#predictionOverlayY'),
   predictionOverlayXValue: document.querySelector('#predictionOverlayXValue'),
   predictionOverlayYValue: document.querySelector('#predictionOverlayYValue'),
+  resetAllOverlayPositions: document.querySelector('#resetAllOverlayPositions'),
   customNotablePlayersWrap: document.querySelector('#customNotablePlayersWrap'),
   customNotablePlayersTitle: document.querySelector('#customNotablePlayersTitle'),
   customNotablePlayersHint: document.querySelector('#customNotablePlayersHint'),
@@ -148,6 +160,7 @@ let predictionConfigSaveTimer = null;
 let overlayPositionSaveTimer = null;
 let activePage = localStorage.getItem('dsk.activePage') || 'protection';
 let editingNotablePlayerAccountId = '';
+let activeOverlayPositionKey = localStorage.getItem('dsk.overlayPositionTarget') || 'streamerStatsGame';
 
 const overlayPositionKeys = ['streamerStatsMenu', 'streamerStatsGame', 'roshanTimer', 'predictionOverlay'];
 const overlayPreviewBoxes = {
@@ -185,12 +198,30 @@ const overlayPreviewBoxes = {
   }
 };
 
+if (!overlayPositionKeys.includes(activeOverlayPositionKey)) {
+  activeOverlayPositionKey = 'streamerStatsGame';
+}
+
 if (els.overlayPreviewBackground) {
   const savedPreviewBackground = localStorage.getItem('dsk.overlayPreviewBackground');
   if (['screenshot', 'black', 'white'].includes(savedPreviewBackground)) {
     els.overlayPreviewBackground.value = savedPreviewBackground;
   }
 }
+
+if (els.overlayPositionTarget) {
+  els.overlayPositionTarget.value = activeOverlayPositionKey;
+}
+
+document.querySelectorAll('[data-collapsible-section]').forEach((section) => {
+  const key = section.dataset.collapsibleSection;
+  const saved = localStorage.getItem(`dsk.section.${key}`);
+  if (saved === 'open') section.open = true;
+  if (saved === 'closed') section.open = false;
+  section.addEventListener('toggle', () => {
+    localStorage.setItem(`dsk.section.${key}`, section.open ? 'open' : 'closed');
+  });
+});
 
 const translations = {
   ru: {
@@ -235,6 +266,19 @@ const translations = {
     showPlayerFlags: 'Флаги игроков',
     showAegisTimer: 'Таймер Aegis',
     showRoshanTimer: 'Таймер Roshan',
+    gameIntelSection: 'Игровая информация',
+    gameIntelSectionSummary: 'Notable Players, флаги, Aegis, Roshan',
+    streamerStatsSectionSummary: 'Медаль, MMR, Win-Lose',
+    overlayPositionSectionSummary: 'Медаль, Roshan, прогноз Twitch',
+    customNotablePlayersSectionSummary: 'Ручной список notable игроков',
+    intelStatusOn: 'вкл',
+    intelStatusOff: 'выкл',
+    intelStatusDefault: 'по умолчанию',
+    intelStatusCustom: 'изменены',
+    intelMatchStatus: 'Match intel: {value}',
+    intelNotableStatus: 'Notable: {value}',
+    intelRoshanStatus: 'Таймеры: {value}',
+    intelPositionStatus: 'Позиции: {value}',
     rankDisplayMode: 'Когда показывать notable players',
     rankDisplayFirstMinutes: 'Первые N минут',
     rankDisplayFullGame: 'До конца игры',
@@ -265,6 +309,7 @@ const translations = {
     streamerStatsPrevious: ' / прошлый W-L можно восстановить: {wins}-{losses}',
     overlayPositionTitle: 'Положение overlay',
     overlayPositionHint: 'Перемещение цельных блоков без разрыва иконок и чисел.',
+    overlayPositionTarget: 'Блок',
     overlayPreviewBackground: 'Фон превью',
     overlayPreviewScreenshot: 'Скриншот',
     overlayPreviewBlack: 'Черный',
@@ -276,6 +321,7 @@ const translations = {
     overlayPositionX: 'Горизонталь',
     overlayPositionY: 'Вертикаль',
     overlayPositionReset: 'Сбросить',
+    overlayPositionResetAll: 'Сбросить все позиции',
     customNotablePlayers: 'Кастомные Notable Players',
     customNotablePlayersHint: 'Добавь Dota account id игроков, которых нужно всегда считать notable. Ник и страна из этого списка имеют приоритет над OpenDota.',
     notablePlayerId: 'Dota ID',
@@ -487,6 +533,19 @@ const translations = {
     showPlayerFlags: 'Player flags',
     showAegisTimer: 'Aegis timer',
     showRoshanTimer: 'Roshan timer',
+    gameIntelSection: 'Game information',
+    gameIntelSectionSummary: 'Notable Players, flags, Aegis, Roshan',
+    streamerStatsSectionSummary: 'Medal, MMR, Win-Lose',
+    overlayPositionSectionSummary: 'Medal, Roshan, Twitch prediction',
+    customNotablePlayersSectionSummary: 'Manual notable list',
+    intelStatusOn: 'on',
+    intelStatusOff: 'off',
+    intelStatusDefault: 'default',
+    intelStatusCustom: 'custom',
+    intelMatchStatus: 'Match intel: {value}',
+    intelNotableStatus: 'Notable: {value}',
+    intelRoshanStatus: 'Timers: {value}',
+    intelPositionStatus: 'Positions: {value}',
     rankDisplayMode: 'When to show notable players',
     rankDisplayFirstMinutes: 'First N minutes',
     rankDisplayFullGame: 'Full game',
@@ -517,6 +576,7 @@ const translations = {
     streamerStatsPrevious: ' / previous W-L can be restored: {wins}-{losses}',
     overlayPositionTitle: 'Overlay position',
     overlayPositionHint: 'Move grouped blocks without splitting icons from numbers.',
+    overlayPositionTarget: 'Block',
     overlayPreviewBackground: 'Preview background',
     overlayPreviewScreenshot: 'Screenshot',
     overlayPreviewBlack: 'Black',
@@ -528,6 +588,7 @@ const translations = {
     overlayPositionX: 'Horizontal',
     overlayPositionY: 'Vertical',
     overlayPositionReset: 'Reset',
+    overlayPositionResetAll: 'Reset all positions',
     customNotablePlayers: 'Custom notable players',
     customNotablePlayersHint: 'Add Dota account ids that should always be treated as notable. Name and country here override OpenDota.',
     notablePlayerId: 'Dota ID',
@@ -799,6 +860,11 @@ function applyLanguage(config) {
   setOptionText(els.queueMode, 'partial', t('partial'));
   setOptionText(els.queueMode, 'full', t('full'));
   setText(els.matchIntelEnabled.closest('article').querySelector('h2'), 'pageIntel');
+  els.gameIntelSectionTitle.textContent = t('gameIntelSection');
+  els.gameIntelSectionSummary.textContent = t('gameIntelSectionSummary');
+  els.streamerStatsSectionSummary.textContent = t('streamerStatsSectionSummary');
+  els.overlayPositionSectionSummary.textContent = t('overlayPositionSectionSummary');
+  els.customNotablePlayersSectionSummary.textContent = t('customNotablePlayersSectionSummary');
   setLabelText(els.matchIntelEnabled.closest('label'), t('matchIntelEnabled'));
   setLabelText(els.showPlayerRanks.closest('label'), t('showPlayerRanks'));
   setLabelText(els.showPlayerFlags.closest('label'), t('showPlayerFlags'));
@@ -827,6 +893,11 @@ function applyLanguage(config) {
   els.restoreStreamerStats.textContent = t('restoreStreamerStats');
   els.overlayPositionTitle.textContent = t('overlayPositionTitle');
   els.overlayPositionHint.textContent = t('overlayPositionHint');
+  setLabelText(els.overlayPositionTargetWrap, t('overlayPositionTarget'));
+  setOptionText(els.overlayPositionTarget, 'streamerStatsMenu', t('streamerStatsMenuPosition'));
+  setOptionText(els.overlayPositionTarget, 'streamerStatsGame', t('streamerStatsGamePosition'));
+  setOptionText(els.overlayPositionTarget, 'roshanTimer', t('roshanTimerPosition'));
+  setOptionText(els.overlayPositionTarget, 'predictionOverlay', t('predictionOverlayPosition'));
   setLabelText(els.overlayPreviewBackgroundWrap, t('overlayPreviewBackground'));
   setOptionText(els.overlayPreviewBackground, 'screenshot', t('overlayPreviewScreenshot'));
   setOptionText(els.overlayPreviewBackground, 'black', t('overlayPreviewBlack'));
@@ -842,6 +913,7 @@ function applyLanguage(config) {
   document.querySelectorAll('[data-reset-position]').forEach((button) => {
     button.textContent = t('overlayPositionReset');
   });
+  els.resetAllOverlayPositions.textContent = t('overlayPositionResetAll');
   els.customNotablePlayersTitle.textContent = t('customNotablePlayers');
   els.customNotablePlayersHint.textContent = t('customNotablePlayersHint');
   setLabelText(els.notablePlayerIdWrap, t('notablePlayerId'));
@@ -1071,6 +1143,7 @@ function render(data) {
   setInputValue(els.streamerMmrWinDelta, matchIntel.streamerMmrWinDelta ?? 25);
   setInputValue(els.streamerMmrLossDelta, matchIntel.streamerMmrLossDelta ?? 25);
   setOverlayPositionControls(matchIntel.overlayPositions || {});
+  renderIntelSummary(matchIntel);
   renderStreamerStatsStatus(state.streamerStats || {}, matchIntel);
   renderCustomNotablePlayers(matchIntel.customPlayers || []);
   updateMatchIntelFieldVisibility();
@@ -1680,6 +1753,27 @@ function renderStreamerStatsStatus(stats, settings) {
   els.restoreStreamerStats.disabled = !stats.previousSession;
 }
 
+function renderIntelSummary(settings) {
+  const enabled = settings.enabled !== false;
+  const notableEnabled = enabled && (settings.showPlayerRanks !== false || settings.showPlayerFlags === true);
+  const timersEnabled = enabled && (settings.showAegisTimer !== false || settings.showRoshanTimer !== false);
+  const positions = settings.overlayPositions || {};
+  const customized = overlayPositionKeys.some((key) => {
+    const offset = normalizeOverlayOffset(positions[key]);
+    return offset.x !== 0 || offset.y !== 0;
+  });
+  setStatusText(els.intelMatchStatus, 'intelMatchStatus', enabled ? 'intelStatusOn' : 'intelStatusOff');
+  setStatusText(els.intelNotableStatus, 'intelNotableStatus', notableEnabled ? 'intelStatusOn' : 'intelStatusOff');
+  setStatusText(els.intelRoshanStatus, 'intelRoshanStatus', timersEnabled ? 'intelStatusOn' : 'intelStatusOff');
+  setStatusText(els.intelPositionStatus, 'intelPositionStatus', customized ? 'intelStatusCustom' : 'intelStatusDefault');
+}
+
+function setStatusText(el, templateKey, valueKey) {
+  if (!el) return;
+  el.textContent = t(templateKey).replace('{value}', t(valueKey));
+  el.dataset.active = valueKey === 'intelStatusOn' || valueKey === 'intelStatusCustom' ? 'true' : 'false';
+}
+
 function setOverlayPositionControls(positions) {
   for (const key of overlayPositionKeys) {
     const offset = normalizeOverlayOffset(positions[key]);
@@ -1750,12 +1844,17 @@ function clampNumber(value, min, max, fallback = 0) {
 function renderOverlayPositionPreviews() {
   const positions = overlayPositionsFromForm();
   const background = els.overlayPreviewBackground?.value || 'screenshot';
+  if (els.overlayPositionTarget && els.overlayPositionTarget.value !== activeOverlayPositionKey) {
+    els.overlayPositionTarget.value = activeOverlayPositionKey;
+  }
   for (const key of overlayPositionKeys) {
     const card = document.querySelector(`[data-position-preview="${key}"]`);
     const preview = card?.querySelector('.overlay-position-preview');
     const item = card?.querySelector('.overlay-position-item');
     const box = overlayPreviewBoxes[key];
     if (!preview || !item || !box) continue;
+    card.hidden = key !== activeOverlayPositionKey;
+    if (card.hidden) continue;
     const offset = normalizeOverlayOffset(positions[key]);
     const base = overlayVisualBase(box);
     const range = overlayPositionRange(box);
@@ -1864,6 +1963,13 @@ els.overlayPreviewBackground.addEventListener('change', () => {
   localStorage.setItem('dsk.overlayPreviewBackground', els.overlayPreviewBackground.value);
   renderOverlayPositionPreviews();
 });
+els.overlayPositionTarget.addEventListener('change', () => {
+  activeOverlayPositionKey = overlayPositionKeys.includes(els.overlayPositionTarget.value)
+    ? els.overlayPositionTarget.value
+    : 'streamerStatsGame';
+  localStorage.setItem('dsk.overlayPositionTarget', activeOverlayPositionKey);
+  renderOverlayPositionPreviews();
+});
 for (const key of overlayPositionKeys) {
   for (const axis of ['X', 'Y']) {
     const input = els[`${key}${axis}`];
@@ -1888,6 +1994,16 @@ document.querySelectorAll('[data-reset-position]').forEach((button) => {
     renderOverlayPositionPreviews();
     saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
   });
+});
+els.resetAllOverlayPositions.addEventListener('click', () => {
+  for (const key of overlayPositionKeys) {
+    const box = overlayPreviewBoxes[key] || { left: 0, top: 0 };
+    const base = overlayVisualBase(box);
+    if (els[`${key}X`]) els[`${key}X`].value = String(base.left);
+    if (els[`${key}Y`]) els[`${key}Y`].value = String(base.top);
+  }
+  renderOverlayPositionPreviews();
+  saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
 });
 
 function protectionMatchIntelFromForm() {

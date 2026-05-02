@@ -111,16 +111,28 @@
 
         <article class="panel wide" data-page="intel">
           <h2>Match intel</h2>
-          <div class="control-row">
-            <label class="check"><input type="checkbox" id="matchIntelEnabled"> Match intel overlay</label>
-            <label class="check"><input type="checkbox" id="showPlayerRanks"> Notable player names</label>
-            <label class="check"><input type="checkbox" id="showPlayerFlags"> Player flags</label>
-            <label class="check"><input type="checkbox" id="showAegisTimer"> Aegis timer</label>
-            <label class="check"><input type="checkbox" id="showRoshanTimer"> Roshan timer</label>
-            <label id="rankDisplayModeWrap">Rank display<select id="rankDisplayMode"><option value="minutes">First N minutes</option><option value="full_game">Full game</option><option value="pre_game_only">Before the game starts only</option></select></label>
-            <label id="rankDisplayMinutesWrap">Rank display minutes<input id="rankDisplayMinutes" type="number" min="1" max="30" step="1"></label>
-            <div class="streamer-stats-settings" id="streamerStatsWrap">
-              <div class="notable-players-head" id="streamerStatsTitle">Streamer stats</div>
+          <div class="intel-status-row">
+            <span id="intelMatchStatus">Match intel: -</span>
+            <span id="intelNotableStatus">Notable: -</span>
+            <span id="intelRoshanStatus">Timers: -</span>
+            <span id="intelPositionStatus">Positions: -</span>
+          </div>
+          <div class="intel-layout">
+            <details class="intel-section" id="gameIntelSection" data-collapsible-section="gameIntel" open>
+              <summary><span id="gameIntelSectionTitle">Game information</span><span id="gameIntelSectionSummary">Notable players, flags, Aegis, Roshan</span></summary>
+              <div class="intel-section-body control-row">
+                <label class="check"><input type="checkbox" id="matchIntelEnabled"> Match intel overlay</label>
+                <label class="check"><input type="checkbox" id="showPlayerRanks"> Notable player names</label>
+                <label class="check"><input type="checkbox" id="showPlayerFlags"> Player flags</label>
+                <label class="check"><input type="checkbox" id="showAegisTimer"> Aegis timer</label>
+                <label class="check"><input type="checkbox" id="showRoshanTimer"> Roshan timer</label>
+                <label id="rankDisplayModeWrap">Rank display<select id="rankDisplayMode"><option value="minutes">First N minutes</option><option value="full_game">Full game</option><option value="pre_game_only">Before the game starts only</option></select></label>
+                <label id="rankDisplayMinutesWrap">Rank display minutes<input id="rankDisplayMinutes" type="number" min="1" max="30" step="1"></label>
+              </div>
+            </details>
+            <details class="intel-section streamer-stats-settings" id="streamerStatsWrap" data-collapsible-section="streamerStats" open>
+              <summary><span id="streamerStatsTitle">Streamer stats</span><span id="streamerStatsSectionSummary">Medal, MMR, Win-Lose</span></summary>
+              <div class="intel-section-body">
               <p class="muted" id="streamerStatsHint">Track stream W-L, manual MMR, and rank medal.</p>
               <div class="streamer-stats-grid">
                 <label class="check"><input type="checkbox" id="showStreamerStats"> Streamer stats overlay</label>
@@ -138,13 +150,16 @@
                 <button id="resetStreamerStats" type="button">Reset W-L</button>
                 <button id="restoreStreamerStats" type="button">Restore previous W-L</button>
               </div>
-            </div>
-            <div class="overlay-position-settings" id="overlayPositionWrap">
+              </div>
+            </details>
+            <details class="intel-section overlay-position-settings" id="overlayPositionWrap" data-collapsible-section="overlayPositions">
+              <summary><span id="overlayPositionTitle">Overlay position</span><span id="overlayPositionSectionSummary">Medal, Roshan, Twitch prediction</span></summary>
+              <div class="intel-section-body">
               <div class="section-head compact">
                 <div>
-                  <h3 id="overlayPositionTitle">Overlay position</h3>
                   <p class="muted" id="overlayPositionHint">Move grouped overlay blocks.</p>
                 </div>
+                <label id="overlayPositionTargetWrap">Block<select id="overlayPositionTarget"><option value="streamerStatsMenu">Menu medal</option><option value="streamerStatsGame">In-game medal</option><option value="roshanTimer">Roshan timer</option><option value="predictionOverlay">Twitch prediction</option></select></label>
                 <label id="overlayPreviewBackgroundWrap">Preview background<select id="overlayPreviewBackground"><option value="screenshot">Screenshot</option><option value="black">Black</option><option value="white">White</option></select></label>
               </div>
               <div class="overlay-position-grid">
@@ -222,9 +237,14 @@
                   <button type="button" data-reset-position="predictionOverlay">Reset</button>
                 </section>
               </div>
-            </div>
-            <div class="notable-players" id="customNotablePlayersWrap">
-              <div class="notable-players-head" id="customNotablePlayersTitle">Custom notable players</div>
+              <div class="button-row">
+                <button id="resetAllOverlayPositions" type="button">Reset all positions</button>
+              </div>
+              </div>
+            </details>
+            <details class="intel-section notable-players" id="customNotablePlayersWrap" data-collapsible-section="customNotablePlayers">
+              <summary><span id="customNotablePlayersTitle">Custom notable players</span><span id="customNotablePlayersSectionSummary">Manual notable list</span></summary>
+              <div class="intel-section-body">
               <p class="muted" id="customNotablePlayersHint">Add Dota account ids that should always be treated as notable.</p>
               <div class="notable-player-form">
                 <label id="notablePlayerIdWrap">Dota ID<input id="notablePlayerId" inputmode="numeric" maxlength="20"></label>
@@ -240,7 +260,8 @@
                 <span id="notablePlayerListActions">Actions</span>
               </div>
               <div class="notable-player-rows" id="customNotablePlayersRows"></div>
-            </div>
+              </div>
+            </details>
           </div>
         </article>
 
