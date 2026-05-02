@@ -525,10 +525,10 @@ dd {
 }
 
 .intel-section summary {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
+  position: relative;
+  display: block;
+  min-height: 36px;
+  padding: 2px 34px 2px 0;
   color: #f2f4f8;
   font-weight: 700;
   cursor: pointer;
@@ -540,20 +540,34 @@ dd {
 }
 
 .intel-section summary::after {
-  content: "›";
-  color: #8b96a8;
-  font-size: 20px;
-  line-height: 1;
-  transform: rotate(90deg);
-  transition: transform 160ms ease;
+  content: "";
+  position: absolute;
+  top: 10px;
+  right: 3px;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid #8b96a8;
+  border-bottom: 2px solid #8b96a8;
+  transform: rotate(45deg);
+  transform-origin: center;
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease,
+    top 160ms ease;
 }
 
 .intel-section:not([open]) summary::after {
-  transform: rotate(0deg);
+  top: 12px;
+  transform: rotate(-45deg);
+}
+
+.intel-section summary:hover::after {
+  border-color: #dbe3ee;
 }
 
 .intel-section summary span:last-child {
-  grid-column: 1 / -1;
+  display: block;
+  margin-top: 4px;
   color: #8b96a8;
   font-size: 13px;
   font-weight: 500;
