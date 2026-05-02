@@ -155,7 +155,7 @@
                       <div class="overlay-position-preview">
                         <img class="overlay-position-bg" src="/assets/game1.png" alt="">
                         <div class="overlay-position-item streamer-preview">
-                          <div class="streamer-preview-medal"><img src="/assets/rank-medal-7.png" alt=""></div>
+                          <div class="streamer-preview-medal"><img src="/assets/rank-medal-7.png" alt=""><img class="streamer-preview-pips" src="/assets/rank-pip-5.png" alt=""></div>
                           <div class="streamer-preview-wl"><span>0</span><b>W</b><span>-</span><span>0</span><b>L</b></div>
                           <div class="streamer-preview-mmr">6420</div>
                         </div>
@@ -173,7 +173,7 @@
                       <div class="overlay-position-preview">
                         <img class="overlay-position-bg" src="/assets/game2.png" alt="">
                         <div class="overlay-position-item streamer-preview live">
-                          <div class="streamer-preview-medal"><img src="/assets/rank-medal-7.png" alt=""></div>
+                          <div class="streamer-preview-medal"><img src="/assets/rank-medal-7.png" alt=""><img class="streamer-preview-pips" src="/assets/rank-pip-5.png" alt=""></div>
                           <div class="streamer-preview-wl"><span>0</span><b>W</b><span>-</span><span>0</span><b>L</b></div>
                           <div class="streamer-preview-mmr">6420</div>
                         </div>
@@ -197,6 +197,29 @@
                     <label class="overlay-position-y" id="roshanTimerYWrap"><span>Vertical</span><input id="roshanTimerY" type="range" min="0" max="1080" step="1"><output id="roshanTimerYValue">0</output></label>
                   </div>
                   <button type="button" data-reset-position="roshanTimer">Reset</button>
+                </section>
+                <section class="overlay-position-card" data-position-preview="predictionOverlay">
+                  <h4 id="predictionOverlayPositionTitle">Twitch prediction</h4>
+                  <div class="overlay-position-editor">
+                    <div class="overlay-position-main">
+                      <div class="overlay-position-preview">
+                        <img class="overlay-position-bg" src="/assets/game2.png" alt="">
+                        <div class="overlay-position-item prediction-preview">
+                          <div class="prediction-preview-title">Победа на Pudge?</div>
+                          <div class="prediction-preview-bar">
+                            <span class="prediction-preview-fill yes"></span>
+                            <span class="prediction-preview-fill no"></span>
+                            <span class="prediction-preview-label yes">Победа 65% (25,026)</span>
+                            <span class="prediction-preview-label no">Поражение 35% (13,447)</span>
+                          </div>
+                          <div class="prediction-preview-timer">0:43</div>
+                        </div>
+                      </div>
+                      <label class="overlay-position-x" id="predictionOverlayXWrap"><span>Horizontal</span><input id="predictionOverlayX" type="range" min="0" max="1920" step="1"><output id="predictionOverlayXValue">0</output></label>
+                    </div>
+                    <label class="overlay-position-y" id="predictionOverlayYWrap"><span>Vertical</span><input id="predictionOverlayY" type="range" min="0" max="1080" step="1"><output id="predictionOverlayYValue">0</output></label>
+                  </div>
+                  <button type="button" data-reset-position="predictionOverlay">Reset</button>
                 </section>
               </div>
             </div>

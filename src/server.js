@@ -294,7 +294,8 @@ const defaultConfig = {
       overlayPositions: {
         streamerStatsMenu: { x: 0, y: 0 },
         streamerStatsGame: { x: 0, y: 0 },
-        roshanTimer: { x: 0, y: 0 }
+        roshanTimer: { x: 0, y: 0 },
+        predictionOverlay: { x: 0, y: 0 }
       },
       rankDisplayMode: 'minutes',
       rankDisplayMinutes: 12,
@@ -2659,7 +2660,8 @@ function normalizeOverlayPositions(value) {
   return {
     streamerStatsMenu: normalizeOverlayOffset(source.streamerStatsMenu),
     streamerStatsGame: normalizeOverlayOffset(source.streamerStatsGame),
-    roshanTimer: normalizeOverlayOffset(source.roshanTimer)
+    roshanTimer: normalizeOverlayOffset(source.roshanTimer),
+    predictionOverlay: normalizeOverlayOffset(source.predictionOverlay)
   };
 }
 

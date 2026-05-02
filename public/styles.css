@@ -585,36 +585,33 @@ dd {
 .streamer-preview {
   display: grid;
   grid-template-columns: auto auto;
-  align-content: start;
-  justify-content: start;
-  column-gap: 8px;
+  align-items: center;
+  align-content: center;
+  justify-content: center;
+  column-gap: calc(8px * var(--preview-scale, 0.5));
+  row-gap: 0;
   color: #f6f0d8;
   font-family: "Arial Narrow", "Roboto Condensed", "Segoe UI Condensed", "Segoe UI", Arial, Helvetica, sans-serif;
-  font-size: calc(19px * var(--preview-scale, 0.5) * var(--streamer-preview-scale, 1));
+  font-size: calc(19px * var(--preview-scale, 0.5));
   font-weight: 800;
   line-height: 1;
   text-shadow: 0 1px 2px #000, 0 0 3px #000;
   white-space: nowrap;
-  --streamer-preview-scale: 0.6666667;
+  transform: scale(0.6666667);
+  transform-origin: top left;
 }
 
 .streamer-preview.live {
-  --streamer-preview-scale: 0.85;
+  transform: scale(0.85);
 }
 
 .streamer-preview-medal {
   grid-column: 2;
   justify-self: center;
-  width: calc(105px * var(--preview-scale, 0.5) * var(--streamer-preview-scale, 1));
-  aspect-ratio: 1 / 1;
-  height: auto;
-  margin-bottom: calc(-18px * var(--preview-scale, 0.5) * var(--streamer-preview-scale, 1));
-}
-
-.streamer-preview.live .streamer-preview-medal {
-  width: calc(105px * var(--preview-scale, 0.5) * var(--streamer-preview-scale, 1));
-  height: auto;
-  margin-bottom: calc(-18px * var(--preview-scale, 0.5) * var(--streamer-preview-scale, 1));
+  position: relative;
+  width: calc(105px * var(--preview-scale, 0.5));
+  height: calc(105px * var(--preview-scale, 0.5));
+  margin-bottom: calc(-18px * var(--preview-scale, 0.5));
 }
 
 .streamer-preview-medal img {
@@ -623,12 +620,24 @@ dd {
   object-fit: contain;
 }
 
+.streamer-preview-pips {
+  position: absolute;
+  left: calc(-18px * var(--preview-scale, 0.5));
+  right: calc(-18px * var(--preview-scale, 0.5));
+  bottom: calc(-33px * var(--preview-scale, 0.5));
+  width: calc(141px * var(--preview-scale, 0.5)) !important;
+  height: calc(141px * var(--preview-scale, 0.5)) !important;
+  object-fit: contain;
+  pointer-events: none;
+}
+
 .streamer-preview-wl {
   grid-column: 1;
+  grid-row: 3;
   display: flex;
   align-items: baseline;
-  justify-content: flex-end;
-  gap: calc(3px * var(--preview-scale, 0.5) * var(--streamer-preview-scale, 1));
+  justify-content: center;
+  gap: calc(2px * var(--preview-scale, 0.5));
   color: #fff;
 }
 
@@ -642,13 +651,93 @@ dd {
 
 .streamer-preview-mmr {
   grid-column: 2;
+  grid-row: 3;
   color: #fff;
 }
 
 .streamer-preview:not(.live) .streamer-preview-wl {
   grid-row: 1;
   align-self: start;
-  font-size: calc(33.25px * var(--preview-scale, 0.5) * var(--streamer-preview-scale, 1));
+  font-size: calc(33.25px * var(--preview-scale, 0.5));
+  margin-top: 0;
+}
+
+.prediction-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(6px * var(--preview-scale, 0.5));
+  color: #fff;
+  font-family: "Arial Narrow", "Roboto Condensed", "Segoe UI Condensed", "Segoe UI", Arial, Helvetica, sans-serif;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  text-shadow: 0 1px 2px #000, 0 0 4px #000;
+  white-space: nowrap;
+}
+
+.prediction-preview-title {
+  width: 100%;
+  max-width: calc(640px * var(--preview-scale, 0.5));
+  overflow: hidden;
+  font-size: calc(25px * var(--preview-scale, 0.5));
+  text-overflow: ellipsis;
+}
+
+.prediction-preview-bar {
+  position: relative;
+  display: flex;
+  width: calc(620px * var(--preview-scale, 0.5));
+  max-width: 100%;
+  height: calc(28px * var(--preview-scale, 0.5));
+  overflow: hidden;
+  border-radius: calc(14px * var(--preview-scale, 0.5));
+  background: rgba(0, 0, 0, 0.42);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
+}
+
+.prediction-preview-fill {
+  height: 100%;
+  min-width: 0;
+}
+
+.prediction-preview-fill.yes {
+  flex: 0 0 65%;
+  background: linear-gradient(180deg, #497dff, #2f64ec);
+}
+
+.prediction-preview-fill.no {
+  flex: 0 0 35%;
+  background: linear-gradient(180deg, #e84aad, #c93599);
+}
+
+.prediction-preview-label {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 0 calc(10px * var(--preview-scale, 0.5));
+  overflow: hidden;
+  font-size: calc(18px * var(--preview-scale, 0.5));
+  text-overflow: ellipsis;
+}
+
+.prediction-preview-label.yes {
+  left: 0;
+  width: 65%;
+}
+
+.prediction-preview-label.no {
+  left: 65%;
+  width: 35%;
+}
+
+.prediction-preview-timer {
+  font-size: calc(19px * var(--preview-scale, 0.5));
 }
 
 .roshan-preview {

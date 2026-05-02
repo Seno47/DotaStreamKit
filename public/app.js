@@ -61,6 +61,11 @@ const els = {
   roshanTimerY: document.querySelector('#roshanTimerY'),
   roshanTimerXValue: document.querySelector('#roshanTimerXValue'),
   roshanTimerYValue: document.querySelector('#roshanTimerYValue'),
+  predictionOverlayPositionTitle: document.querySelector('#predictionOverlayPositionTitle'),
+  predictionOverlayX: document.querySelector('#predictionOverlayX'),
+  predictionOverlayY: document.querySelector('#predictionOverlayY'),
+  predictionOverlayXValue: document.querySelector('#predictionOverlayXValue'),
+  predictionOverlayYValue: document.querySelector('#predictionOverlayYValue'),
   customNotablePlayersWrap: document.querySelector('#customNotablePlayersWrap'),
   customNotablePlayersTitle: document.querySelector('#customNotablePlayersTitle'),
   customNotablePlayersHint: document.querySelector('#customNotablePlayersHint'),
@@ -144,11 +149,12 @@ let overlayPositionSaveTimer = null;
 let activePage = localStorage.getItem('dsk.activePage') || 'protection';
 let editingNotablePlayerAccountId = '';
 
-const overlayPositionKeys = ['streamerStatsMenu', 'streamerStatsGame', 'roshanTimer'];
+const overlayPositionKeys = ['streamerStatsMenu', 'streamerStatsGame', 'roshanTimer', 'predictionOverlay'];
 const overlayPreviewBoxes = {
   streamerStatsMenu: { left: 1276, top: 18, width: 170, height: 116 },
   streamerStatsGame: { left: 1390, top: 922, width: 260, height: 150 },
-  roshanTimer: { left: 318, top: 6, width: 145, height: 34 }
+  roshanTimer: { left: 318, top: 6, width: 145, height: 34 },
+  predictionOverlay: { left: 610, top: 104, width: 700, height: 96 }
 };
 
 if (els.overlayPreviewBackground) {
@@ -238,6 +244,7 @@ const translations = {
     streamerStatsMenuPosition: 'Медаль в меню',
     streamerStatsGamePosition: 'Медаль в игре',
     roshanTimerPosition: 'Таймер Roshan',
+    predictionOverlayPosition: 'Прогноз Twitch',
     overlayPositionX: 'Горизонталь',
     overlayPositionY: 'Вертикаль',
     overlayPositionReset: 'Сбросить',
@@ -489,6 +496,7 @@ const translations = {
     streamerStatsMenuPosition: 'Menu medal',
     streamerStatsGamePosition: 'In-game medal',
     roshanTimerPosition: 'Roshan timer',
+    predictionOverlayPosition: 'Twitch prediction',
     overlayPositionX: 'Horizontal',
     overlayPositionY: 'Vertical',
     overlayPositionReset: 'Reset',
@@ -798,12 +806,11 @@ function applyLanguage(config) {
   els.streamerStatsMenuPositionTitle.textContent = t('streamerStatsMenuPosition');
   els.streamerStatsGamePositionTitle.textContent = t('streamerStatsGamePosition');
   els.roshanTimerPositionTitle.textContent = t('roshanTimerPosition');
-  els.streamerStatsMenuX.closest('label').querySelector('span').textContent = t('overlayPositionX');
-  els.streamerStatsGameX.closest('label').querySelector('span').textContent = t('overlayPositionX');
-  els.roshanTimerX.closest('label').querySelector('span').textContent = t('overlayPositionX');
-  els.streamerStatsMenuY.closest('label').querySelector('span').textContent = t('overlayPositionY');
-  els.streamerStatsGameY.closest('label').querySelector('span').textContent = t('overlayPositionY');
-  els.roshanTimerY.closest('label').querySelector('span').textContent = t('overlayPositionY');
+  els.predictionOverlayPositionTitle.textContent = t('predictionOverlayPosition');
+  for (const key of overlayPositionKeys) {
+    els[`${key}X`]?.closest('label')?.querySelector('span')?.replaceChildren(document.createTextNode(t('overlayPositionX')));
+    els[`${key}Y`]?.closest('label')?.querySelector('span')?.replaceChildren(document.createTextNode(t('overlayPositionY')));
+  }
   document.querySelectorAll('[data-reset-position]').forEach((button) => {
     button.textContent = t('overlayPositionReset');
   });
@@ -1700,13 +1707,8 @@ function renderOverlayPositionPreviews() {
     preview.dataset.bg = background;
     item.style.left = `${x * (preview.clientWidth / 1920 || 0)}px`;
     item.style.top = `${y * (preview.clientHeight / 1080 || 0)}px`;
-    if (item.classList.contains('streamer-preview')) {
-      item.style.width = 'auto';
-      item.style.height = 'auto';
-    } else {
-      item.style.width = `${box.width * (preview.clientWidth / 1920 || 0)}px`;
-      item.style.height = `${box.height * (preview.clientHeight / 1080 || 0)}px`;
-    }
+    item.style.width = `${box.width * (preview.clientWidth / 1920 || 0)}px`;
+    item.style.height = `${box.height * (preview.clientHeight / 1080 || 0)}px`;
     const xOutput = els[`${key}XValue`];
     const yOutput = els[`${key}YValue`];
     if (xOutput) xOutput.textContent = String(x);
@@ -1871,7 +1873,7 @@ function updateMatchIntelFieldVisibility() {
   els.streamerStatsStatus.hidden = !streamerStatsEnabled;
   els.resetStreamerStats.hidden = !streamerStatsEnabled;
   els.restoreStreamerStats.hidden = !streamerStatsEnabled;
-  els.overlayPositionWrap.hidden = !matchIntelEnabled;
+  els.overlayPositionWrap.hidden = false;
   els.customNotablePlayersWrap.hidden = !notablePlayersEnabled;
 }
 

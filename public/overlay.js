@@ -42,7 +42,7 @@ function renderOverlay({ config, state }) {
   applyTopBarSlots(slots, reference, state);
   applyMatchIntel(matchIntelSlots, reference, config.protection.matchIntel || {}, state);
   applyStreamerStats(reference, config.protection || {}, state);
-  applyPredictionOverlay(reference, config.predictions || {}, state);
+  applyPredictionOverlay(reference, config.predictions || {}, config.protection?.matchIntel || {}, state);
   applyMinimap(config.protection, reference, state);
   setVisible(minimapMask, state.protection.minimap);
 }
@@ -531,7 +531,7 @@ function roshanText(status) {
   return `${formatClock(status.earliestRemaining)}-${formatClock(status.latestRemaining)}`;
 }
 
-function applyPredictionOverlay(reference, predictionsConfig, state) {
+function applyPredictionOverlay(reference, predictionsConfig, overlaySettings, state) {
   if (!predictionOverlayEl) return;
   const prediction = state.activePrediction;
   if (!shouldShowPredictionOverlay(prediction)) {
@@ -564,7 +564,10 @@ function applyPredictionOverlay(reference, predictionsConfig, state) {
   });
   animatePredictionOverlayLabels(prediction.id, nodes, outcomes, displayPercentages, layoutPercentages);
 
-  const box = { left: 610, top: 104, width: 700, height: 96 };
+  const box = withOverlayOffset(
+    { left: 610, top: 104, width: 700, height: 96 },
+    overlaySettings.overlayPositions?.predictionOverlay
+  );
   applyScaledBox(predictionOverlayEl, box, reference);
   setVisible(predictionOverlayEl, true);
 }
