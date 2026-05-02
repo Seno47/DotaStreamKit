@@ -139,6 +139,61 @@
                 <button id="restoreStreamerStats" type="button">Restore previous W-L</button>
               </div>
             </div>
+            <div class="overlay-position-settings" id="overlayPositionWrap">
+              <div class="section-head compact">
+                <div>
+                  <h3 id="overlayPositionTitle">Overlay position</h3>
+                  <p class="muted" id="overlayPositionHint">Move grouped overlay blocks.</p>
+                </div>
+                <label id="overlayPreviewBackgroundWrap">Preview background<select id="overlayPreviewBackground"><option value="screenshot">Screenshot</option><option value="black">Black</option><option value="white">White</option></select></label>
+              </div>
+              <div class="overlay-position-grid">
+                <section class="overlay-position-card" data-position-preview="streamerStatsMenu">
+                  <h4 id="streamerStatsMenuPositionTitle">Menu medal</h4>
+                  <div class="overlay-position-preview">
+                    <img class="overlay-position-bg" src="/assets/game1.png" alt="">
+                    <div class="overlay-position-item streamer-preview">
+                      <div class="streamer-preview-medal"><img src="/assets/rank-medal-7.png" alt=""></div>
+                      <div class="streamer-preview-wl"><span>0</span><b>W</b><span>-</span><span>0</span><b>L</b></div>
+                      <div class="streamer-preview-mmr">6420</div>
+                    </div>
+                  </div>
+                  <div class="overlay-position-sliders">
+                    <label id="streamerStatsMenuXWrap">Horizontal<input id="streamerStatsMenuX" type="range" min="-600" max="600" step="1"><output id="streamerStatsMenuXValue">0</output></label>
+                    <label id="streamerStatsMenuYWrap">Vertical<input id="streamerStatsMenuY" type="range" min="-400" max="400" step="1"><output id="streamerStatsMenuYValue">0</output></label>
+                  </div>
+                  <button type="button" data-reset-position="streamerStatsMenu">Reset</button>
+                </section>
+                <section class="overlay-position-card" data-position-preview="streamerStatsGame">
+                  <h4 id="streamerStatsGamePositionTitle">In-game medal</h4>
+                  <div class="overlay-position-preview">
+                    <img class="overlay-position-bg" src="/assets/game2.png" alt="">
+                    <div class="overlay-position-item streamer-preview live">
+                      <div class="streamer-preview-medal"><img src="/assets/rank-medal-7.png" alt=""></div>
+                      <div class="streamer-preview-wl"><span>0</span><b>W</b><span>-</span><span>0</span><b>L</b></div>
+                      <div class="streamer-preview-mmr">6420</div>
+                    </div>
+                  </div>
+                  <div class="overlay-position-sliders">
+                    <label id="streamerStatsGameXWrap">Horizontal<input id="streamerStatsGameX" type="range" min="-600" max="600" step="1"><output id="streamerStatsGameXValue">0</output></label>
+                    <label id="streamerStatsGameYWrap">Vertical<input id="streamerStatsGameY" type="range" min="-400" max="400" step="1"><output id="streamerStatsGameYValue">0</output></label>
+                  </div>
+                  <button type="button" data-reset-position="streamerStatsGame">Reset</button>
+                </section>
+                <section class="overlay-position-card" data-position-preview="roshanTimer">
+                  <h4 id="roshanTimerPositionTitle">Roshan timer</h4>
+                  <div class="overlay-position-preview">
+                    <img class="overlay-position-bg" src="/assets/game2.png" alt="">
+                    <div class="overlay-position-item roshan-preview"><img src="/assets/roshan.png" alt=""><span>8:42-11:42</span></div>
+                  </div>
+                  <div class="overlay-position-sliders">
+                    <label id="roshanTimerXWrap">Horizontal<input id="roshanTimerX" type="range" min="-600" max="600" step="1"><output id="roshanTimerXValue">0</output></label>
+                    <label id="roshanTimerYWrap">Vertical<input id="roshanTimerY" type="range" min="-300" max="300" step="1"><output id="roshanTimerYValue">0</output></label>
+                  </div>
+                  <button type="button" data-reset-position="roshanTimer">Reset</button>
+                </section>
+              </div>
+            </div>
             <div class="notable-players" id="customNotablePlayersWrap">
               <div class="notable-players-head" id="customNotablePlayersTitle">Custom notable players</div>
               <p class="muted" id="customNotablePlayersHint">Add Dota account ids that should always be treated as notable.</p>

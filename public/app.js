@@ -41,6 +41,26 @@ const els = {
   streamerStatsStatus: document.querySelector('#streamerStatsStatus'),
   resetStreamerStats: document.querySelector('#resetStreamerStats'),
   restoreStreamerStats: document.querySelector('#restoreStreamerStats'),
+  overlayPositionWrap: document.querySelector('#overlayPositionWrap'),
+  overlayPositionTitle: document.querySelector('#overlayPositionTitle'),
+  overlayPositionHint: document.querySelector('#overlayPositionHint'),
+  overlayPreviewBackgroundWrap: document.querySelector('#overlayPreviewBackgroundWrap'),
+  overlayPreviewBackground: document.querySelector('#overlayPreviewBackground'),
+  streamerStatsMenuPositionTitle: document.querySelector('#streamerStatsMenuPositionTitle'),
+  streamerStatsMenuX: document.querySelector('#streamerStatsMenuX'),
+  streamerStatsMenuY: document.querySelector('#streamerStatsMenuY'),
+  streamerStatsMenuXValue: document.querySelector('#streamerStatsMenuXValue'),
+  streamerStatsMenuYValue: document.querySelector('#streamerStatsMenuYValue'),
+  streamerStatsGamePositionTitle: document.querySelector('#streamerStatsGamePositionTitle'),
+  streamerStatsGameX: document.querySelector('#streamerStatsGameX'),
+  streamerStatsGameY: document.querySelector('#streamerStatsGameY'),
+  streamerStatsGameXValue: document.querySelector('#streamerStatsGameXValue'),
+  streamerStatsGameYValue: document.querySelector('#streamerStatsGameYValue'),
+  roshanTimerPositionTitle: document.querySelector('#roshanTimerPositionTitle'),
+  roshanTimerX: document.querySelector('#roshanTimerX'),
+  roshanTimerY: document.querySelector('#roshanTimerY'),
+  roshanTimerXValue: document.querySelector('#roshanTimerXValue'),
+  roshanTimerYValue: document.querySelector('#roshanTimerYValue'),
   customNotablePlayersWrap: document.querySelector('#customNotablePlayersWrap'),
   customNotablePlayersTitle: document.querySelector('#customNotablePlayersTitle'),
   customNotablePlayersHint: document.querySelector('#customNotablePlayersHint'),
@@ -120,8 +140,23 @@ const els = {
 let snapshot = null;
 let lastTemplateInput = null;
 let predictionConfigSaveTimer = null;
+let overlayPositionSaveTimer = null;
 let activePage = localStorage.getItem('dsk.activePage') || 'protection';
 let editingNotablePlayerAccountId = '';
+
+const overlayPositionKeys = ['streamerStatsMenu', 'streamerStatsGame', 'roshanTimer'];
+const overlayPreviewBoxes = {
+  streamerStatsMenu: { left: 1276, top: 18, width: 170, height: 116 },
+  streamerStatsGame: { left: 1390, top: 922, width: 260, height: 150 },
+  roshanTimer: { left: 318, top: 6, width: 145, height: 34 }
+};
+
+if (els.overlayPreviewBackground) {
+  const savedPreviewBackground = localStorage.getItem('dsk.overlayPreviewBackground');
+  if (['screenshot', 'black', 'white'].includes(savedPreviewBackground)) {
+    els.overlayPreviewBackground.value = savedPreviewBackground;
+  }
+}
 
 const translations = {
   ru: {
@@ -194,6 +229,18 @@ const translations = {
     streamerStatsOffline: 'offline',
     streamerStatsUnknown: 'неизвестно',
     streamerStatsPrevious: ' / прошлый W-L можно восстановить: {wins}-{losses}',
+    overlayPositionTitle: 'Положение overlay',
+    overlayPositionHint: 'Перемещение цельных блоков без разрыва иконок и чисел.',
+    overlayPreviewBackground: 'Фон превью',
+    overlayPreviewScreenshot: 'Скриншот',
+    overlayPreviewBlack: 'Черный',
+    overlayPreviewWhite: 'Белый',
+    streamerStatsMenuPosition: 'Медаль в меню',
+    streamerStatsGamePosition: 'Медаль в игре',
+    roshanTimerPosition: 'Таймер Roshan',
+    overlayPositionX: 'Горизонталь',
+    overlayPositionY: 'Вертикаль',
+    overlayPositionReset: 'Сбросить',
     customNotablePlayers: 'Кастомные Notable Players',
     customNotablePlayersHint: 'Добавь Dota account id игроков, которых нужно всегда считать notable. Ник и страна из этого списка имеют приоритет над OpenDota.',
     notablePlayerId: 'Dota ID',
@@ -433,6 +480,18 @@ const translations = {
     streamerStatsOffline: 'offline',
     streamerStatsUnknown: 'unknown',
     streamerStatsPrevious: ' / previous W-L can be restored: {wins}-{losses}',
+    overlayPositionTitle: 'Overlay position',
+    overlayPositionHint: 'Move grouped blocks without splitting icons from numbers.',
+    overlayPreviewBackground: 'Preview background',
+    overlayPreviewScreenshot: 'Screenshot',
+    overlayPreviewBlack: 'Black',
+    overlayPreviewWhite: 'White',
+    streamerStatsMenuPosition: 'Menu medal',
+    streamerStatsGamePosition: 'In-game medal',
+    roshanTimerPosition: 'Roshan timer',
+    overlayPositionX: 'Horizontal',
+    overlayPositionY: 'Vertical',
+    overlayPositionReset: 'Reset',
     customNotablePlayers: 'Custom notable players',
     customNotablePlayersHint: 'Add Dota account ids that should always be treated as notable. Name and country here override OpenDota.',
     notablePlayerId: 'Dota ID',
@@ -730,6 +789,24 @@ function applyLanguage(config) {
   setLabelText(els.streamerMmrLossDeltaWrap, t('streamerMmrLossDelta'));
   els.resetStreamerStats.textContent = t('resetStreamerStats');
   els.restoreStreamerStats.textContent = t('restoreStreamerStats');
+  els.overlayPositionTitle.textContent = t('overlayPositionTitle');
+  els.overlayPositionHint.textContent = t('overlayPositionHint');
+  setLabelText(els.overlayPreviewBackgroundWrap, t('overlayPreviewBackground'));
+  setOptionText(els.overlayPreviewBackground, 'screenshot', t('overlayPreviewScreenshot'));
+  setOptionText(els.overlayPreviewBackground, 'black', t('overlayPreviewBlack'));
+  setOptionText(els.overlayPreviewBackground, 'white', t('overlayPreviewWhite'));
+  els.streamerStatsMenuPositionTitle.textContent = t('streamerStatsMenuPosition');
+  els.streamerStatsGamePositionTitle.textContent = t('streamerStatsGamePosition');
+  els.roshanTimerPositionTitle.textContent = t('roshanTimerPosition');
+  setLabelText(els.streamerStatsMenuX.closest('label'), t('overlayPositionX'));
+  setLabelText(els.streamerStatsMenuY.closest('label'), t('overlayPositionY'));
+  setLabelText(els.streamerStatsGameX.closest('label'), t('overlayPositionX'));
+  setLabelText(els.streamerStatsGameY.closest('label'), t('overlayPositionY'));
+  setLabelText(els.roshanTimerX.closest('label'), t('overlayPositionX'));
+  setLabelText(els.roshanTimerY.closest('label'), t('overlayPositionY'));
+  document.querySelectorAll('[data-reset-position]').forEach((button) => {
+    button.textContent = t('overlayPositionReset');
+  });
   els.customNotablePlayersTitle.textContent = t('customNotablePlayers');
   els.customNotablePlayersHint.textContent = t('customNotablePlayersHint');
   setLabelText(els.notablePlayerIdWrap, t('notablePlayerId'));
@@ -958,6 +1035,7 @@ function render(data) {
   els.autoUpdateStreamerMmr.checked = matchIntel.autoUpdateStreamerMmr !== false;
   setInputValue(els.streamerMmrWinDelta, matchIntel.streamerMmrWinDelta ?? 25);
   setInputValue(els.streamerMmrLossDelta, matchIntel.streamerMmrLossDelta ?? 25);
+  setOverlayPositionControls(matchIntel.overlayPositions || {});
   renderStreamerStatsStatus(state.streamerStats || {}, matchIntel);
   renderCustomNotablePlayers(matchIntel.customPlayers || []);
   updateMatchIntelFieldVisibility();
@@ -1567,6 +1645,72 @@ function renderStreamerStatsStatus(stats, settings) {
   els.restoreStreamerStats.disabled = !stats.previousSession;
 }
 
+function setOverlayPositionControls(positions) {
+  for (const key of overlayPositionKeys) {
+    const offset = normalizeOverlayOffset(positions[key]);
+    const xInput = els[`${key}X`];
+    const yInput = els[`${key}Y`];
+    if (xInput) setInputValue(xInput, offset.x);
+    if (yInput) setInputValue(yInput, offset.y);
+  }
+  renderOverlayPositionPreviews();
+}
+
+function overlayPositionsFromForm() {
+  return Object.fromEntries(overlayPositionKeys.map((key) => [key, {
+    x: Number(els[`${key}X`]?.value || 0),
+    y: Number(els[`${key}Y`]?.value || 0)
+  }]));
+}
+
+function normalizeOverlayOffset(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  return {
+    x: clampNumber(source.x, -1200, 1200, 0),
+    y: clampNumber(source.y, -700, 700, 0)
+  };
+}
+
+function clampNumber(value, min, max, fallback = 0) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(min, Math.min(max, Math.trunc(number)));
+}
+
+function renderOverlayPositionPreviews() {
+  const positions = overlayPositionsFromForm();
+  const background = els.overlayPreviewBackground?.value || 'screenshot';
+  for (const key of overlayPositionKeys) {
+    const card = document.querySelector(`[data-position-preview="${key}"]`);
+    const preview = card?.querySelector('.overlay-position-preview');
+    const item = card?.querySelector('.overlay-position-item');
+    const box = overlayPreviewBoxes[key];
+    if (!preview || !item || !box) continue;
+    const offset = normalizeOverlayOffset(positions[key]);
+    preview.dataset.bg = background;
+    item.style.left = `${((box.left + offset.x) / 1920) * 100}%`;
+    item.style.top = `${((box.top + offset.y) / 1080) * 100}%`;
+    item.style.width = `${(box.width / 1920) * 100}%`;
+    item.style.height = `${(box.height / 1080) * 100}%`;
+    const xOutput = els[`${key}XValue`];
+    const yOutput = els[`${key}YValue`];
+    if (xOutput) xOutput.textContent = signedOffset(offset.x);
+    if (yOutput) yOutput.textContent = signedOffset(offset.y);
+  }
+}
+
+function signedOffset(value) {
+  const number = Number(value || 0);
+  return number > 0 ? `+${number}` : String(number);
+}
+
+function scheduleOverlayPositionSave() {
+  clearTimeout(overlayPositionSaveTimer);
+  overlayPositionSaveTimer = setTimeout(() => {
+    saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch((error) => console.error('Overlay position save failed', error));
+  }, 250);
+}
+
 function countryFlagEmoji(code) {
   const normalized = normalizeCountryCode(code);
   if (!normalized) return '';
@@ -1643,6 +1787,33 @@ els.manualTopBar.addEventListener('click', () => saveProtection({ manualTopBar: 
 els.manualQueue.addEventListener('click', () => saveProtection({ manualQueue: nextManualProtectionState('manualQueue', 'queue') }).catch(alert));
 els.resetStreamerStats.addEventListener('click', () => api('/api/streamer-stats/reset', {}).catch(alert));
 els.restoreStreamerStats.addEventListener('click', () => api('/api/streamer-stats/restore', {}).catch(alert));
+els.overlayPreviewBackground.addEventListener('change', () => {
+  localStorage.setItem('dsk.overlayPreviewBackground', els.overlayPreviewBackground.value);
+  renderOverlayPositionPreviews();
+});
+for (const key of overlayPositionKeys) {
+  for (const axis of ['X', 'Y']) {
+    const input = els[`${key}${axis}`];
+    input?.addEventListener('input', () => {
+      renderOverlayPositionPreviews();
+      scheduleOverlayPositionSave();
+    });
+    input?.addEventListener('change', () => {
+      renderOverlayPositionPreviews();
+      saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+    });
+  }
+}
+document.querySelectorAll('[data-reset-position]').forEach((button) => {
+  button.addEventListener('click', () => {
+    const key = button.dataset.resetPosition;
+    if (!overlayPositionKeys.includes(key)) return;
+    els[`${key}X`].value = '0';
+    els[`${key}Y`].value = '0';
+    renderOverlayPositionPreviews();
+    saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+  });
+});
 
 function protectionMatchIntelFromForm() {
   return {
@@ -1662,6 +1833,7 @@ function protectionMatchIntelFromForm() {
     autoUpdateStreamerMmr: els.autoUpdateStreamerMmr.checked,
     streamerMmrWinDelta: Number(els.streamerMmrWinDelta.value),
     streamerMmrLossDelta: Number(els.streamerMmrLossDelta.value),
+    overlayPositions: overlayPositionsFromForm(),
     customPlayers: customNotablePlayersFromForm()
   };
 }
@@ -1688,6 +1860,7 @@ function updateMatchIntelFieldVisibility() {
   els.streamerStatsStatus.hidden = !streamerStatsEnabled;
   els.resetStreamerStats.hidden = !streamerStatsEnabled;
   els.restoreStreamerStats.hidden = !streamerStatsEnabled;
+  els.overlayPositionWrap.hidden = !matchIntelEnabled;
   els.customNotablePlayersWrap.hidden = !notablePlayersEnabled;
 }
 

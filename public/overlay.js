@@ -431,7 +431,7 @@ function applyRoshanIntel(reference, settings, state, version, slots) {
   const box = firstSlot
     ? { left: Math.max(0, Number(firstSlot.left) - 230), top: Number(firstSlot.top || 0) + 6, width: 145, height: 34 }
     : { left: 318, top: 6, width: 145, height: 34 };
-  applyScaledBox(roshanIntelEl, box, reference);
+  applyScaledBox(roshanIntelEl, withOverlayOffset(box, settings.overlayPositions?.roshanTimer), reference);
   setVisible(roshanIntelEl, true);
 }
 
@@ -791,8 +791,23 @@ function applyStreamerStats(reference, protection, state) {
   const box = inLiveGame
     ? { left, bottom: 8, width: 260, height: 150 }
     : { left, top: 18, width: 170, height: 116 };
-  applyScaledBox(streamerStatsEl, box, reference);
+  const offset = inLiveGame
+    ? settings.overlayPositions?.streamerStatsGame
+    : settings.overlayPositions?.streamerStatsMenu;
+  applyScaledBox(streamerStatsEl, withOverlayOffset(box, offset), reference);
   setVisible(streamerStatsEl, true);
+}
+
+function withOverlayOffset(box, offset) {
+  const x = Number(offset?.x || 0);
+  const y = Number(offset?.y || 0);
+  const next = { ...box, left: Number(box.left || 0) + x };
+  if (box.bottom !== undefined) {
+    next.bottom = Number(box.bottom || 0) - y;
+  } else {
+    next.top = Number(box.top || 0) + y;
+  }
+  return next;
 }
 
 function shouldShowStreamerStatsInOverlay(state) {

@@ -291,6 +291,11 @@ const defaultConfig = {
       autoUpdateStreamerMmr: true,
       streamerMmrWinDelta: 25,
       streamerMmrLossDelta: 25,
+      overlayPositions: {
+        streamerStatsMenu: { x: 0, y: 0 },
+        streamerStatsGame: { x: 0, y: 0 },
+        roshanTimer: { x: 0, y: 0 }
+      },
       rankDisplayMode: 'minutes',
       rankDisplayMinutes: 12,
       customPlayers: []
@@ -1265,6 +1270,8 @@ function assetNames() {
     'rank-immortal.png',
     'aegis.png',
     'roshan.png',
+    'game1.png',
+    'game2.png',
     'draft-screenshot.png',
     'queue-screenshot.png',
     ...Array.from({ length: 10 }, (_, index) => `topbar-slot-${index}.png`)
@@ -1281,6 +1288,8 @@ function defaultSeedAssetNames() {
     'rank-immortal.png',
     'aegis.png',
     'roshan.png',
+    'game1.png',
+    'game2.png',
     'minimap-base-realistic.png',
     'minimap-base-simple.png'
   ];
@@ -2640,8 +2649,26 @@ function normalizeMatchIntelConfig(config) {
   delete config.showAegisRoshan;
   if (!['minutes', 'full_game', 'pre_game_only'].includes(config.rankDisplayMode)) config.rankDisplayMode = 'minutes';
   config.rankDisplayMinutes = clampInt(config.rankDisplayMinutes, 1, 30);
+  config.overlayPositions = normalizeOverlayPositions(config.overlayPositions);
   config.customPlayers = normalizeCustomNotablePlayers(config.customPlayers);
   normalizeStreamerStatsConfig(config);
+}
+
+function normalizeOverlayPositions(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  return {
+    streamerStatsMenu: normalizeOverlayOffset(source.streamerStatsMenu),
+    streamerStatsGame: normalizeOverlayOffset(source.streamerStatsGame),
+    roshanTimer: normalizeOverlayOffset(source.roshanTimer)
+  };
+}
+
+function normalizeOverlayOffset(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  return {
+    x: clampInt(source.x, -1200, 1200),
+    y: clampInt(source.y, -700, 700)
+  };
 }
 
 function normalizeCustomNotablePlayers(value) {
