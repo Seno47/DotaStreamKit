@@ -680,43 +680,56 @@ dd {
 }
 
 .overlay-position-x span {
-  grid-column: 1 / -1;
+  grid-column: 1;
+  grid-row: 1;
 }
 
 .overlay-position-y {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: minmax(0, 1fr) auto;
-  column-gap: 4px;
+  grid-template-rows: var(--preview-height, 260px) auto;
+  column-gap: 6px;
+  row-gap: 4px;
   justify-items: center;
   align-items: center;
-  height: var(--preview-height, 260px);
-  min-height: 220px;
   margin: 0;
   color: #dbe3ee;
   font-size: 13px;
 }
 
 .overlay-position-x input[type="range"] {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  box-sizing: border-box;
   width: 100%;
+  margin: 0;
   accent-color: #63b3ff;
 }
 
 .overlay-position-y input[type="range"] {
   grid-column: 1;
   grid-row: 1;
+  box-sizing: border-box;
   width: 100%;
   height: 100%;
-  min-height: 220px;
+  min-height: 0;
+  margin: 0;
   writing-mode: vertical-lr;
   direction: ltr;
   accent-color: #63b3ff;
 }
 
-.overlay-position-x output,
 .overlay-position-y output {
   grid-column: 1;
   grid-row: 2;
+  color: #9aa5b5;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.overlay-position-x output {
+  grid-column: 2;
+  grid-row: 1;
   color: #9aa5b5;
   font-variant-numeric: tabular-nums;
   text-align: right;
