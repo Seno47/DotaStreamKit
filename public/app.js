@@ -1651,8 +1651,8 @@ function setOverlayPositionControls(positions) {
     const box = overlayPreviewBoxes[key];
     const xInput = els[`${key}X`];
     const yInput = els[`${key}Y`];
-    if (xInput && box) setInputValue(xInput, box.left + offset.x);
-    if (yInput && box) setInputValue(yInput, box.top + offset.y);
+    if (xInput && box) setInputValue(xInput, clampNumber(box.left + offset.x, 0, 1920, box.left));
+    if (yInput && box) setInputValue(yInput, clampNumber(box.top + offset.y, 0, 1080, box.top));
   }
   renderOverlayPositionPreviews();
 }
@@ -1660,8 +1660,8 @@ function setOverlayPositionControls(positions) {
 function overlayPositionsFromForm() {
   return Object.fromEntries(overlayPositionKeys.map((key) => {
     const box = overlayPreviewBoxes[key] || { left: 0, top: 0 };
-    const x = clampNumber(els[`${key}X`]?.value, -1920, 3840, box.left);
-    const y = clampNumber(els[`${key}Y`]?.value, -1080, 2160, box.top);
+    const x = clampNumber(els[`${key}X`]?.value, 0, 1920, box.left);
+    const y = clampNumber(els[`${key}Y`]?.value, 0, 1080, box.top);
     return [key, {
       x: x - box.left,
       y: y - box.top
@@ -1672,8 +1672,8 @@ function overlayPositionsFromForm() {
 function normalizeOverlayOffset(value) {
   const source = value && typeof value === 'object' ? value : {};
   return {
-    x: clampNumber(source.x, -3840, 3840, 0),
-    y: clampNumber(source.y, -2160, 2160, 0)
+    x: clampNumber(source.x, -1920, 1920, 0),
+    y: clampNumber(source.y, -1080, 1080, 0)
   };
 }
 
@@ -1693,8 +1693,8 @@ function renderOverlayPositionPreviews() {
     const box = overlayPreviewBoxes[key];
     if (!preview || !item || !box) continue;
     const offset = normalizeOverlayOffset(positions[key]);
-    const x = box.left + offset.x;
-    const y = box.top + offset.y;
+    const x = clampNumber(box.left + offset.x, 0, 1920, box.left);
+    const y = clampNumber(box.top + offset.y, 0, 1080, box.top);
     preview.style.setProperty('--preview-scale', String(preview.clientWidth / 1920 || 0.5));
     card.style.setProperty('--preview-height', `${preview.clientHeight || 260}px`);
     preview.dataset.bg = background;

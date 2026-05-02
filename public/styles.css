@@ -685,7 +685,9 @@ dd {
 
 .overlay-position-y {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto;
+  column-gap: 4px;
   justify-items: center;
   align-items: center;
   height: var(--preview-height, 260px);
@@ -701,6 +703,8 @@ dd {
 }
 
 .overlay-position-y input[type="range"] {
+  grid-column: 1;
+  grid-row: 1;
   width: 100%;
   height: 100%;
   min-height: 220px;
@@ -711,13 +715,18 @@ dd {
 
 .overlay-position-x output,
 .overlay-position-y output {
+  grid-column: 1;
+  grid-row: 2;
   color: #9aa5b5;
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
 
 .overlay-position-y span {
+  grid-column: 2;
+  grid-row: 1;
   writing-mode: vertical-rl;
+  align-self: start;
 }
 
 .notable-player-form {
