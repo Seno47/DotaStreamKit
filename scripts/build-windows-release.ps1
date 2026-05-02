@@ -61,7 +61,7 @@ foreach ($item in $items) {
 
 Remove-Item -LiteralPath (Join-Path $appDir "scripts\launcher") -Recurse -Force -ErrorAction SilentlyContinue
 
-& $csc /nologo /target:exe /win32icon:$iconPath /out:$launcherExe $launcherSource
+& $csc /nologo /target:winexe /win32icon:$iconPath /r:System.Windows.Forms.dll /r:System.Drawing.dll /out:$launcherExe $launcherSource
 if ($LASTEXITCODE -ne 0) {
   throw "Launcher compilation failed"
 }

@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { copyFile, readFile, writeFile, mkdir, stat, rm } from 'node:fs/promises';
+import { copyFile, readFile, writeFile, mkdir, stat, rm, readdir } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { basename, dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -35,7 +35,7 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const execFileAsync = promisify(execFile);
 const rootDir = normalize(join(__dirname, '..'));
 const publicDir = join(rootDir, 'public');
-const dataDir = join(rootDir, 'data');
+const dataDir = resolveDataDir();
 const assetDir = join(dataDir, 'assets');
 const defaultAssetDir = join(publicDir, 'default-assets');
 const configPath = join(dataDir, 'config.json');
@@ -51,6 +51,25 @@ const githubLatestReleaseApi = `https://api.github.com/repos/${githubRepoOwner}/
 const twitchApi = 'https://api.twitch.tv/helix';
 const twitchId = 'https://id.twitch.tv/oauth2';
 const twitchScopes = ['channel:manage:predictions', 'user:write:chat'];
+
+function resolveDataDir() {
+  if (process.env.DOTASTREAMKIT_DATA_DIR) return normalize(process.env.DOTASTREAMKIT_DATA_DIR);
+  if (process.env.DOTASTREAMKIT_LAUNCHER === '1' && isInsideProtectedInstallDir(rootDir)) {
+    const base = process.env.APPDATA || process.env.LOCALAPPDATA || process.env.USERPROFILE;
+    if (base) return normalize(join(base, 'DotaStreamKit'));
+  }
+  return join(rootDir, 'data');
+}
+
+function isInsideProtectedInstallDir(path) {
+  if (process.platform !== 'win32') return false;
+  const normalizedPath = normalize(path).toLowerCase();
+  const protectedRoots = [process.env.ProgramFiles, process.env['ProgramFiles(x86)']]
+    .filter(Boolean)
+    .map((value) => normalize(value).toLowerCase());
+  return protectedRoots.some((protectedRoot) => normalizedPath === protectedRoot || normalizedPath.startsWith(`${protectedRoot}\\`));
+}
+
 const queueAutoOnDelayMs = 0;
 const queueAutoOffDelayMs = 2500;
 const queueAutoStaleKeepMs = 10 * 60 * 1000;
@@ -441,6 +460,7 @@ const runtime = {
 
 await mkdir(dataDir, { recursive: true });
 await mkdir(assetDir, { recursive: true });
+await migrateLegacyLocalDataDir();
 await ensureGeneratedAssets();
 runtime.config = await loadJson(configPath, defaultConfig);
 await migrateConfig(runtime.config);
@@ -850,6 +870,60 @@ async function persistTwitchTokenBackup() {
 
 async function deleteTwitchTokenBackup() {
   await rm(twitchTokenPath, { force: true });
+}
+
+async function migrateLegacyLocalDataDir() {
+  const legacyDataDir = join(rootDir, 'data');
+  if (samePath(legacyDataDir, dataDir)) return;
+  try {
+    await stat(legacyDataDir);
+  } catch {
+    return;
+  }
+
+  for (const name of ['config.json', 'state.json', 'twitch-token.json']) {
+    await copyFileIfMissing(join(legacyDataDir, name), join(dataDir, name));
+  }
+  await copyDirectoryFilesIfMissing(join(legacyDataDir, 'assets'), assetDir);
+}
+
+async function copyFileIfMissing(source, target) {
+  try {
+    await stat(target);
+    return false;
+  } catch {}
+  try {
+    await mkdir(dirname(target), { recursive: true });
+    await copyFile(source, target);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function copyDirectoryFilesIfMissing(sourceDir, targetDir) {
+  let entries;
+  try {
+    entries = await readdir(sourceDir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  await mkdir(targetDir, { recursive: true });
+  for (const entry of entries) {
+    const source = join(sourceDir, entry.name);
+    const target = join(targetDir, entry.name);
+    if (entry.isDirectory()) {
+      await copyDirectoryFilesIfMissing(source, target);
+    } else if (entry.isFile()) {
+      await copyFileIfMissing(source, target);
+    }
+  }
+}
+
+function samePath(a, b) {
+  const left = normalize(a);
+  const right = normalize(b);
+  return process.platform === 'win32' ? left.toLowerCase() === right.toLowerCase() : left === right;
 }
 
 async function ensureGeneratedAssets() {
