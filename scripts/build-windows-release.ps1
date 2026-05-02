@@ -39,6 +39,8 @@ $items = @(
   "package.json",
   "package-lock.json",
   "README.md",
+  "LICENSE",
+  "SECURITY.md",
   "src",
   "public",
   "scripts",

@@ -1271,7 +1271,6 @@ function assetNames() {
 
 function defaultSeedAssetNames() {
   return [
-    'draft-screenshot.png',
     'ward-eye.png',
     'sentry-eye.png',
     ...Array.from({ length: 9 }, (_, index) => `rank-medal-${index}.png`),
