@@ -13,7 +13,10 @@ $releaseRoot = Join-Path $dist $releaseName
 $appDir = Join-Path $releaseRoot "app"
 $runtimeDir = Join-Path $releaseRoot "runtime"
 $launcherSource = Join-Path $PSScriptRoot "launcher\DotaStreamKitLauncher.cs"
+$updaterSource = Join-Path $PSScriptRoot "launcher\DotaStreamKitUpdater.cs"
+$iconPath = Join-Path $PSScriptRoot "launcher\DotaStreamKit.ico"
 $launcherExe = Join-Path $releaseRoot "DotaStreamKit.exe"
+$updaterExe = Join-Path $releaseRoot "DotaStreamKitUpdater.exe"
 $zipPath = Join-Path $dist "$releaseName.zip"
 $csc = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
 
@@ -58,9 +61,13 @@ foreach ($item in $items) {
 
 Remove-Item -LiteralPath (Join-Path $appDir "scripts\launcher") -Recurse -Force -ErrorAction SilentlyContinue
 
-& $csc /nologo /target:exe /out:$launcherExe $launcherSource
+& $csc /nologo /target:exe /win32icon:$iconPath /out:$launcherExe $launcherSource
 if ($LASTEXITCODE -ne 0) {
   throw "Launcher compilation failed"
+}
+& $csc /nologo /target:exe /win32icon:$iconPath /r:System.IO.Compression.FileSystem.dll /out:$updaterExe $updaterSource
+if ($LASTEXITCODE -ne 0) {
+  throw "Updater compilation failed"
 }
 
 Compress-Archive -LiteralPath $releaseRoot -DestinationPath $zipPath -CompressionLevel Optimal

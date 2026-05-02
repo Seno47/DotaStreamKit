@@ -148,6 +148,17 @@ const els = {
   dotaPath: document.querySelector('#dotaPath'),
   detectDota: document.querySelector('#detectDota'),
   installGsi: document.querySelector('#installGsi'),
+  autoCheckUpdates: document.querySelector('#autoCheckUpdates'),
+  autoInstallUpdates: document.querySelector('#autoInstallUpdates'),
+  checkUpdates: document.querySelector('#checkUpdates'),
+  installUpdate: document.querySelector('#installUpdate'),
+  updateStatus: document.querySelector('#updateStatus'),
+  backupAll: document.querySelector('#backupAll'),
+  backupSections: document.querySelector('#backupSections'),
+  exportBackup: document.querySelector('#exportBackup'),
+  importBackupFile: document.querySelector('#importBackupFile'),
+  importBackupLabel: document.querySelector('#importBackupLabel'),
+  backupStatus: document.querySelector('#backupStatus'),
   draftScreenshotAsset: document.querySelector('#draftScreenshotAsset'),
   queueScreenshotAsset: document.querySelector('#queueScreenshotAsset'),
   assetStatus: document.querySelector('#assetStatus'),
@@ -161,6 +172,7 @@ let overlayPositionSaveTimer = null;
 let activePage = localStorage.getItem('dsk.activePage') || 'protection';
 let editingNotablePlayerAccountId = '';
 let activeOverlayPositionKey = localStorage.getItem('dsk.overlayPositionTarget') || 'streamerStatsGame';
+let latestUpdateStatus = null;
 
 const overlayPositionKeys = ['streamerStatsMenu', 'streamerStatsGame', 'roshanTimer', 'predictionOverlay'];
 const overlayPreviewBoxes = {
@@ -408,6 +420,23 @@ const translations = {
     findDota: 'Найти Dota',
     installGsi: 'Установить GSI',
     gsiHelp: 'GSI встроен в Dota 2. DotaStreamKit устанавливает только маленький cfg-файл, который отправляет состояние игры на локальный сервер.',
+    updatesTitle: 'Обновления',
+    autoCheckUpdates: 'Проверять обновления при запуске',
+    autoInstallUpdates: 'Автоматически устанавливать опубликованный релиз',
+    checkUpdates: 'Проверить',
+    installUpdate: 'Установить обновление',
+    updateOnlyReleases: 'Обновления проверяются только по опубликованным GitHub Releases.',
+    updateChecking: 'Проверяю обновления...',
+    updateAvailable: 'Доступна версия {version}.',
+    updateCurrent: 'Установлена актуальная версия {version}.',
+    updateStarted: 'Обновление запущено. Приложение перезапустится после установки.',
+    backupTitle: 'Перенос настроек',
+    backupAll: 'Все настройки и файлы',
+    exportBackup: 'Экспорт',
+    importBackup: 'Импорт',
+    backupHelp: 'По умолчанию переносится всё. Можно оставить один раздел или любую комбинацию.',
+    backupExported: 'Файл настроек сохранён.',
+    backupImported: 'Настройки импортированы.',
     assetsTitle: 'Картинки draft HUD',
     draftImage: 'Полный draft-скрин',
     queueImage: 'Скрин меню для скрытия поиска',
@@ -675,6 +704,23 @@ const translations = {
     findDota: 'Find Dota',
     installGsi: 'Install GSI',
     gsiHelp: 'GSI is built into Dota 2. DotaStreamKit installs only a small cfg file that sends game state to the local server.',
+    updatesTitle: 'Updates',
+    autoCheckUpdates: 'Check for updates on startup',
+    autoInstallUpdates: 'Automatically install published releases',
+    checkUpdates: 'Check',
+    installUpdate: 'Install update',
+    updateOnlyReleases: 'Updates are checked only from published GitHub Releases.',
+    updateChecking: 'Checking for updates...',
+    updateAvailable: 'Version {version} is available.',
+    updateCurrent: 'You are on the latest version {version}.',
+    updateStarted: 'Update started. The app will restart after installation.',
+    backupTitle: 'Settings transfer',
+    backupAll: 'All settings and files',
+    exportBackup: 'Export',
+    importBackup: 'Import',
+    backupHelp: 'Everything is selected by default. You can keep one section or any combination.',
+    backupExported: 'Settings file saved.',
+    backupImported: 'Settings imported.',
     assetsTitle: 'Draft HUD images',
     draftImage: 'Full draft screenshot',
     queueImage: 'Menu screenshot for queue masking',
@@ -777,6 +823,7 @@ let predictionTypeControlKey = '';
 
 buildPredictionTypeControls();
 setActivePage(activePage);
+syncBackupSectionToggles();
 
 const stream = new EventSource('/api/events');
 stream.onmessage = (event) => {
@@ -999,6 +1046,19 @@ function applyLanguage(config) {
   els.installGsi.textContent = t('installGsi');
   els.installGsi.closest('article').querySelector('.muted').textContent = t('gsiHelp');
 
+  setText('#updatesTitle', 'updatesTitle');
+  setLabelText(els.autoCheckUpdates.closest('label'), t('autoCheckUpdates'));
+  setLabelText(els.autoInstallUpdates.closest('label'), t('autoInstallUpdates'));
+  els.checkUpdates.textContent = t('checkUpdates');
+  els.installUpdate.textContent = t('installUpdate');
+  if (!latestUpdateStatus) els.updateStatus.textContent = t('updateOnlyReleases');
+
+  setText('#backupTitle', 'backupTitle');
+  setLabelText(els.backupAll.closest('label'), t('backupAll'));
+  els.exportBackup.textContent = t('exportBackup');
+  els.importBackupLabel.textContent = t('importBackup');
+  if (!els.backupStatus.dataset.custom) els.backupStatus.textContent = t('backupHelp');
+
   setText(els.draftScreenshotAsset.closest('article').querySelector('h2'), 'assetsTitle');
   setLabelText(els.draftScreenshotAsset.closest('label'), t('draftImage'));
   setLabelText(els.queueScreenshotAsset.closest('label'), t('queueImage'));
@@ -1189,9 +1249,19 @@ function render(data) {
   renderPredictionTypes(config.predictions.types || {});
   renderPredictionTypeVisibility();
   renderPredictionTypePreviews();
+  els.autoCheckUpdates.checked = config.updates?.autoCheck !== false;
+  els.autoInstallUpdates.checked = config.updates?.autoInstall === true;
 
   renderPrediction(state.activePrediction);
   renderEvents(state.events || []);
+
+  if (config.updates?.autoCheck !== false && !latestUpdateStatus && !sessionStorage.getItem('dsk.updateChecked')) {
+    sessionStorage.setItem('dsk.updateChecked', '1');
+    checkUpdates(false).catch((error) => {
+      els.updateStatus.dataset.custom = 'true';
+      els.updateStatus.textContent = error.message;
+    });
+  }
 }
 
 function updateConditionalVisibility(config) {
@@ -2236,6 +2306,17 @@ els.installGsi.addEventListener('click', () => api('/api/install-gsi', {
   els.dotaPath.value = result.dotaPath || els.dotaPath.value;
   alert(`${t('gsiInstalled')}\n${result.cfgPath}\n\n${t('restartDota')}`);
 }).catch(alert));
+els.autoCheckUpdates.addEventListener('change', saveUpdateSettings);
+els.autoInstallUpdates.addEventListener('change', saveUpdateSettings);
+els.checkUpdates.addEventListener('click', () => checkUpdates(true).catch(alert));
+els.installUpdate.addEventListener('click', () => installUpdate().catch(alert));
+els.backupAll.addEventListener('change', syncBackupSectionToggles);
+els.backupSections.addEventListener('change', () => {
+  const selected = selectedBackupSections();
+  els.backupAll.checked = selected.length === backupSectionInputs().length;
+});
+els.exportBackup.addEventListener('click', () => exportBackup().catch(alert));
+els.importBackupFile.addEventListener('change', () => importBackup().catch(alert));
 els.draftScreenshotAsset.addEventListener('change', () => uploadAsset('draft-screenshot.png', els.draftScreenshotAsset.files[0]).catch(alert));
 els.queueScreenshotAsset.addEventListener('change', () => uploadAsset('queue-screenshot.png', els.queueScreenshotAsset.files[0]).catch(alert));
 
@@ -2243,6 +2324,85 @@ async function detectDota() {
   const result = await api('/api/dota/detect', null, 'GET');
   els.dotaPath.value = result.dotaPath || '';
   alert(`${t('dotaFound')}\n${result.dotaPath}`);
+}
+
+async function saveUpdateSettings() {
+  await api('/api/config', {
+    updates: {
+      autoCheck: els.autoCheckUpdates.checked,
+      autoInstall: els.autoInstallUpdates.checked
+    }
+  });
+}
+
+async function checkUpdates(manual = false) {
+  els.updateStatus.dataset.custom = 'true';
+  els.updateStatus.textContent = t('updateChecking');
+  const status = await api('/api/updates/check', null, 'GET');
+  latestUpdateStatus = status;
+  els.installUpdate.disabled = !status.updateAvailable;
+  els.updateStatus.textContent = status.updateAvailable
+    ? t('updateAvailable').replace('{version}', status.latestVersion)
+    : t('updateCurrent').replace('{version}', status.currentVersion);
+  if (status.updateAvailable && els.autoInstallUpdates.checked && !manual) {
+    await installUpdate();
+  }
+  return status;
+}
+
+async function installUpdate() {
+  if (!latestUpdateStatus) await checkUpdates(true);
+  if (!latestUpdateStatus?.updateAvailable) return;
+  const result = await api('/api/updates/install', { release: latestUpdateStatus });
+  els.updateStatus.textContent = result.message || t('updateStarted');
+  els.installUpdate.disabled = true;
+}
+
+function backupSectionInputs() {
+  return [...els.backupSections.querySelectorAll('[data-backup-section]')];
+}
+
+function selectedBackupSections() {
+  return backupSectionInputs()
+    .filter((input) => input.checked)
+    .map((input) => input.dataset.backupSection);
+}
+
+function syncBackupSectionToggles() {
+  for (const input of backupSectionInputs()) input.checked = els.backupAll.checked;
+}
+
+async function exportBackup() {
+  const sections = selectedBackupSections();
+  if (!sections.length) return alert(t('backupHelp'));
+  const response = await fetch(`/api/backup/export?sections=${encodeURIComponent(sections.join(','))}`);
+  if (!response.ok) {
+    const json = await response.json().catch(() => ({}));
+    throw new Error(json.error || `HTTP ${response.status}`);
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `DotaStreamKit-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  els.backupStatus.dataset.custom = 'true';
+  els.backupStatus.textContent = t('backupExported');
+}
+
+async function importBackup() {
+  const file = els.importBackupFile.files?.[0];
+  if (!file) return;
+  const backup = JSON.parse(await file.text());
+  const sections = selectedBackupSections();
+  if (!sections.length) return alert(t('backupHelp'));
+  await api('/api/backup/import', { backup, sections });
+  els.importBackupFile.value = '';
+  els.backupStatus.dataset.custom = 'true';
+  els.backupStatus.textContent = t('backupImported');
 }
 
 function withPrediction(fn) {

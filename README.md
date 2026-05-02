@@ -82,6 +82,9 @@ http://localhost:37273/overlay.html
 - автоматическое закрытие, отмена и ручное управление прогнозами;
 - оверлей Twitch-прогноза: название, таймер закрытия, баллы канала, проценты и анимированная полоса исходов;
 - поддержка личного Twitch-аккаунта или отдельного аккаунта-модератора;
+- установщик Windows с выбором папки, ярлыками и нормальным отображением в поиске Windows;
+- проверка обновлений из опубликованных GitHub Releases, без установки сырого кода из ветки;
+- экспорт и импорт настроек с выбором разделов: можно перенести всё сразу или только нужные части;
 - локальная установка Dota Game State Integration.
 
 Серверный режим в интерфейсе есть, но эта инструкция пока описывает только локальное использование. Для публичного сервера проект ещё не считается готовым сценарием.
@@ -94,13 +97,14 @@ http://localhost:37273/overlay.html
    https://github.com/Seno47/DotaStreamKit/releases
    ```
 
-2. Открой самый свежий релиз и скачай архив для своей системы:
-   - Windows: `DotaStreamKit-<version>-win-x64.zip`
+2. Открой самый свежий релиз и скачай сборку для своей системы:
+   - Windows, обычная установка: `DotaStreamKit-<version>-win-x64-Setup.exe`
+   - Windows, portable-версия без установки: `DotaStreamKit-<version>-win-x64.zip`
    - Linux Debian/Ubuntu x64: `DotaStreamKit-<version>-linux-x64.tar.gz`
    - macOS Apple Silicon: `DotaStreamKit-<version>-darwin-arm64.tar.gz`
    - macOS Intel: `DotaStreamKit-<version>-darwin-x64.tar.gz`
-3. Распакуй архив в удобную папку.
-4. Запусти:
+3. На Windows проще запустить установщик: он предложит папку установки, ярлык на рабочем столе и добавит DotaStreamKit в меню Пуск. Если программа уже установлена, установщик предложит исправить/обновить установку или удалить её.
+4. Для portable-архива распакуй сборку в удобную папку и запусти:
    - Windows: `DotaStreamKit.exe`
    - Linux/macOS: `bash DotaStreamKit`
 5. Открой панель:
@@ -109,7 +113,11 @@ http://localhost:37273/overlay.html
    http://localhost:37273
    ```
 
-Если Windows SmartScreen предупреждает о неизвестном приложении, это нормально для unsigned portable-сборки. Запускай только архив, скачанный из релизов этого репозитория.
+Если Windows SmartScreen предупреждает о неизвестном приложении, это нормально для unsigned-сборки. Запускай только файлы, скачанные из релизов этого репозитория.
+
+В разделе `Setup` можно вручную проверить обновления или включить проверку при запуске. DotaStreamKit устанавливает только готовые GitHub Release assets, поэтому случайный коммит из ветки `master` не попадёт пользователю как обновление.
+
+Там же есть экспорт и импорт настроек. По умолчанию переносится всё, включая Twitch/Dota-настройки, пресеты защиты, прогнозы, Win/Lose/MMR и загруженные картинки, но перед импортом или экспортом можно оставить только нужные разделы.
 
 ### Настройка Twitch
 
@@ -433,6 +441,9 @@ Main features:
 - supports manual prediction controls and automatic lock/resolve/cancel flows;
 - Twitch prediction overlay: title, close timer, channel points, percentages, and animated outcome bar;
 - supports personal Twitch account mode and separate moderator account mode;
+- Windows installer with install path selection, shortcuts, and Windows search/start menu integration;
+- update checks from published GitHub Releases only, never from raw branch commits;
+- settings export/import with section selection, from one section to the full local setup;
 - installs Dota Game State Integration locally.
 
 The dashboard contains a server mode, but this README intentionally covers only local usage for now. Public server deployment is not documented as a stable path yet.
@@ -445,13 +456,14 @@ The dashboard contains a server mode, but this README intentionally covers only 
    https://github.com/Seno47/DotaStreamKit/releases
    ```
 
-2. Open the latest release and download the archive for your system:
-   - Windows: `DotaStreamKit-<version>-win-x64.zip`
+2. Open the latest release and download the build for your system:
+   - Windows, normal installer: `DotaStreamKit-<version>-win-x64-Setup.exe`
+   - Windows, portable build: `DotaStreamKit-<version>-win-x64.zip`
    - Linux Debian/Ubuntu x64: `DotaStreamKit-<version>-linux-x64.tar.gz`
    - macOS Apple Silicon: `DotaStreamKit-<version>-darwin-arm64.tar.gz`
    - macOS Intel: `DotaStreamKit-<version>-darwin-x64.tar.gz`
-3. Extract it.
-4. Run:
+3. On Windows, the installer is the recommended path. It lets you choose the install folder, create a desktop shortcut, and adds DotaStreamKit to the Start menu. If DotaStreamKit is already installed, setup offers to repair/update or remove it.
+4. For the portable archive, extract it and run:
    - Windows: `DotaStreamKit.exe`
    - Linux/macOS: `bash DotaStreamKit`
 5. Open:
@@ -460,7 +472,11 @@ The dashboard contains a server mode, but this README intentionally covers only 
    http://localhost:37273
    ```
 
-If Windows SmartScreen warns you about an unknown app, that is expected for an unsigned portable build. Only run archives downloaded from this repository's releases.
+If Windows SmartScreen warns you about an unknown app, that is expected for an unsigned build. Only run files downloaded from this repository's releases.
+
+The `Setup` page can check for updates manually or on startup. Updates are installed only from published GitHub Release assets, so an unfinished commit on `master` will not be treated as an update.
+
+The same page has settings export/import. By default it transfers everything, including Twitch/Dota setup, protection presets, predictions, Win/Lose/MMR, and uploaded images. Before importing or exporting, you can keep only the sections you need.
 
 ### Twitch Setup
 
@@ -738,6 +754,7 @@ Useful commands:
 npm run check
 npm run stop
 npm run build:win
+npm run build:win:installer
 npm run build:linux
 npm run build:mac
 ```
@@ -746,6 +763,7 @@ Build portable release archives:
 
 ```powershell
 npm run build:win
+npm run build:win:installer
 npm run build:linux
 npm run build:mac
 ```
@@ -754,10 +772,13 @@ The archives are written to:
 
 ```text
 dist/DotaStreamKit-<version>-win-x64.zip
+dist/DotaStreamKit-<version>-win-x64-Setup.exe
 dist/DotaStreamKit-<version>-linux-x64.tar.gz
 dist/DotaStreamKit-<version>-darwin-arm64.tar.gz
 dist/DotaStreamKit-<version>-darwin-x64.tar.gz
 ```
+
+The Windows installer build requires Inno Setup 6.
 
 Local data, config, OAuth tokens, uploaded screenshots, and generated assets are stored in `data/`. This folder is ignored by Git.
 

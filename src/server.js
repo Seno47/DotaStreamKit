@@ -4,7 +4,7 @@ import { createReadStream } from 'node:fs';
 import { basename, dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import sharp from 'sharp';
 import {
@@ -41,8 +41,13 @@ const defaultAssetDir = join(publicDir, 'default-assets');
 const configPath = join(dataDir, 'config.json');
 const statePath = join(dataDir, 'state.json');
 const twitchTokenPath = join(dataDir, 'twitch-token.json');
+const appPackage = JSON.parse(await readFile(join(rootDir, 'package.json'), 'utf8'));
+const appVersion = String(appPackage.version || '0.0.0');
 
 const port = Number(process.env.PORT || 37273);
+const githubRepoOwner = 'Seno47';
+const githubRepoName = 'DotaStreamKit';
+const githubLatestReleaseApi = `https://api.github.com/repos/${githubRepoOwner}/${githubRepoName}/releases/latest`;
 const twitchApi = 'https://api.twitch.tv/helix';
 const twitchId = 'https://id.twitch.tv/oauth2';
 const twitchScopes = ['channel:manage:predictions', 'user:write:chat'];
@@ -243,6 +248,10 @@ const defaultConfig = {
     installPath: '',
     cfgDir: '',
     detectionSource: ''
+  },
+  updates: {
+    autoCheck: true,
+    autoInstall: false
   },
   protection: {
     autoDraft: true,
@@ -509,6 +518,10 @@ const server = createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/api/assets') return await uploadAsset(req, res);
     if (req.method === 'GET' && url.pathname === '/api/config') return sendJson(res, sanitizeConfig(runtime.config));
     if (req.method === 'POST' && url.pathname === '/api/config') return await updateConfig(req, res);
+    if (req.method === 'GET' && url.pathname === '/api/backup/export') return await exportBackupApi(url, res);
+    if (req.method === 'POST' && url.pathname === '/api/backup/import') return await importBackupApi(req, res);
+    if (req.method === 'GET' && url.pathname === '/api/updates/check') return await checkUpdatesApi(res);
+    if (req.method === 'POST' && url.pathname === '/api/updates/install') return await installUpdateApi(req, res);
     if (req.method === 'POST' && url.pathname === '/api/protection') return await updateProtection(req, res);
     if (req.method === 'POST' && url.pathname === '/api/streamer-stats/reset') return await resetStreamerStatsApi(res);
     if (req.method === 'POST' && url.pathname === '/api/streamer-stats/restore') return await restoreStreamerStatsApi(res);
@@ -652,6 +665,12 @@ async function migrateConfig(config) {
   config.predictions = merge(structuredClone(defaultConfig.predictions), config.predictions || {});
   normalizePredictionSettings(config.predictions);
   if (JSON.stringify(config.predictions) !== beforePredictions) changed = true;
+
+  const beforeUpdates = JSON.stringify(config.updates || {});
+  config.updates = merge(structuredClone(defaultConfig.updates), config.updates || {});
+  normalizeUpdateConfig(config.updates);
+  if (JSON.stringify(config.updates) !== beforeUpdates) changed = true;
+
   const box = config.protection?.topBarBox;
   const hasOldCenteredTopBarBox = box?.left === 485 && box?.top === 0 && box?.width === 950 && box?.height === 86;
   const hasFullWidthTopBarBox = box?.left === 0 && box?.top === 0 && box?.width === 1920 && box?.height === 124;
@@ -1350,6 +1369,177 @@ function sanitizeConfig(config) {
   };
 }
 
+function backupSectionKeys() {
+  return ['ui', 'deployment', 'twitch', 'dota', 'updates', 'protection', 'predictions', 'streamerStats', 'customAssets'];
+}
+
+async function buildBackup(sections) {
+  const selected = new Set(sections.filter((section) => backupSectionKeys().includes(section)));
+  const backup = {
+    app: 'DotaStreamKit',
+    formatVersion: 1,
+    exportedAt: new Date().toISOString(),
+    version: appVersion,
+    sections: {}
+  };
+  for (const key of ['ui', 'deployment', 'twitch', 'dota', 'updates', 'protection', 'predictions']) {
+    if (selected.has(key)) backup.sections[key] = structuredClone(runtime.config[key] || {});
+  }
+  if (selected.has('streamerStats')) {
+    backup.sections.streamerStats = structuredClone(runtime.state.streamerStats || {});
+  }
+  if (selected.has('customAssets')) {
+    backup.sections.customAssets = await exportCustomAssets();
+  }
+  return backup;
+}
+
+async function applyBackup(backup, sections) {
+  const source = backup?.sections && typeof backup.sections === 'object' ? backup.sections : backup;
+  if (!source || typeof source !== 'object') throw new Error('Invalid backup file');
+  const selected = new Set(sections.filter((section) => backupSectionKeys().includes(section)));
+  const imported = [];
+  const nextConfig = structuredClone(runtime.config);
+
+  for (const key of ['ui', 'deployment', 'twitch', 'dota', 'updates', 'protection', 'predictions']) {
+    if (!selected.has(key) || source[key] === undefined) continue;
+    nextConfig[key] = key === 'protection' || key === 'predictions'
+      ? merge(structuredClone(defaultConfig[key]), source[key])
+      : merge(structuredClone(nextConfig[key] || defaultConfig[key]), source[key]);
+    imported.push(key);
+  }
+
+  normalizeDeploymentConfig(nextConfig.deployment);
+  normalizeUiConfig(nextConfig.ui);
+  normalizeTwitchConfig(nextConfig.twitch);
+  normalizeUpdateConfig(nextConfig.updates);
+  normalizePredictionSettings(nextConfig.predictions);
+  if (nextConfig.protection?.matchIntel) normalizeMatchIntelConfig(nextConfig.protection.matchIntel);
+  runtime.config = nextConfig;
+
+  if (selected.has('streamerStats') && source.streamerStats !== undefined) {
+    runtime.state.streamerStats = normalizeStreamerStatsState(source.streamerStats);
+    imported.push('streamerStats');
+  }
+
+  if (selected.has('customAssets') && source.customAssets !== undefined) {
+    await importCustomAssets(source.customAssets);
+    imported.push('customAssets');
+  }
+
+  hydrateTwitchStatus();
+  runtime.state.protection = computeProtection(runtime.config, runtime.state.gsi);
+  await persistConfig();
+  await persistState();
+  return { imported };
+}
+
+async function exportCustomAssets() {
+  const names = ['draft-screenshot.png', 'queue-screenshot.png', ...Array.from({ length: 10 }, (_, index) => `topbar-slot-${index}.png`)];
+  const files = {};
+  for (const name of names) {
+    try {
+      const buffer = await readFile(join(assetDir, name));
+      files[name] = buffer.toString('base64');
+    } catch {
+      // Missing user-generated assets are skipped.
+    }
+  }
+  return { files };
+}
+
+async function importCustomAssets(value) {
+  const files = value?.files && typeof value.files === 'object' ? value.files : {};
+  const allowed = new Set(['draft-screenshot.png', 'queue-screenshot.png', ...Array.from({ length: 10 }, (_, index) => `topbar-slot-${index}.png`)]);
+  await mkdir(assetDir, { recursive: true });
+  for (const [name, encoded] of Object.entries(files)) {
+    if (!allowed.has(name)) continue;
+    const buffer = Buffer.from(String(encoded || ''), 'base64');
+    if (buffer.length > 30 * 1024 * 1024) continue;
+    await writeFile(join(assetDir, name), buffer);
+  }
+}
+
+async function fetchLatestRelease() {
+  const response = await fetch(githubLatestReleaseApi, {
+    headers: {
+      'accept': 'application/vnd.github+json',
+      'user-agent': `DotaStreamKit/${appVersion}`
+    }
+  });
+  if (!response.ok) throw new Error(`GitHub update check failed: ${response.status}`);
+  return await response.json();
+}
+
+function normalizeUpdateRelease(release) {
+  const latestVersion = normalizeReleaseVersion(release?.tag_name || release?.name || '');
+  const assets = Array.isArray(release?.assets) ? release.assets.map((asset) => ({
+    name: asset.name,
+    url: asset.browser_download_url,
+    size: asset.size,
+    platform: classifyUpdateAsset(asset.name)
+  })).filter((asset) => asset.platform && asset.url) : [];
+  return {
+    currentVersion: appVersion,
+    latestVersion,
+    updateAvailable: !release?.draft && !release?.prerelease && compareVersions(latestVersion, appVersion) > 0,
+    releaseOnly: true,
+    draft: release?.draft === true,
+    prerelease: release?.prerelease === true,
+    releaseUrl: release?.html_url || '',
+    publishedAt: release?.published_at || null,
+    notes: String(release?.body || '').slice(0, 8000),
+    assets
+  };
+}
+
+function normalizeReleaseVersion(value) {
+  return String(value || '').trim().replace(/^v/i, '');
+}
+
+function compareVersions(left, right) {
+  const a = normalizeReleaseVersion(left).split(/[.-]/).map((part) => Number(part) || 0);
+  const b = normalizeReleaseVersion(right).split(/[.-]/).map((part) => Number(part) || 0);
+  for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
+    const diff = (a[index] || 0) - (b[index] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+function classifyUpdateAsset(name) {
+  const value = String(name || '').toLowerCase();
+  if (value.includes('win-x64') && value.endsWith('.zip')) return 'win32-x64';
+  if (value.includes('linux-x64') && value.endsWith('.tar.gz')) return 'linux-x64';
+  if (value.includes('darwin-arm64') && value.endsWith('.tar.gz')) return 'darwin-arm64';
+  if (value.includes('darwin-x64') && value.endsWith('.tar.gz')) return 'darwin-x64';
+  return null;
+}
+
+function currentUpdatePlatform() {
+  const arch = process.arch === 'x64' ? 'x64' : process.arch;
+  return `${process.platform}-${arch}`;
+}
+
+async function findUpdaterExecutable() {
+  const names = process.platform === 'win32'
+    ? ['DotaStreamKitUpdater.exe']
+    : ['DotaStreamKitUpdater'];
+  const candidates = [
+    ...names.map((name) => join(rootDir, '..', name)),
+    ...names.map((name) => join(rootDir, name))
+  ];
+  for (const candidate of candidates) {
+    try {
+      const fileStat = await stat(candidate);
+      if (fileStat.isFile()) return candidate;
+    } catch {
+      // Try next candidate.
+    }
+  }
+  return null;
+}
+
 function hydrateTwitchStatus() {
   const token = runtime.state.twitchToken;
   const scopes = normalizeScopes(token?.scopes || []);
@@ -1459,6 +1649,7 @@ async function updateConfig(req, res) {
   normalizeDeploymentConfig(next.deployment);
   normalizeUiConfig(next.ui);
   normalizeTwitchConfig(next.twitch);
+  normalizeUpdateConfig(next.updates);
   next.predictions.windowSeconds = clampInt(next.predictions.windowSeconds, 30, 1800);
   next.predictions.autoLockAtGameSeconds = clampInt(next.predictions.autoLockAtGameSeconds, 0, 3600);
   next.predictions.autoCancelDisconnectSeconds = clampInt(next.predictions.autoCancelDisconnectSeconds, 300, 1800);
@@ -1475,6 +1666,68 @@ async function updateConfig(req, res) {
   await persistState();
   logEvent('config', 'Settings updated');
   sendJson(res, publicState());
+}
+
+async function exportBackupApi(url, res) {
+  const requestedSections = String(url.searchParams.get('sections') || 'all')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const sections = requestedSections.includes('all') ? backupSectionKeys() : requestedSections;
+  const backup = await buildBackup(sections);
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const body = JSON.stringify(backup, null, 2);
+  res.writeHead(200, {
+    'content-type': 'application/json; charset=utf-8',
+    'content-disposition': `attachment; filename="DotaStreamKit-backup-${stamp}.json"`,
+    'content-length': Buffer.byteLength(body),
+    'cache-control': 'no-store'
+  });
+  res.end(body);
+}
+
+async function importBackupApi(req, res) {
+  const body = await readBody(req);
+  const backup = body.backup && typeof body.backup === 'object' ? body.backup : body;
+  const requestedSections = Array.isArray(body.sections) ? body.sections : backupSectionKeys();
+  const sections = requestedSections.includes('all') ? backupSectionKeys() : requestedSections;
+  const result = await applyBackup(backup, sections);
+  logEvent('config', `Settings imported: ${result.imported.join(', ') || 'nothing'}`);
+  sendJson(res, { ok: true, ...result, state: publicState() });
+}
+
+async function checkUpdatesApi(res) {
+  const release = await fetchLatestRelease();
+  const status = normalizeUpdateRelease(release);
+  sendJson(res, status);
+}
+
+async function installUpdateApi(req, res) {
+  await readBody(req);
+  const release = await fetchLatestRelease();
+  const status = normalizeUpdateRelease(release);
+  if (!status.updateAvailable) return sendJson(res, { ok: true, message: 'Already up to date', status });
+  const asset = status.assets.find((item) => item.platform === currentUpdatePlatform());
+  if (!asset) return sendJson(res, { error: 'No update asset is available for this platform', status }, 400);
+  const updater = await findUpdaterExecutable();
+  if (!updater) return sendJson(res, { error: 'Updater is not available in this build', status }, 400);
+
+  const args = [
+    '--app-root', rootDir,
+    '--download-url', asset.url,
+    '--version', status.latestVersion,
+    '--asset-name', asset.name,
+    '--pid', String(process.pid)
+  ];
+  const child = spawn(updater, args, {
+    detached: true,
+    stdio: 'ignore',
+    windowsHide: false
+  });
+  child.unref();
+  logEvent('system', `Update started: ${status.latestVersion}`);
+  sendJson(res, { ok: true, status, message: 'Update started. DotaStreamKit will restart when the update is installed.' });
+  setTimeout(() => process.exit(0), 1000).unref();
 }
 
 async function updateProtection(req, res) {
@@ -2638,6 +2891,11 @@ function normalizeDeploymentConfig(config) {
 function normalizeUiConfig(config) {
   if (!['auto', 'ru', 'en'].includes(config.language)) config.language = 'auto';
   if (!['', 'ru', 'en'].includes(config.predictionTemplateLanguage)) config.predictionTemplateLanguage = '';
+}
+
+function normalizeUpdateConfig(config) {
+  config.autoCheck = config.autoCheck !== false;
+  config.autoInstall = config.autoInstall === true;
 }
 
 function normalizeMatchIntelConfig(config) {

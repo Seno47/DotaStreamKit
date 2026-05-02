@@ -17,6 +17,7 @@
     "extract:dota-assets": "powershell -ExecutionPolicy Bypass -File scripts/extract-dota-assets.ps1",
     "install:gsi": "powershell -ExecutionPolicy Bypass -File scripts/install-gsi.ps1",
     "build:win": "powershell -ExecutionPolicy Bypass -File scripts/build-windows-release.ps1",
+    "build:win:installer": "powershell -ExecutionPolicy Bypass -File scripts/build-windows-installer.ps1",
     "build:linux": "powershell -ExecutionPolicy Bypass -File scripts/build-linux-release.ps1",
     "build:mac": "powershell -ExecutionPolicy Bypass -File scripts/build-macos-release.ps1"
   },

@@ -479,6 +479,35 @@ dd {
   min-height: 46px;
 }
 
+.backup-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.backup-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.file-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid #51627a;
+  border-radius: 7px;
+  background: #1b2430;
+  color: #f5f7fb;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.file-button input {
+  display: none;
+}
+
 .intel-status-row {
   display: flex;
   flex-wrap: wrap;
