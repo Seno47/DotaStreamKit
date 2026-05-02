@@ -19,6 +19,7 @@ import {
   notablePlayersFromRankCache,
   updateMatchIntel
 } from './game-intel.js';
+import { inferOwnPickPhase } from './draft-phase.js';
 import {
   applyStreamerMatchResult,
   normalizeStreamerStatsConfig,
@@ -386,6 +387,10 @@ const runtime = {
       playerHeroPicked: false,
       draftActiveTeam: null,
       ownPickPhaseEnded: false,
+      ownTeamPickedHeroCount: null,
+      enemyTeamPickedHeroCount: null,
+      ownPickPhaseTargetCount: null,
+      ownPickPhaseSource: null,
       draftCycle: 0,
       queueSearchSignal: false,
       inGameScreen: false,
@@ -457,6 +462,10 @@ runtime.state.gsi = {
   playerHeroPicked: false,
   draftActiveTeam: null,
   ownPickPhaseEnded: false,
+  ownTeamPickedHeroCount: null,
+  enemyTeamPickedHeroCount: null,
+  ownPickPhaseTargetCount: null,
+  ownPickPhaseSource: null,
   draftCycle: 0,
   queueSearchSignal: false,
   inGameScreen: false,
@@ -558,6 +567,10 @@ async function refreshRuntimePresence() {
     runtime.state.gsi.playerHeroPicked = false;
     runtime.state.gsi.draftActiveTeam = null;
     runtime.state.gsi.ownPickPhaseEnded = false;
+    runtime.state.gsi.ownTeamPickedHeroCount = null;
+    runtime.state.gsi.enemyTeamPickedHeroCount = null;
+    runtime.state.gsi.ownPickPhaseTargetCount = null;
+    runtime.state.gsi.ownPickPhaseSource = null;
     runtime.state.gsi.inGameScreen = false;
     runtime.state.gsi.leftGameView = false;
   }
@@ -1538,7 +1551,8 @@ async function handleGsi(req, res) {
   const level = statNumber(hero.level, previous.level);
   const playerHeroPicked = inferPlayerHeroPicked(previous, gameState, hero, lifecycle);
   const draftActiveTeam = inferDraftActiveTeam(draft);
-  const ownPickPhaseEnded = inferOwnPickPhaseEnded({ previous, gameState, playerHeroPicked, draftActiveTeam, playerTeam, lifecycle });
+  const ownPickPhase = inferOwnPickPhase({ previous, payload, gameState, playerHeroPicked, playerTeam, lifecycle });
+  const ownPickPhaseEnded = ownPickPhase.ownPickPhaseEnded;
   const activeMatchId = inferActiveMatchId(previous, gameState, matchId, lifecycle);
   const queueSearchSignal = inferQueueSearchSignal(payload);
   const inGameScreen = inferInGameScreen(gameState, playerActivity);
@@ -1575,6 +1589,10 @@ async function handleGsi(req, res) {
     playerHeroPicked,
     draftActiveTeam,
     ownPickPhaseEnded,
+    ownTeamPickedHeroCount: ownPickPhase.ownTeamPickedHeroCount,
+    enemyTeamPickedHeroCount: ownPickPhase.enemyTeamPickedHeroCount,
+    ownPickPhaseTargetCount: ownPickPhase.ownPickPhaseTargetCount,
+    ownPickPhaseSource: ownPickPhase.ownPickPhaseSource,
     draftCycle: lifecycle.draftCycle,
     queueSearchSignal,
     inGameScreen,
@@ -2001,17 +2019,6 @@ function inferDraftActiveTeam(draft) {
     if (normalized) return normalized;
   }
   return null;
-}
-
-function inferOwnPickPhaseEnded({ previous, gameState, playerHeroPicked, draftActiveTeam, playerTeam, lifecycle = {} }) {
-  const state = String(gameState || '');
-  if (!/HERO_SELECTION/i.test(state)) {
-    if (/STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS/i.test(state) && playerHeroPicked && !lifecycle.newDraft) return true;
-    return false;
-  }
-  if (!playerHeroPicked) return false;
-  if (draftActiveTeam && playerTeam) return draftActiveTeam !== playerTeam;
-  return true;
 }
 
 function inferActiveMatchId(previous, gameState, matchId, lifecycle = {}) {
