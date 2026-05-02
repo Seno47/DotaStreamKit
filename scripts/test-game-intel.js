@@ -54,6 +54,39 @@ assert.equal(intel.roshanStatus.phase, 'waiting');
 assert.equal(intel.roshanStatus.earliestRemaining, 475);
 assert.equal(intel.roshanStatus.latestRemaining, 655);
 
+const teammateAegisPlayers = collectMatchPlayers({
+  allplayers: {
+    player1: { player_slot: 0, accountid: 111, name: 'Streamer' },
+    player2: { player_slot: 7, accountid: 777, name: 'Offlaner' }
+  },
+  player: { team_name: 'radiant', player_slot: 0, accountid: 111, name: 'Streamer' },
+  items: { slot0: { name: 'item_blink' } }
+});
+const teammateAegis = updateMatchIntel(null, {
+  events: [{ event_type: 'aegis_picked_up', player_id: 7, game_time: 1800 }]
+}, { clockTime: 1800, activeMatchId: 43 }, teammateAegisPlayers);
+assert.equal(teammateAegis.aegis.slot, 7);
+assert.equal(teammateAegis.aegis.accountId, 777);
+assert.equal(teammateAegis.aegis.expiresAt, 2100);
+
+const keptTeammateAegis = updateMatchIntel(teammateAegis, {}, { clockTime: 1810, activeMatchId: 43 }, teammateAegisPlayers);
+assert.equal(keptTeammateAegis.aegis.slot, 7);
+
+const ignoredDeniedEvent = updateMatchIntel(teammateAegis, {
+  events: [{ event_type: 'aegis_denied', player_id: 7, game_time: 1815 }]
+}, { clockTime: 1815, activeMatchId: 43 }, teammateAegisPlayers);
+assert.equal(ignoredDeniedEvent.aegis.slot, 7);
+
+const teammateDeathAegis = updateMatchIntel(teammateAegis, {}, { clockTime: 1815, activeMatchId: 43 }, teammateAegisPlayers.map((player) => (
+  player.slot === 7 ? { ...player, deaths: 1 } : player
+)));
+assert.equal(teammateDeathAegis.aegis, null);
+
+const teammateRespawnAegis = updateMatchIntel(teammateAegis, {}, { clockTime: 1815, activeMatchId: 43 }, teammateAegisPlayers.map((player) => (
+  player.slot === 7 ? { ...player, respawnSeconds: 4 } : player
+)));
+assert.equal(teammateRespawnAegis.aegis, null);
+
 const windowIntel = updateMatchIntel(intel, {}, { clockTime: 1685, activeMatchId: 42 }, players);
 assert.equal(windowIntel.roshanStatus.phase, 'window');
 assert.equal(windowIntel.roshanStatus.latestRemaining, 170);
@@ -73,7 +106,7 @@ const repeatedRoshanEvent = updateMatchIntel(intel, { events: { roshan_killed: t
 assert.equal(repeatedRoshanEvent.roshan.killedAt, 1195);
 
 const hiddenAegisItems = updateMatchIntel(intel, {}, { clockTime: 1230, activeMatchId: 42 }, players.map((player) => ({ ...player, hasAegis: false })));
-assert.equal(hiddenAegisItems.aegis, null);
+assert.equal(hiddenAegisItems.aegis.slot, 5);
 
 const sparseAegisItems = updateMatchIntel(intel, {}, { clockTime: 1230, activeMatchId: 42 }, players.map((player) => ({ ...player, hasAegis: false, hasItemData: false })));
 assert.equal(sparseAegisItems.aegis.slot, 5);
@@ -98,6 +131,9 @@ assert.deepEqual(fallbackPlayers, [{
   accountId: 333,
   name: 'Streamer',
   hero: 'npc_dota_hero_axe',
+  deaths: null,
+  alive: null,
+  respawnSeconds: null,
   hasItemData: true,
   hasAegis: true
 }]);

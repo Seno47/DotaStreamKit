@@ -3,6 +3,8 @@ export const roshanRespawnMinSeconds = 8 * 60;
 export const roshanRespawnMaxSeconds = 11 * 60;
 
 const aegisItemPattern = /(^|_)aegis($|_)/i;
+const aegisItemIds = new Set([117]);
+const aegisPickupPattern = /aegis.*pick|pick.*aegis|aegis_picked_up/i;
 const roshanKillPattern = /roshan.*(kill|death|dead|slain)|(?:kill|death|dead|slain).*roshan|roshan_killed/i;
 const roshanRespawnPattern = /roshan.*(respawn|spawn|alive|up)|(?:respawn|spawn|alive).*roshan/i;
 
@@ -22,8 +24,10 @@ export function updateMatchIntel(previousIntel, payload, gsi, players) {
   const activeMatchId = gsi?.activeMatchId || gsi?.matchId || null;
   const matchChanged = previous.matchId && activeMatchId && String(previous.matchId) !== String(activeMatchId);
   const base = matchChanged ? {} : previous;
+  const aegisEvent = extractLatestAegisEvent(payload, players);
   const rosterAegisHolder = players.find((player) => player.source === 'roster' && player.hasAegis) || null;
-  const aegisHolder = rosterAegisHolder || players.find((player) => player.hasAegis) || null;
+  const eventAegisHolder = aegisEvent?.holder || null;
+  const aegisHolder = eventAegisHolder || rosterAegisHolder || players.find((player) => player.hasAegis) || null;
   const roshanKilled = hasRoshanKillEvent(payload);
   const roshanRespawned = hasRoshanRespawnEvent(payload);
   let roshan = base.roshan ? { ...base.roshan } : null;
@@ -44,16 +48,22 @@ export function updateMatchIntel(previousIntel, payload, gsi, players) {
 
   if (aegisHolder && Number.isFinite(clockTime)) {
     const sameHolder = aegis && String(aegis.slot) === String(aegisHolder.slot);
-    const pickedAt = sameHolder && Number.isFinite(Number(aegis.pickedAt)) ? Number(aegis.pickedAt) : clockTime;
+    const eventPickedAt = Number(aegisHolder.pickedAt);
+    const pickedAt = sameHolder && Number.isFinite(Number(aegis.pickedAt))
+      ? Number(aegis.pickedAt)
+      : (Number.isFinite(eventPickedAt) ? eventPickedAt : clockTime);
     aegis = {
       slot: aegisHolder.slot,
       accountId: aegisHolder.accountId,
       name: aegisHolder.name,
+      holderDeaths: Number.isFinite(Number(aegisHolder.deaths)) ? Number(aegisHolder.deaths) : null,
+      holderAlive: typeof aegisHolder.alive === 'boolean' ? aegisHolder.alive : null,
+      holderRespawnSeconds: Number.isFinite(Number(aegisHolder.respawnSeconds)) ? Number(aegisHolder.respawnSeconds) : null,
       pickedAt,
       expiresAt: pickedAt + aegisDurationSeconds
     };
   } else if (aegis && Number.isFinite(clockTime)) {
-    if (clockTime >= Number(aegis.expiresAt || 0) || players.some((player) => player.hasItemData)) {
+    if (clockTime >= Number(aegis.expiresAt || 0) || didAegisHolderDieOrRespawn(aegis, players)) {
       aegis = null;
     }
   }
@@ -82,6 +92,32 @@ function shouldStartRoshanTimer({ roshan, roshanKilled, aegisHolder, aegis, cloc
       || (Number.isFinite(latestRespawnAt) && clockTime > latestRespawnAt + 30);
   }
   return Boolean(aegisHolder && !aegis && !roshan);
+}
+
+function didAegisHolderDieOrRespawn(aegis, players) {
+  const holder = findPlayerForAegis(aegis, players);
+  if (!holder) return false;
+
+  const holderDeaths = Number(holder.deaths);
+  const knownDeaths = Number(aegis.holderDeaths);
+  if (Number.isFinite(holderDeaths) && Number.isFinite(knownDeaths) && holderDeaths > knownDeaths) return true;
+
+  if (holder.alive === false) return true;
+
+  const respawnSeconds = Number(holder.respawnSeconds);
+  if (Number.isFinite(respawnSeconds) && respawnSeconds > 0) return true;
+
+  return false;
+}
+
+function findPlayerForAegis(aegis, players) {
+  const accountId = normalizeAccountId(aegis?.accountId);
+  if (accountId) {
+    const byAccount = players.find((player) => player.accountId === accountId);
+    if (byAccount) return byAccount;
+  }
+  const slot = Number(aegis?.slot);
+  return Number.isFinite(slot) ? players.find((player) => player.slot === slot) || null : null;
 }
 
 export function notablePlayersFromRankCache(players, getCachedRank, customPlayers = []) {
@@ -144,6 +180,9 @@ function normalizeMatchPlayer(key, player) {
     accountId,
     name: String(player.name || player.player_name || player.personaname || '').slice(0, 40),
     hero: String(player.hero_name || player.heroName || player.hero || '').slice(0, 60),
+    deaths: normalizeOptionalNumber(player.deaths),
+    alive: normalizeOptionalBoolean(player.alive),
+    respawnSeconds: normalizeOptionalNumber(player.respawn_seconds ?? player.respawnSeconds),
     hasItemData: hasInspectableItemData(player),
     hasAegis: hasAegisItem(player)
   };
@@ -162,6 +201,9 @@ function normalizeCurrentMatchPlayer(payload, forceVisualFirst = false) {
     accountId: normalizeAccountId(player.accountid ?? player.account_id ?? player.accountId ?? player.steamid ?? player.steam_id),
     name: String(player.name || player.player_name || player.personaname || '').slice(0, 40),
     hero: String(hero.name || hero.hero_name || hero.heroName || hero.localized_name || '').slice(0, 60),
+    deaths: normalizeOptionalNumber(player.deaths),
+    alive: normalizeOptionalBoolean(hero.alive),
+    respawnSeconds: normalizeOptionalNumber(hero.respawn_seconds ?? hero.respawnSeconds),
     hasItemData: hasInspectableItemData(player) || hasInspectableItemData(payload.items),
     hasAegis: hasAegisItem(player) || hasAegisItem(payload.items)
   };
@@ -227,6 +269,18 @@ function normalizeHeroToken(value) {
     .replace(/^_+|_+$/g, '');
 }
 
+function normalizeOptionalNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function normalizeOptionalBoolean(value) {
+  if (typeof value === 'boolean') return value;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return null;
+}
+
 function upsertCurrentPlayer(players, currentPlayer) {
   if (!currentPlayer) return players;
   const existingIndex = players.findIndex((player) => (
@@ -242,6 +296,9 @@ function upsertCurrentPlayer(players, currentPlayer) {
     accountId: merged[existingIndex].accountId || currentPlayer.accountId,
     name: merged[existingIndex].name || currentPlayer.name,
     hero: merged[existingIndex].hero || currentPlayer.hero,
+    deaths: currentPlayer.deaths ?? merged[existingIndex].deaths ?? null,
+    alive: currentPlayer.alive ?? merged[existingIndex].alive ?? null,
+    respawnSeconds: currentPlayer.respawnSeconds ?? merged[existingIndex].respawnSeconds ?? null,
     hasItemData: merged[existingIndex].hasItemData || currentPlayer.hasItemData,
     hasAegis: currentPlayer.hasItemData
       ? currentPlayer.hasAegis
@@ -301,6 +358,8 @@ function itemNames(value, depth = 0) {
   if (Array.isArray(value)) return value.flatMap((item) => itemNames(item, depth + 1));
   const namedItem = value.name || value.item_name || value.itemName;
   if (typeof namedItem === 'string' && /(^item_)|(^|_)aegis($|_)/i.test(namedItem)) return [namedItem.toLowerCase()];
+  const itemId = Number(value.id ?? value.item_id ?? value.itemId);
+  if (aegisItemIds.has(itemId)) return ['item_aegis'];
   return Object.entries(value).flatMap(([key, item]) => {
     const normalizedKey = String(key || '').toLowerCase();
     const inItemContainer = /item|inventory|backpack|stash|neutral/.test(normalizedKey);
@@ -322,6 +381,119 @@ function hasRoshanRespawnEvent(value, depth = 0) {
   if (typeof value !== 'object') return roshanRespawnPattern.test(String(value));
   if (Array.isArray(value)) return value.some((item) => hasRoshanRespawnEvent(item, depth + 1));
   return Object.entries(value).some(([key, item]) => roshanRespawnPattern.test(key) || hasRoshanRespawnEvent(item, depth + 1));
+}
+
+function extractLatestAegisEvent(payload, players) {
+  const events = collectEventEntries(payload);
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = expandEventData(events[index]);
+    const eventText = [
+      event.event_type,
+      event.eventType,
+      event.type,
+      event.name,
+      event.key
+    ].filter(Boolean).join(' ');
+
+    if (!aegisPickupPattern.test(eventText)) continue;
+    const holder = findAegisEventHolder(event, players);
+    if (holder) {
+      return {
+        holder: {
+          ...holder,
+          pickedAt: normalizeEventTime(event)
+        }
+      };
+    }
+  }
+  return null;
+}
+
+function collectEventEntries(payload) {
+  const entries = [];
+  appendEventEntries(entries, payload?.events);
+  appendEventEntries(entries, payload?.added?.events);
+  return entries;
+}
+
+function appendEventEntries(entries, value) {
+  if (!value) return;
+  if (Array.isArray(value)) {
+    value.forEach((event) => appendEventEntries(entries, event));
+    return;
+  }
+  if (typeof value !== 'object') return;
+  if (value.event_type || value.eventType || value.type || value.name) {
+    entries.push(value);
+    return;
+  }
+  for (const [key, item] of Object.entries(value)) {
+    if (item && typeof item === 'object') {
+      entries.push({ key, ...item });
+    }
+  }
+}
+
+function expandEventData(event) {
+  const expanded = { ...(event || {}) };
+  const rawData = expanded.data;
+  if (typeof rawData === 'string') {
+    try {
+      const parsed = JSON.parse(rawData);
+      if (parsed && typeof parsed === 'object') Object.assign(expanded, parsed);
+    } catch {
+      // Some Dota events carry plain text data; the event_type is still enough.
+    }
+  } else if (rawData && typeof rawData === 'object') {
+    Object.assign(expanded, rawData);
+  }
+  return expanded;
+}
+
+function findAegisEventHolder(event, players) {
+  const slot = normalizeEventPlayerSlot(
+    event.player_id
+      ?? event.playerId
+      ?? event.playerid
+      ?? event.playerid1
+      ?? event.player_slot
+      ?? event.playerSlot,
+    event
+  );
+  const accountId = normalizeAccountId(event.accountid ?? event.account_id ?? event.accountId ?? event.steamid ?? event.steam_id);
+  const heroToken = normalizeHeroToken(event.hero_name || event.heroName || event.hero || event.hero_id || event.heroId || '');
+  const player = (slot !== null ? players.find((item) => item.slot === slot) : null)
+    || (accountId ? players.find((item) => item.accountId === accountId) : null)
+    || (heroToken ? players.find((item) => normalizeHeroToken(item.hero) === heroToken) : null)
+    || null;
+
+  if (player) {
+    return {
+      slot: player.slot,
+      accountId: player.accountId || accountId,
+      name: player.name,
+      source: 'event'
+    };
+  }
+  if (slot === null) return null;
+  return {
+    slot,
+    accountId,
+    name: '',
+    source: 'event'
+  };
+}
+
+function normalizeEventPlayerSlot(value, event) {
+  if (value === undefined || value === null || value === '') return null;
+  return normalizePlayerSlot(value, {
+    team_name: event.team_name || event.team || event.player_team || event.playerTeam || ''
+  });
+}
+
+function normalizeEventTime(event) {
+  const time = Number(event.game_time ?? event.gameTime ?? event.clock_time ?? event.clockTime ?? event.time);
+  return Number.isFinite(time) ? Math.max(0, time) : null;
 }
 
 function normalizedClock(value) {
