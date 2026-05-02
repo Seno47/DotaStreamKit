@@ -245,7 +245,7 @@ body {
   white-space: nowrap;
   box-sizing: border-box;
   transform: none;
-  transform-origin: top center;
+  transform-origin: top left;
   --streamer-medal-gap-offset: 0px;
 }
 
@@ -343,11 +343,12 @@ body {
 
 #streamerStats.mainMenuScale {
   transform: scale(0.6666667);
+  transform-origin: top left;
 }
 
 #streamerStats.liveGameScale {
   transform: scale(0.85);
-  transform-origin: bottom center;
+  transform-origin: top left;
 }
 
 .streamerStatsMedalWrap {
