@@ -28,6 +28,7 @@ import {
   selectStreamerMedal,
   updateStreamerSessionPresence
 } from './streamer-stats.js';
+import { merge } from './safe-merge.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const execFileAsync = promisify(execFile);
@@ -605,18 +606,6 @@ async function loadJson(path, fallback) {
     await writeFile(path, JSON.stringify(fallback, null, 2));
     return structuredClone(fallback);
   }
-}
-
-function merge(target, source) {
-  if (!source || typeof source !== 'object' || Array.isArray(source)) return target;
-  for (const [key, value] of Object.entries(source)) {
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      target[key] = merge(target[key] && typeof target[key] === 'object' ? target[key] : {}, value);
-    } else {
-      target[key] = value;
-    }
-  }
-  return target;
 }
 
 async function persistConfig() {

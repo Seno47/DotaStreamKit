@@ -8,6 +8,7 @@
     "start": "node src/server.js",
     "stop": "powershell -ExecutionPolicy Bypass -File scripts/stop.ps1",
     "check": "node --check src/server.js",
+    "test:safe-merge": "node scripts/test-safe-merge.js",
     "test:prediction-safety": "node scripts/test-prediction-safety.js",
     "test:game-intel": "node scripts/test-game-intel.js",
     "test:streamer-stats": "node scripts/test-streamer-stats.js",
