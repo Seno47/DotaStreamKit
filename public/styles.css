@@ -662,7 +662,7 @@ dd {
   margin-top: 0;
 }
 
-.prediction-preview {
+.overlay-prediction-preview {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -677,7 +677,7 @@ dd {
   white-space: nowrap;
 }
 
-.prediction-preview-title {
+.overlay-prediction-preview-title {
   width: 100%;
   max-width: calc(640px * var(--preview-scale, 0.5));
   overflow: hidden;
@@ -685,7 +685,7 @@ dd {
   text-overflow: ellipsis;
 }
 
-.prediction-preview-bar {
+.overlay-prediction-preview-bar {
   position: relative;
   display: flex;
   width: calc(620px * var(--preview-scale, 0.5));
@@ -697,22 +697,22 @@ dd {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
 }
 
-.prediction-preview-fill {
+.overlay-prediction-preview-fill {
   height: 100%;
   min-width: 0;
 }
 
-.prediction-preview-fill.yes {
+.overlay-prediction-preview-fill.yes {
   flex: 0 0 65%;
   background: linear-gradient(180deg, #497dff, #2f64ec);
 }
 
-.prediction-preview-fill.no {
+.overlay-prediction-preview-fill.no {
   flex: 0 0 35%;
   background: linear-gradient(180deg, #e84aad, #c93599);
 }
 
-.prediction-preview-label {
+.overlay-prediction-preview-label {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -726,17 +726,17 @@ dd {
   text-overflow: ellipsis;
 }
 
-.prediction-preview-label.yes {
+.overlay-prediction-preview-label.yes {
   left: 0;
   width: 65%;
 }
 
-.prediction-preview-label.no {
+.overlay-prediction-preview-label.no {
   left: 65%;
   width: 35%;
 }
 
-.prediction-preview-timer {
+.overlay-prediction-preview-timer {
   font-size: calc(19px * var(--preview-scale, 0.5));
 }
 

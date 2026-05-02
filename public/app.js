@@ -151,10 +151,38 @@ let editingNotablePlayerAccountId = '';
 
 const overlayPositionKeys = ['streamerStatsMenu', 'streamerStatsGame', 'roshanTimer', 'predictionOverlay'];
 const overlayPreviewBoxes = {
-  streamerStatsMenu: { left: 1276, top: 18, width: 170, height: 116 },
-  streamerStatsGame: { left: 1390, top: 922, width: 260, height: 150 },
-  roshanTimer: { left: 318, top: 6, width: 145, height: 34 },
-  predictionOverlay: { left: 610, top: 104, width: 700, height: 96 }
+  streamerStatsMenu: {
+    left: 1276,
+    top: 18,
+    width: 170,
+    height: 116,
+    anchor: { x: 24, y: 0 },
+    visible: { width: 124, height: 92 }
+  },
+  streamerStatsGame: {
+    left: 1390,
+    top: 922,
+    width: 260,
+    height: 150,
+    anchor: { x: 52, y: 0 },
+    visible: { width: 150, height: 112 }
+  },
+  roshanTimer: {
+    left: 318,
+    top: 6,
+    width: 145,
+    height: 34,
+    anchor: { x: 0, y: 0 },
+    visible: { width: 145, height: 34 }
+  },
+  predictionOverlay: {
+    left: 610,
+    top: 104,
+    width: 700,
+    height: 96,
+    anchor: { x: 0, y: 0 },
+    visible: { width: 700, height: 96 }
+  }
 };
 
 if (els.overlayPreviewBackground) {
@@ -1658,22 +1686,51 @@ function setOverlayPositionControls(positions) {
     const box = overlayPreviewBoxes[key];
     const xInput = els[`${key}X`];
     const yInput = els[`${key}Y`];
-    if (xInput && box) setInputValue(xInput, clampNumber(box.left + offset.x, 0, 1920, box.left));
-    if (yInput && box) setInputValue(yInput, clampNumber(box.top + offset.y, 0, 1080, box.top));
+    if (!box) continue;
+    const base = overlayVisualBase(box);
+    const range = overlayPositionRange(box);
+    if (xInput) {
+      xInput.min = '0';
+      xInput.max = String(range.maxX);
+      setInputValue(xInput, clampNumber(base.left + offset.x, 0, range.maxX, base.left));
+    }
+    if (yInput) {
+      yInput.min = '0';
+      yInput.max = String(range.maxY);
+      setInputValue(yInput, clampNumber(base.top + offset.y, 0, range.maxY, base.top));
+    }
   }
   renderOverlayPositionPreviews();
 }
 
 function overlayPositionsFromForm() {
   return Object.fromEntries(overlayPositionKeys.map((key) => {
-    const box = overlayPreviewBoxes[key] || { left: 0, top: 0 };
-    const x = clampNumber(els[`${key}X`]?.value, 0, 1920, box.left);
-    const y = clampNumber(els[`${key}Y`]?.value, 0, 1080, box.top);
+    const box = overlayPreviewBoxes[key] || { left: 0, top: 0, width: 0, height: 0 };
+    const base = overlayVisualBase(box);
+    const range = overlayPositionRange(box);
+    const x = clampNumber(els[`${key}X`]?.value, 0, range.maxX, base.left);
+    const y = clampNumber(els[`${key}Y`]?.value, 0, range.maxY, base.top);
     return [key, {
-      x: x - box.left,
-      y: y - box.top
+      x: x - base.left,
+      y: y - base.top
     }];
   }));
+}
+
+function overlayVisualBase(box) {
+  const anchor = box.anchor || { x: 0, y: 0 };
+  return {
+    left: Number(box.left || 0) + Number(anchor.x || 0),
+    top: Number(box.top || 0) + Number(anchor.y || 0)
+  };
+}
+
+function overlayPositionRange(box) {
+  const visible = box.visible || { width: box.width || 0, height: box.height || 0 };
+  return {
+    maxX: Math.max(0, Math.trunc(1920 - Number(visible.width || 0))),
+    maxY: Math.max(0, Math.trunc(1080 - Number(visible.height || 0)))
+  };
 }
 
 function normalizeOverlayOffset(value) {
@@ -1700,14 +1757,18 @@ function renderOverlayPositionPreviews() {
     const box = overlayPreviewBoxes[key];
     if (!preview || !item || !box) continue;
     const offset = normalizeOverlayOffset(positions[key]);
-    const x = clampNumber(box.left + offset.x, 0, 1920, box.left);
-    const y = clampNumber(box.top + offset.y, 0, 1080, box.top);
-    preview.style.setProperty('--preview-scale', String(preview.clientWidth / 1920 || 0.5));
+    const base = overlayVisualBase(box);
+    const range = overlayPositionRange(box);
+    const anchor = box.anchor || { x: 0, y: 0 };
+    const x = clampNumber(base.left + offset.x, 0, range.maxX, base.left);
+    const y = clampNumber(base.top + offset.y, 0, range.maxY, base.top);
+    const previewScale = preview.clientWidth / 1920 || 0;
+    preview.style.setProperty('--preview-scale', String(previewScale || 0.5));
     card.style.setProperty('--preview-height', `${preview.clientHeight || 260}px`);
     preview.dataset.bg = background;
-    item.style.left = `${x * (preview.clientWidth / 1920 || 0)}px`;
-    item.style.top = `${y * (preview.clientHeight / 1080 || 0)}px`;
-    item.style.width = `${box.width * (preview.clientWidth / 1920 || 0)}px`;
+    item.style.left = `${(x - Number(anchor.x || 0)) * previewScale}px`;
+    item.style.top = `${(y - Number(anchor.y || 0)) * (preview.clientHeight / 1080 || 0)}px`;
+    item.style.width = `${box.width * previewScale}px`;
     item.style.height = `${box.height * (preview.clientHeight / 1080 || 0)}px`;
     const xOutput = els[`${key}XValue`];
     const yOutput = els[`${key}YValue`];
@@ -1821,8 +1882,9 @@ document.querySelectorAll('[data-reset-position]').forEach((button) => {
     const key = button.dataset.resetPosition;
     if (!overlayPositionKeys.includes(key)) return;
     const box = overlayPreviewBoxes[key] || { left: 0, top: 0 };
-    els[`${key}X`].value = String(box.left);
-    els[`${key}Y`].value = String(box.top);
+    const base = overlayVisualBase(box);
+    els[`${key}X`].value = String(base.left);
+    els[`${key}Y`].value = String(base.top);
     renderOverlayPositionPreviews();
     saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
   });
