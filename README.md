@@ -76,6 +76,7 @@ http://localhost:37273/overlay.html
 - скрытие меню поиска игры через загруженный или встроенный скрин меню;
 - Match Intel оверлей: отмеченные игроки, флаги, держатель Aegis и таймер Рошана;
 - статистика стримера на оверлее: Dota-медаль, звёзды/пипы, ранг в leaderboard, MMR и W-L счётчик;
+- настройка положения отдельных блоков оверлея: медали в меню, медали в игре, таймера Рошана и Twitch-прогноза;
 - режим калибровки: при MMR `0` показывается отдельная calibration-медаль, а MMR после матчей не меняется;
 - автоматическое создание Twitch Predictions после пика героя стримером;
 - автоматическое закрытие, отмена и ручное управление прогнозами;
@@ -274,6 +275,10 @@ Match Intel добавляет на OBS-оверлей небольшие игр
 
 MMR можно вести вручную или обновлять автоматически после победы/поражения. Авто-обновление применяет заданные `Win MMR` и `Loss MMR`, но не выходит за диапазон `1..99999`. Если поставить MMR `0`, программа считает аккаунт на калибровке: показывает calibration-медаль и не трогает MMR после матчей.
 
+В этой же вкладке есть редактор положения оверлея. Можно выбрать нужный блок, посмотреть его на превью со скриншотом или на чёрном/белом фоне, сдвинуть по горизонтали и вертикали, сбросить один блок или вернуть все позиции к значениям по умолчанию. Так настраиваются медаль в меню, медаль в игре, таймер Рошана и блок Twitch-прогноза.
+
+Интерфейс Match Intel разбит на сворачиваемые секции: игровая информация, статистика стримера, позиции оверлея и кастомные notable players. Верхняя строка показывает короткий статус включённых подсказок и помогает быстро понять, что сейчас активно.
+
 Во время драфта медаль и W-L скрываются, чтобы не мешать защите пиков. После выхода из матча Match Intel очищается с оверлея, чтобы старые отметки, Aegis или таймер Рошана не оставались на экране.
 
 ### Прогнозы за баллы канала
@@ -281,8 +286,10 @@ MMR можно вести вручную или обновлять автома�
 DotaStreamKit может автоматически создавать прогноз после того, как:
 
 - GSI увидел пик героя стримером;
-- завершилась pick-фаза, в которой стример выбрал героя;
+- завершилась вся pick-фаза, в которой стример выбрал героя;
 - Twitch-канал находится online.
+
+Для All Pick и похожих режимов программа ждёт конец именно той фазы, где был пик стримера: сначала обе команды должны добрать героев этой фазы, и только после этого создаётся прогноз и меняется логика draft-оверлея.
 
 Доступны встроенные типы прогнозов:
 
@@ -420,6 +427,7 @@ Main features:
 - hides queue/search menu areas using a menu screenshot;
 - Match Intel overlay: notable players, country flags, Aegis holder, and Roshan timer;
 - streamer stats overlay: Dota rank medal, pips/stars, leaderboard rank, MMR, and W-L counter;
+- position customization for overlay blocks: menu medal, in-game medal, Roshan timer, and Twitch prediction;
 - calibration mode: MMR `0` shows a calibration medal and disables automatic MMR changes;
 - creates Twitch Channel Points Predictions after the streamer picks a hero;
 - supports manual prediction controls and automatic lock/resolve/cancel flows;
@@ -601,6 +609,10 @@ Streamer stats are configured separately from notable players. You can show only
 
 Manual MMR can be updated automatically after wins and losses. The configured `Win MMR` and `Loss MMR` values are applied after the match, clamped to `1..99999`. If MMR is set to `0`, DotaStreamKit treats the account as calibrating: it shows the calibration medal and does not change MMR after matches.
 
+The same tab includes an overlay position editor. Choose a block, preview it on a screenshot or a black/white background, move it horizontally and vertically, reset one block, or reset every overlay position. It supports the menu medal, in-game medal, Roshan timer, and Twitch prediction block.
+
+The Match Intel page is grouped into collapsible sections for game information, streamer stats, overlay positions, and custom notable players. A small status row shows which helper groups are currently active.
+
 During draft, the medal and W-L are hidden so they do not interfere with pick protection. After leaving a match, Match Intel is cleared from the overlay so old player marks, Aegis, or Roshan timers do not stay on screen.
 
 ### Channel Points Predictions
@@ -608,8 +620,10 @@ During draft, the medal and W-L are hidden so they do not interfere with pick pr
 DotaStreamKit can auto-create a prediction after:
 
 - GSI sees the streamer's picked hero;
-- the pick phase where the streamer picked that hero has ended;
+- the full pick phase where the streamer picked that hero has ended;
 - the Twitch channel is online.
+
+For All Pick and similar modes, the app waits for the whole phase to finish, including the opponent pick in that phase, before creating the prediction or switching draft protection behavior.
 
 Built-in prediction types:
 
