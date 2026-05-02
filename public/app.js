@@ -799,11 +799,11 @@ function applyLanguage(config) {
   els.streamerStatsGamePositionTitle.textContent = t('streamerStatsGamePosition');
   els.roshanTimerPositionTitle.textContent = t('roshanTimerPosition');
   setLabelText(els.streamerStatsMenuX.closest('label'), t('overlayPositionX'));
-  setLabelText(els.streamerStatsMenuY.closest('label'), t('overlayPositionY'));
   setLabelText(els.streamerStatsGameX.closest('label'), t('overlayPositionX'));
-  setLabelText(els.streamerStatsGameY.closest('label'), t('overlayPositionY'));
   setLabelText(els.roshanTimerX.closest('label'), t('overlayPositionX'));
-  setLabelText(els.roshanTimerY.closest('label'), t('overlayPositionY'));
+  els.streamerStatsMenuY.closest('label').querySelector('span').textContent = t('overlayPositionY');
+  els.streamerStatsGameY.closest('label').querySelector('span').textContent = t('overlayPositionY');
+  els.roshanTimerY.closest('label').querySelector('span').textContent = t('overlayPositionY');
   document.querySelectorAll('[data-reset-position]').forEach((button) => {
     button.textContent = t('overlayPositionReset');
   });
@@ -1648,19 +1648,25 @@ function renderStreamerStatsStatus(stats, settings) {
 function setOverlayPositionControls(positions) {
   for (const key of overlayPositionKeys) {
     const offset = normalizeOverlayOffset(positions[key]);
+    const box = overlayPreviewBoxes[key];
     const xInput = els[`${key}X`];
     const yInput = els[`${key}Y`];
-    if (xInput) setInputValue(xInput, offset.x);
-    if (yInput) setInputValue(yInput, offset.y);
+    if (xInput && box) setInputValue(xInput, clampNumber(box.left + offset.x, 0, 1920, box.left));
+    if (yInput && box) setInputValue(yInput, clampNumber(box.top + offset.y, 0, 1080, box.top));
   }
   renderOverlayPositionPreviews();
 }
 
 function overlayPositionsFromForm() {
-  return Object.fromEntries(overlayPositionKeys.map((key) => [key, {
-    x: Number(els[`${key}X`]?.value || 0),
-    y: Number(els[`${key}Y`]?.value || 0)
-  }]));
+  return Object.fromEntries(overlayPositionKeys.map((key) => {
+    const box = overlayPreviewBoxes[key] || { left: 0, top: 0 };
+    const x = clampNumber(els[`${key}X`]?.value, 0, 1920, box.left);
+    const y = clampNumber(els[`${key}Y`]?.value, 0, 1080, box.top);
+    return [key, {
+      x: x - box.left,
+      y: y - box.top
+    }];
+  }));
 }
 
 function normalizeOverlayOffset(value) {
@@ -1687,21 +1693,20 @@ function renderOverlayPositionPreviews() {
     const box = overlayPreviewBoxes[key];
     if (!preview || !item || !box) continue;
     const offset = normalizeOverlayOffset(positions[key]);
+    const x = clampNumber(box.left + offset.x, 0, 1920, box.left);
+    const y = clampNumber(box.top + offset.y, 0, 1080, box.top);
+    preview.style.setProperty('--preview-scale', String(preview.clientWidth / 1920 || 0.5));
+    card.style.setProperty('--preview-height', `${preview.clientHeight || 260}px`);
     preview.dataset.bg = background;
-    item.style.left = `${((box.left + offset.x) / 1920) * 100}%`;
-    item.style.top = `${((box.top + offset.y) / 1080) * 100}%`;
+    item.style.left = `${(x / 1920) * 100}%`;
+    item.style.top = `${(y / 1080) * 100}%`;
     item.style.width = `${(box.width / 1920) * 100}%`;
     item.style.height = `${(box.height / 1080) * 100}%`;
     const xOutput = els[`${key}XValue`];
     const yOutput = els[`${key}YValue`];
-    if (xOutput) xOutput.textContent = signedOffset(offset.x);
-    if (yOutput) yOutput.textContent = signedOffset(offset.y);
+    if (xOutput) xOutput.textContent = String(x);
+    if (yOutput) yOutput.textContent = String(y);
   }
-}
-
-function signedOffset(value) {
-  const number = Number(value || 0);
-  return number > 0 ? `+${number}` : String(number);
 }
 
 function scheduleOverlayPositionSave() {
@@ -1808,8 +1813,9 @@ document.querySelectorAll('[data-reset-position]').forEach((button) => {
   button.addEventListener('click', () => {
     const key = button.dataset.resetPosition;
     if (!overlayPositionKeys.includes(key)) return;
-    els[`${key}X`].value = '0';
-    els[`${key}Y`].value = '0';
+    const box = overlayPreviewBoxes[key] || { left: 0, top: 0 };
+    els[`${key}X`].value = String(box.left);
+    els[`${key}Y`].value = String(box.top);
     renderOverlayPositionPreviews();
     saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
   });

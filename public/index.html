@@ -150,45 +150,51 @@
               <div class="overlay-position-grid">
                 <section class="overlay-position-card" data-position-preview="streamerStatsMenu">
                   <h4 id="streamerStatsMenuPositionTitle">Menu medal</h4>
-                  <div class="overlay-position-preview">
-                    <img class="overlay-position-bg" src="/assets/game1.png" alt="">
-                    <div class="overlay-position-item streamer-preview">
-                      <div class="streamer-preview-medal"><img src="/assets/rank-medal-7.png" alt=""></div>
-                      <div class="streamer-preview-wl"><span>0</span><b>W</b><span>-</span><span>0</span><b>L</b></div>
-                      <div class="streamer-preview-mmr">6420</div>
+                  <div class="overlay-position-editor">
+                    <div class="overlay-position-main">
+                      <div class="overlay-position-preview">
+                        <img class="overlay-position-bg" src="/assets/game1.png" alt="">
+                        <div class="overlay-position-item streamer-preview">
+                          <div class="streamer-preview-medal"><img src="/assets/rank-medal-7.png" alt=""></div>
+                          <div class="streamer-preview-wl"><span>0</span><b>W</b><span>-</span><span>0</span><b>L</b></div>
+                          <div class="streamer-preview-mmr">6420</div>
+                        </div>
+                      </div>
+                      <label class="overlay-position-x" id="streamerStatsMenuXWrap">Horizontal<input id="streamerStatsMenuX" type="range" min="0" max="1920" step="1"><output id="streamerStatsMenuXValue">0</output></label>
                     </div>
-                  </div>
-                  <div class="overlay-position-sliders">
-                    <label id="streamerStatsMenuXWrap">Horizontal<input id="streamerStatsMenuX" type="range" min="-600" max="600" step="1"><output id="streamerStatsMenuXValue">0</output></label>
-                    <label id="streamerStatsMenuYWrap">Vertical<input id="streamerStatsMenuY" type="range" min="-400" max="400" step="1"><output id="streamerStatsMenuYValue">0</output></label>
+                    <label class="overlay-position-y" id="streamerStatsMenuYWrap"><span>Vertical</span><input id="streamerStatsMenuY" type="range" min="0" max="1080" step="1"><output id="streamerStatsMenuYValue">0</output></label>
                   </div>
                   <button type="button" data-reset-position="streamerStatsMenu">Reset</button>
                 </section>
                 <section class="overlay-position-card" data-position-preview="streamerStatsGame">
                   <h4 id="streamerStatsGamePositionTitle">In-game medal</h4>
-                  <div class="overlay-position-preview">
-                    <img class="overlay-position-bg" src="/assets/game2.png" alt="">
-                    <div class="overlay-position-item streamer-preview live">
-                      <div class="streamer-preview-medal"><img src="/assets/rank-medal-7.png" alt=""></div>
-                      <div class="streamer-preview-wl"><span>0</span><b>W</b><span>-</span><span>0</span><b>L</b></div>
-                      <div class="streamer-preview-mmr">6420</div>
+                  <div class="overlay-position-editor">
+                    <div class="overlay-position-main">
+                      <div class="overlay-position-preview">
+                        <img class="overlay-position-bg" src="/assets/game2.png" alt="">
+                        <div class="overlay-position-item streamer-preview live">
+                          <div class="streamer-preview-medal"><img src="/assets/rank-medal-7.png" alt=""></div>
+                          <div class="streamer-preview-wl"><span>0</span><b>W</b><span>-</span><span>0</span><b>L</b></div>
+                          <div class="streamer-preview-mmr">6420</div>
+                        </div>
+                      </div>
+                      <label class="overlay-position-x" id="streamerStatsGameXWrap">Horizontal<input id="streamerStatsGameX" type="range" min="0" max="1920" step="1"><output id="streamerStatsGameXValue">0</output></label>
                     </div>
-                  </div>
-                  <div class="overlay-position-sliders">
-                    <label id="streamerStatsGameXWrap">Horizontal<input id="streamerStatsGameX" type="range" min="-600" max="600" step="1"><output id="streamerStatsGameXValue">0</output></label>
-                    <label id="streamerStatsGameYWrap">Vertical<input id="streamerStatsGameY" type="range" min="-400" max="400" step="1"><output id="streamerStatsGameYValue">0</output></label>
+                    <label class="overlay-position-y" id="streamerStatsGameYWrap"><span>Vertical</span><input id="streamerStatsGameY" type="range" min="0" max="1080" step="1"><output id="streamerStatsGameYValue">0</output></label>
                   </div>
                   <button type="button" data-reset-position="streamerStatsGame">Reset</button>
                 </section>
                 <section class="overlay-position-card" data-position-preview="roshanTimer">
                   <h4 id="roshanTimerPositionTitle">Roshan timer</h4>
-                  <div class="overlay-position-preview">
-                    <img class="overlay-position-bg" src="/assets/game2.png" alt="">
-                    <div class="overlay-position-item roshan-preview"><img src="/assets/roshan.png" alt=""><span>8:42-11:42</span></div>
-                  </div>
-                  <div class="overlay-position-sliders">
-                    <label id="roshanTimerXWrap">Horizontal<input id="roshanTimerX" type="range" min="-600" max="600" step="1"><output id="roshanTimerXValue">0</output></label>
-                    <label id="roshanTimerYWrap">Vertical<input id="roshanTimerY" type="range" min="-300" max="300" step="1"><output id="roshanTimerYValue">0</output></label>
+                  <div class="overlay-position-editor">
+                    <div class="overlay-position-main">
+                      <div class="overlay-position-preview">
+                        <img class="overlay-position-bg" src="/assets/game2.png" alt="">
+                        <div class="overlay-position-item roshan-preview"><img src="/assets/roshan.png" alt=""><span>8:42-11:42</span></div>
+                      </div>
+                      <label class="overlay-position-x" id="roshanTimerXWrap">Horizontal<input id="roshanTimerX" type="range" min="0" max="1920" step="1"><output id="roshanTimerXValue">0</output></label>
+                    </div>
+                    <label class="overlay-position-y" id="roshanTimerYWrap"><span>Vertical</span><input id="roshanTimerY" type="range" min="0" max="1080" step="1"><output id="roshanTimerYValue">0</output></label>
                   </div>
                   <button type="button" data-reset-position="roshanTimer">Reset</button>
                 </section>
