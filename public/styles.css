@@ -585,41 +585,36 @@ dd {
 .streamer-preview {
   display: grid;
   grid-template-columns: auto auto;
-  align-content: center;
-  justify-content: center;
+  align-content: start;
+  justify-content: start;
   column-gap: 8px;
   color: #f6f0d8;
   font-family: "Arial Narrow", "Roboto Condensed", "Segoe UI Condensed", "Segoe UI", Arial, Helvetica, sans-serif;
-  font-size: calc(19px * var(--preview-scale, 0.5));
+  font-size: calc(19px * var(--preview-scale, 0.5) * var(--streamer-preview-scale, 1));
   font-weight: 800;
   line-height: 1;
   text-shadow: 0 1px 2px #000, 0 0 3px #000;
   white-space: nowrap;
+  --streamer-preview-scale: 0.6666667;
 }
 
 .streamer-preview.live {
-  transform: scale(0.85);
-  transform-origin: bottom center;
-}
-
-.streamer-preview:not(.live) {
-  transform: scale(0.6666667);
-  transform-origin: top center;
+  --streamer-preview-scale: 0.85;
 }
 
 .streamer-preview-medal {
   grid-column: 2;
   justify-self: center;
-  width: calc(105px * var(--preview-scale, 0.5));
+  width: calc(105px * var(--preview-scale, 0.5) * var(--streamer-preview-scale, 1));
   aspect-ratio: 1 / 1;
   height: auto;
-  margin-bottom: calc(-18px * var(--preview-scale, 0.5));
+  margin-bottom: calc(-18px * var(--preview-scale, 0.5) * var(--streamer-preview-scale, 1));
 }
 
 .streamer-preview.live .streamer-preview-medal {
-  width: calc(105px * var(--preview-scale, 0.5));
+  width: calc(105px * var(--preview-scale, 0.5) * var(--streamer-preview-scale, 1));
   height: auto;
-  margin-bottom: calc(-18px * var(--preview-scale, 0.5));
+  margin-bottom: calc(-18px * var(--preview-scale, 0.5) * var(--streamer-preview-scale, 1));
 }
 
 .streamer-preview-medal img {
@@ -633,7 +628,7 @@ dd {
   display: flex;
   align-items: baseline;
   justify-content: flex-end;
-  gap: calc(3px * var(--preview-scale, 0.5));
+  gap: calc(3px * var(--preview-scale, 0.5) * var(--streamer-preview-scale, 1));
   color: #fff;
 }
 
@@ -648,6 +643,12 @@ dd {
 .streamer-preview-mmr {
   grid-column: 2;
   color: #fff;
+}
+
+.streamer-preview:not(.live) .streamer-preview-wl {
+  grid-row: 1;
+  align-self: start;
+  font-size: calc(33.25px * var(--preview-scale, 0.5) * var(--streamer-preview-scale, 1));
 }
 
 .roshan-preview {

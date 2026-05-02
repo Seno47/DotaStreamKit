@@ -2666,8 +2666,8 @@ function normalizeOverlayPositions(value) {
 function normalizeOverlayOffset(value) {
   const source = value && typeof value === 'object' ? value : {};
   return {
-    x: clampInt(source.x, -1200, 1200),
-    y: clampInt(source.y, -700, 700)
+    x: clampInt(source.x, -1920, 1920),
+    y: clampInt(source.y, -1080, 1080)
   };
 }
 

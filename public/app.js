@@ -1700,8 +1700,13 @@ function renderOverlayPositionPreviews() {
     preview.dataset.bg = background;
     item.style.left = `${x * (preview.clientWidth / 1920 || 0)}px`;
     item.style.top = `${y * (preview.clientHeight / 1080 || 0)}px`;
-    item.style.width = `${box.width * (preview.clientWidth / 1920 || 0)}px`;
-    item.style.height = `${box.height * (preview.clientHeight / 1080 || 0)}px`;
+    if (item.classList.contains('streamer-preview')) {
+      item.style.width = 'auto';
+      item.style.height = 'auto';
+    } else {
+      item.style.width = `${box.width * (preview.clientWidth / 1920 || 0)}px`;
+      item.style.height = `${box.height * (preview.clientHeight / 1080 || 0)}px`;
+    }
     const xOutput = els[`${key}XValue`];
     const yOutput = els[`${key}YValue`];
     if (xOutput) xOutput.textContent = String(x);
