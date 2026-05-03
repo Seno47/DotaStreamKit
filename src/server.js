@@ -384,13 +384,12 @@ defaultConfig.spectatorPredictions = {
   ...structuredClone(defaultConfig.predictions),
   titleTemplate: 'Ставка на просматриваемую игру?',
   types: {
-    ...structuredClone(defaultConfig.predictions.types),
-    win_loss: { enabled: true, weight: 3, titleTemplate: 'Победа выбранной стороны?', yesTitle: 'Победа', noTitle: 'Поражение' },
-    streamer_kills: { enabled: true, weight: 2, min: 5, max: 12, titleTemplate: '{hero}: {target}+ киллов?', yesTitle: 'Да', noTitle: 'Нет' },
-    streamer_deaths: { enabled: true, weight: 1, min: 4, max: 9, titleTemplate: '{hero}: {target}+ смертей?', yesTitle: 'Да', noTitle: 'Нет' },
-    streamer_assists: { enabled: true, weight: 2, min: 8, max: 20, titleTemplate: '{hero}: {target}+ ассистов?', yesTitle: 'Да', noTitle: 'Нет' },
-    no_death_until: { enabled: true, weight: 1, minMinute: 8, maxMinute: 15, titleTemplate: '{hero} не умрет до {minute}:00?', yesTitle: 'Не умрет', noTitle: 'Умрет' },
-    last_hits_by_minute: { enabled: true, weight: 2, min: 45, max: 85, minMinute: 10, maxMinute: 10, titleTemplate: '{hero}: {target}+ ластхитов к {minute}:00?', yesTitle: 'Да', noTitle: 'Нет' }
+    radiant_win: { enabled: true, weight: 3, titleTemplate: 'Победа {radiant_team}?', yesTitle: 'Да', noTitle: 'Нет' },
+    dire_win: { enabled: true, weight: 3, titleTemplate: 'Победа {dire_team}?', yesTitle: 'Да', noTitle: 'Нет' },
+    game_duration_at_least: { enabled: true, weight: 2, minMinute: 35, maxMinute: 55, titleTemplate: 'Игра продлится {minute}:00?', yesTitle: 'Да', noTitle: 'Нет' },
+    total_kills_by_minute: { enabled: true, weight: 2, min: 20, max: 45, minMinute: 20, maxMinute: 35, titleTemplate: 'К {minute}:00 будет {target}+ убийств?', yesTitle: 'Да', noTitle: 'Нет' },
+    radiant_kills_by_minute: { enabled: true, weight: 1, min: 10, max: 25, minMinute: 20, maxMinute: 35, titleTemplate: '{radiant_team}: {target}+ убийств к {minute}:00?', yesTitle: 'Да', noTitle: 'Нет' },
+    dire_kills_by_minute: { enabled: true, weight: 1, min: 10, max: 25, minMinute: 20, maxMinute: 35, titleTemplate: '{dire_team}: {target}+ убийств к {minute}:00?', yesTitle: 'Да', noTitle: 'Нет' }
   },
   customTemplates: []
 };
@@ -420,6 +419,8 @@ const runtime = {
       activeMatchId: null,
       playerActivity: null,
       playerTeam: null,
+      radiantTeamName: null,
+      direTeamName: null,
       winTeam: null,
       heroName: null,
       heroId: null,
@@ -435,6 +436,12 @@ const runtime = {
       enemyKills: null,
       enemyDeaths: null,
       enemyAssists: null,
+      radiantKills: null,
+      radiantDeaths: null,
+      radiantAssists: null,
+      direKills: null,
+      direDeaths: null,
+      direAssists: null,
       totalKills: null,
       totalDeaths: null,
       totalAssists: null,
@@ -496,6 +503,8 @@ runtime.state.gsi = {
   activeMatchId: null,
   playerActivity: null,
   playerTeam: null,
+  radiantTeamName: null,
+  direTeamName: null,
   winTeam: null,
   heroName: null,
   heroId: null,
@@ -511,6 +520,12 @@ runtime.state.gsi = {
   enemyKills: null,
   enemyDeaths: null,
   enemyAssists: null,
+  radiantKills: null,
+  radiantDeaths: null,
+  radiantAssists: null,
+  direKills: null,
+  direDeaths: null,
+  direAssists: null,
   totalKills: null,
   totalDeaths: null,
   totalAssists: null,
@@ -1944,6 +1959,7 @@ async function handleGsi(req, res) {
   const queueSearchSignal = inferQueueSearchSignal(payload);
   const inGameScreen = inferInGameScreen(gameState, playerActivity);
   const matchPlayers = collectMatchPlayers(payload);
+  const matchTeams = inferMatchTeams(payload, matchPlayers);
   const rosterDebug = buildRosterDebug(payload);
   const leftGameView = inferLeftGameView({
     connected: true,
@@ -1961,6 +1977,8 @@ async function handleGsi(req, res) {
     activeMatchId,
     playerActivity,
     playerTeam,
+    radiantTeamName: matchTeams.radiant,
+    direTeamName: matchTeams.dire,
     playerSlotRaw,
     playerTeamSlotRaw,
     winTeam: normalizeTeam(map.win_team),
@@ -2002,7 +2020,8 @@ async function handleGsi(req, res) {
 }
 
 function buildMatchIntel(payload, gsi, players) {
-  if (!runtime.config.protection.matchIntel?.enabled || isMatchIntelFinished(gsi) || gsi.leftGameView) {
+  const settings = matchIntelSettingsForGsi(gsi);
+  if (!settings?.enabled || isMatchIntelFinished(gsi) || gsi.leftGameView) {
     return {
       matchId: gsi.activeMatchId || gsi.matchId || null,
       players,
@@ -2024,11 +2043,11 @@ function buildMatchIntel(payload, gsi, players) {
     intel.roshanStatus = null;
     intel.aegis = null;
   }
-  if (!runtime.config.protection.matchIntel.showRoshanTimer) {
+  if (!settings.showRoshanTimer) {
     intel.roshan = null;
     intel.roshanStatus = null;
   }
-  if (!runtime.config.protection.matchIntel.showAegisTimer) {
+  if (!settings.showAegisTimer) {
     intel.aegis = null;
   }
   return intel;
@@ -2444,6 +2463,12 @@ function collectTeamStats(payload, playerTeam) {
     enemyKills: null,
     enemyDeaths: null,
     enemyAssists: null,
+    radiantKills: null,
+    radiantDeaths: null,
+    radiantAssists: null,
+    direKills: null,
+    direDeaths: null,
+    direAssists: null,
     totalKills: null,
     totalDeaths: null,
     totalAssists: null
@@ -2457,21 +2482,40 @@ function collectTeamStats(payload, playerTeam) {
     enemyKills: 0,
     enemyDeaths: 0,
     enemyAssists: 0,
+    radiantKills: 0,
+    radiantDeaths: 0,
+    radiantAssists: 0,
+    direKills: 0,
+    direDeaths: 0,
+    direAssists: 0,
     totalKills: 0,
     totalDeaths: 0,
     totalAssists: 0
   };
   let hasTeam = false;
   let hasEnemy = false;
+  let hasRadiant = false;
+  let hasDire = false;
 
   for (const player of players) {
-    const team = normalizeTeam(player.team_name || player.team || player.team_slot || player.player_slot);
+    const team = normalizePlayerTeam(player);
     const kills = statNumber(player.kills, 0) || 0;
     const deaths = statNumber(player.deaths, 0) || 0;
     const assists = statNumber(player.assists, 0) || 0;
     totals.totalKills += kills;
     totals.totalDeaths += deaths;
     totals.totalAssists += assists;
+    if (team === 'radiant') {
+      totals.radiantKills += kills;
+      totals.radiantDeaths += deaths;
+      totals.radiantAssists += assists;
+      hasRadiant = true;
+    } else if (team === 'dire') {
+      totals.direKills += kills;
+      totals.direDeaths += deaths;
+      totals.direAssists += assists;
+      hasDire = true;
+    }
     if (playerTeam && team === playerTeam) {
       totals.teamKills += kills;
       totals.teamDeaths += deaths;
@@ -2492,10 +2536,68 @@ function collectTeamStats(payload, playerTeam) {
     enemyKills: hasEnemy ? totals.enemyKills : null,
     enemyDeaths: hasEnemy ? totals.enemyDeaths : null,
     enemyAssists: hasEnemy ? totals.enemyAssists : null,
+    radiantKills: hasRadiant ? totals.radiantKills : null,
+    radiantDeaths: hasRadiant ? totals.radiantDeaths : null,
+    radiantAssists: hasRadiant ? totals.radiantAssists : null,
+    direKills: hasDire ? totals.direKills : null,
+    direDeaths: hasDire ? totals.direDeaths : null,
+    direAssists: hasDire ? totals.direAssists : null,
     totalKills: totals.totalKills,
     totalDeaths: totals.totalDeaths,
     totalAssists: totals.totalAssists
   };
+}
+
+function inferMatchTeams(payload, players = []) {
+  const radiant = firstNonEmpty(
+    payload?.map?.radiant_team_name,
+    payload?.map?.radiantTeamName,
+    payload?.map?.radiant_team,
+    payload?.map?.radiant,
+    payload?.draft?.radiant_team_name,
+    payload?.draft?.radiantTeamName,
+    teamNameFromRoster(payload, players, 'radiant')
+  );
+  const dire = firstNonEmpty(
+    payload?.map?.dire_team_name,
+    payload?.map?.direTeamName,
+    payload?.map?.dire_team,
+    payload?.map?.dire,
+    payload?.draft?.dire_team_name,
+    payload?.draft?.direTeamName,
+    teamNameFromRoster(payload, players, 'dire')
+  );
+  return {
+    radiant: sanitizeTeamName(radiant, 'Radiant'),
+    dire: sanitizeTeamName(dire, 'Dire')
+  };
+}
+
+function teamNameFromRoster(payload, players, team) {
+  const slotTeam = team === 'dire' ? 'dire' : 'radiant';
+  const source = payload?.allplayers || payload?.players || {};
+  for (const [key, player] of Object.entries(source)) {
+    if (!player || typeof player !== 'object') continue;
+    const normalized = normalizePlayerTeam(player);
+    if (normalized !== slotTeam) continue;
+    const teamName = firstNonEmpty(player.team_display_name, player.teamDisplayName, player.team_tag, player.teamTag, player.team_clan_name, player.teamClanName);
+    if (teamName) return teamName;
+  }
+  const player = players.find((item) => item?.team === slotTeam);
+  return player?.teamName || null;
+}
+
+function firstNonEmpty(...values) {
+  return values.find((value) => String(value || '').trim()) || null;
+}
+
+function sanitizeTeamName(value, fallback) {
+  if (value && typeof value === 'object') {
+    return sanitizeTeamName(value.name || value.team_name || value.tag || value.team_tag, fallback);
+  }
+  const text = String(value || '').trim();
+  if (!text || /^(radiant|dire|good|bad|2|3)$/i.test(text)) return fallback;
+  return text.slice(0, 40);
 }
 
 function inferLeftGameView({ connected, activeMatchId, gameState, playerActivity, hasLivePayload }) {
@@ -2603,6 +2705,25 @@ function predictionSettingsForProfile(profile) {
 
 function inferPredictionResult(gsi) {
   const meta = runtime.state.activePredictionMeta;
+  if (meta?.type === 'radiant_win') {
+    if (!/POST_GAME/i.test(String(gsi.gameState || '')) || !gsi.winTeam) return null;
+    return gsi.winTeam === 'radiant' ? 'yes' : 'no';
+  }
+  if (meta?.type === 'dire_win') {
+    if (!/POST_GAME/i.test(String(gsi.gameState || '')) || !gsi.winTeam) return null;
+    return gsi.winTeam === 'dire' ? 'yes' : 'no';
+  }
+  if (meta?.type === 'game_duration_at_least') {
+    if (Number(gsi.clockTime) >= meta.deadlineSeconds) return 'yes';
+    if (/POST_GAME/i.test(String(gsi.gameState || ''))) return 'no';
+    return null;
+  }
+  if (['total_kills_by_minute', 'radiant_kills_by_minute', 'dire_kills_by_minute'].includes(meta?.type)) {
+    if (/POST_GAME/i.test(String(gsi.gameState || '')) && Number(gsi.clockTime || 0) < meta.deadlineSeconds) return 'no';
+    if (Number(gsi.clockTime) < meta.deadlineSeconds) return null;
+    const stat = predictionStatValue(meta.type, gsi);
+    return Number.isFinite(stat) && stat >= meta.target ? 'yes' : 'no';
+  }
   if (!meta?.type || meta.type === 'win_loss' || meta.type === 'manual') {
     const result = inferResult(gsi);
     return result === 'win' ? 'yes' : result === 'lose' ? 'no' : null;
@@ -2637,6 +2758,9 @@ function predictionStatValue(type, gsi) {
   if (type === 'streamer_kills') return Number(gsi.kills);
   if (type === 'streamer_deaths') return Number(gsi.deaths);
   if (type === 'streamer_assists') return Number(gsi.assists);
+  if (type === 'total_kills_by_minute') return Number(gsi.totalKills);
+  if (type === 'radiant_kills_by_minute') return Number(gsi.radiantKills);
+  if (type === 'dire_kills_by_minute') return Number(gsi.direKills);
   return NaN;
 }
 
@@ -2681,6 +2805,12 @@ function predictionMetricValue(metric, gsi) {
   if (metric === 'enemy_kills') return Number(gsi.enemyKills);
   if (metric === 'enemy_deaths') return Number(gsi.enemyDeaths);
   if (metric === 'enemy_assists') return Number(gsi.enemyAssists);
+  if (metric === 'radiant_kills') return Number(gsi.radiantKills);
+  if (metric === 'radiant_deaths') return Number(gsi.radiantDeaths);
+  if (metric === 'radiant_assists') return Number(gsi.radiantAssists);
+  if (metric === 'dire_kills') return Number(gsi.direKills);
+  if (metric === 'dire_deaths') return Number(gsi.direDeaths);
+  if (metric === 'dire_assists') return Number(gsi.direAssists);
   if (metric === 'total_kills') return Number(gsi.totalKills);
   if (metric === 'total_deaths') return Number(gsi.totalDeaths);
   if (metric === 'total_assists') return Number(gsi.totalAssists);
@@ -3043,9 +3173,25 @@ function inferResult(gsi) {
 
 function normalizeTeam(value) {
   const raw = String(value || '').toLowerCase();
-  if (raw.includes('radiant') || raw === '2') return 'radiant';
-  if (raw.includes('dire') || raw === '3') return 'dire';
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) {
+    if (numeric === 2) return 'radiant';
+    if (numeric === 3) return 'dire';
+  }
+  if (raw.includes('radiant') || raw.includes('good') || raw === '2' || raw === 'team2') return 'radiant';
+  if (raw.includes('dire') || raw.includes('bad') || raw === '3' || raw === 'team3') return 'dire';
   return null;
+}
+
+function normalizePlayerTeam(player) {
+  const direct = normalizeTeam(player?.team_name || player?.team);
+  if (direct) return direct;
+  const slot = Number(player?.team_slot ?? player?.player_slot);
+  if (!Number.isFinite(slot)) return null;
+  if (slot >= 0 && slot < 5) return 'radiant';
+  if (slot >= 5 && slot < 10) return 'dire';
+  if (slot >= 128) return 'dire';
+  return 'radiant';
 }
 
 function normalizeDeploymentConfig(config) {
@@ -3170,15 +3316,16 @@ function normalizePredictionSettings(settings, defaults = defaultConfig.predicti
     if (!defaults.types[type]) delete settings.types[type];
   }
   settings.customTemplates = normalizeCustomPredictionTemplates(settings.customTemplates);
-  if (!allPredictionTypes(settings)[settings.selectedType]) settings.selectedType = 'win_loss';
+  const availableTypes = allPredictionTypes(settings);
+  if (!availableTypes[settings.selectedType]) settings.selectedType = Object.keys(availableTypes)[0] || 'win_loss';
   for (const [type, config] of Object.entries(settings.types)) {
     config.enabled = config.enabled !== false;
     config.weight = clampInt(config.weight, 1, 100);
-    if (['streamer_kills', 'streamer_deaths', 'streamer_assists', 'last_hits_by_minute'].includes(type)) {
+    if (['streamer_kills', 'streamer_deaths', 'streamer_assists', 'last_hits_by_minute', 'total_kills_by_minute', 'radiant_kills_by_minute', 'dire_kills_by_minute'].includes(type)) {
       config.min = clampInt(config.min, 0, 999);
       config.max = clampInt(config.max, config.min, 999);
     }
-    if (['no_death_until', 'last_hits_by_minute'].includes(type)) {
+    if (['no_death_until', 'last_hits_by_minute', 'game_duration_at_least', 'total_kills_by_minute', 'radiant_kills_by_minute', 'dire_kills_by_minute'].includes(type)) {
       config.minMinute = clampInt(config.minMinute, 1, 180);
       config.maxMinute = clampInt(config.maxMinute, config.minMinute, 180);
     }
@@ -3598,7 +3745,8 @@ function buildPredictionDraft(overrides = {}, settings = runtime.config.predicti
   }
 
   const type = choosePredictionType(settings);
-  const typeConfig = allPredictionTypes(settings)[type] || defaultConfig.predictions.types.win_loss;
+  const allTypes = allPredictionTypes(settings);
+  const typeConfig = allTypes[type] || allTypes[Object.keys(allTypes)[0]] || defaultConfig.predictions.types.win_loss;
   const target = randomRange(typeConfig.min, typeConfig.max);
   const minute = randomRange(typeConfig.minMinute, typeConfig.maxMinute);
   const variables = predictionVariables({ target, minute, type });
@@ -3629,7 +3777,7 @@ function choosePredictionType(settings) {
   const types = allPredictionTypes(settings);
   if (settings.selectionMode === 'selected' && types[settings.selectedType]?.enabled !== false) return settings.selectedType;
   const enabled = Object.entries(types).filter(([, config]) => config?.enabled !== false);
-  if (!enabled.length) return 'win_loss';
+  if (!enabled.length) return Object.keys(types)[0] || 'win_loss';
   const total = enabled.reduce((sum, [, config]) => sum + Math.max(1, Number(config.weight) || 1), 0);
   let roll = Math.random() * total;
   for (const [type, config] of enabled) {
@@ -3653,11 +3801,26 @@ function allPredictionTypes(settings) {
 
 function predictionVariables(extra = {}) {
   const gsi = runtime.state.gsi;
+  const players = runtime.state.matchIntel?.players || [];
+  const radiantPlayers = players.filter((player) => player.team === 'radiant').sort((left, right) => Number(left.slot) - Number(right.slot));
+  const direPlayers = players.filter((player) => player.team === 'dire').sort((left, right) => Number(left.slot) - Number(right.slot));
+  const radiantHeroes = teamHeroList(radiantPlayers);
+  const direHeroes = teamHeroList(direPlayers);
   const hero = formatHeroName(gsi.heroName || gsi.heroId || 'hero');
-  return {
+  const variables = {
     hero,
     hero_raw: gsi.heroName || '',
     hero_id: gsi.heroId || '',
+    match_id: gsi.activeMatchId || gsi.matchId || '',
+    radiant_team: gsi.radiantTeamName || 'Radiant',
+    dire_team: gsi.direTeamName || 'Dire',
+    winning_team: gsi.winTeam === 'radiant'
+      ? (gsi.radiantTeamName || 'Radiant')
+      : gsi.winTeam === 'dire'
+        ? (gsi.direTeamName || 'Dire')
+        : '',
+    radiant_heroes: radiantHeroes || 'Radiant heroes',
+    dire_heroes: direHeroes || 'Dire heroes',
     target: extra.target ?? '',
     minute: extra.minute ?? '',
     clock_minutes: Math.max(0, Math.floor(Number(gsi.clockTime || 0) / 60)),
@@ -3673,12 +3836,38 @@ function predictionVariables(extra = {}) {
     enemy_kills: gsi.enemyKills ?? 0,
     enemy_deaths: gsi.enemyDeaths ?? 0,
     enemy_assists: gsi.enemyAssists ?? 0,
+    radiant_kills: gsi.radiantKills ?? 0,
+    radiant_deaths: gsi.radiantDeaths ?? 0,
+    radiant_assists: gsi.radiantAssists ?? 0,
+    dire_kills: gsi.direKills ?? 0,
+    dire_deaths: gsi.direDeaths ?? 0,
+    dire_assists: gsi.direAssists ?? 0,
     total_kills: gsi.totalKills ?? 0,
     total_deaths: gsi.totalDeaths ?? 0,
     total_assists: gsi.totalAssists ?? 0,
     team: gsi.playerTeam || '',
     type: extra.type || ''
   };
+  addTeamSlotVariables(variables, 'radiant', radiantPlayers);
+  addTeamSlotVariables(variables, 'dire', direPlayers);
+  return variables;
+}
+
+function teamHeroList(players) {
+  return players
+    .map((player) => player?.hero ? formatHeroName(player.hero) : '')
+    .filter(Boolean)
+    .join(', ');
+}
+
+function addTeamSlotVariables(variables, team, players) {
+  for (let index = 0; index < 5; index += 1) {
+    const player = players[index] || null;
+    const number = index + 1;
+    variables[`${team}_hero_${number}`] = player?.hero ? formatHeroName(player.hero) : '';
+    variables[`${team}_player_${number}`] = player?.name || '';
+    variables[`${team}_account_${number}`] = player?.accountId || '';
+  }
 }
 
 function renderTemplate(template, variables) {

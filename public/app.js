@@ -14,6 +14,17 @@ function cloneSpectatorPredictionPanel() {
   }
   const heading = clone.querySelector('h2');
   if (heading) heading.textContent = 'Ставки при просмотре игр';
+  const variableGrid = clone.querySelector('.variable-grid');
+  if (variableGrid) {
+    variableGrid.replaceChildren(...spectatorVariableChips().map(({ variable, label }) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'variable-chip';
+      button.dataset.var = variable;
+      button.innerHTML = `<code>${variable}</code><span>${label}</span>`;
+      return button;
+    }));
+  }
   const summary = document.createElement('p');
   summary.className = 'muted spectator-prediction-note';
   summary.textContent = 'Отдельные автоставки для режима просмотра чужих игр. Защитные маски в этом режиме не включаются.';
@@ -39,6 +50,43 @@ function cloneSpectatorPredictionPanel() {
   `;
   clone.insertBefore(intel, clone.querySelector(`#spectatorPredictionForm`));
   grid.insertBefore(clone, source.nextSibling);
+}
+
+function spectatorVariableChips() {
+  return [
+    ['{radiant_team}', 'команда Radiant'],
+    ['{dire_team}', 'команда Dire'],
+    ['{winning_team}', 'победившая команда после игры'],
+    ['{match_id}', 'ID матча'],
+    ['{radiant_heroes}', 'герои Radiant списком'],
+    ['{dire_heroes}', 'герои Dire списком'],
+    ['{radiant_hero_1}', 'герой Radiant слот 1'],
+    ['{radiant_hero_2}', 'герой Radiant слот 2'],
+    ['{radiant_hero_3}', 'герой Radiant слот 3'],
+    ['{radiant_hero_4}', 'герой Radiant слот 4'],
+    ['{radiant_hero_5}', 'герой Radiant слот 5'],
+    ['{dire_hero_1}', 'герой Dire слот 1'],
+    ['{dire_hero_2}', 'герой Dire слот 2'],
+    ['{dire_hero_3}', 'герой Dire слот 3'],
+    ['{dire_hero_4}', 'герой Dire слот 4'],
+    ['{dire_hero_5}', 'герой Dire слот 5'],
+    ['{radiant_player_1}', 'игрок Radiant слот 1'],
+    ['{radiant_player_2}', 'игрок Radiant слот 2'],
+    ['{radiant_player_3}', 'игрок Radiant слот 3'],
+    ['{radiant_player_4}', 'игрок Radiant слот 4'],
+    ['{radiant_player_5}', 'игрок Radiant слот 5'],
+    ['{dire_player_1}', 'игрок Dire слот 1'],
+    ['{dire_player_2}', 'игрок Dire слот 2'],
+    ['{dire_player_3}', 'игрок Dire слот 3'],
+    ['{dire_player_4}', 'игрок Dire слот 4'],
+    ['{dire_player_5}', 'игрок Dire слот 5'],
+    ['{radiant_kills}', 'убийства Radiant'],
+    ['{dire_kills}', 'убийства Dire'],
+    ['{total_kills}', 'убийства обеих команд'],
+    ['{clock_minutes}', 'текущая минута игры'],
+    ['{target}', 'случайная цель из диапазона'],
+    ['{minute}', 'выбранная минута']
+  ].map(([variable, label]) => ({ variable, label }));
 }
 
 const els = {
@@ -333,7 +381,7 @@ const translations = {
     pageProtection: 'Защита',
     pageIntel: 'Match intel',
     pagePredictions: 'Прогнозы',
-    pageSpectatorPredictions: 'Ставки просмотра',
+    pageSpectatorPredictions: 'Настройки просмотра',
     pageTwitch: 'Twitch',
     pageSetup: 'Настройка',
     pageEvents: 'Журнал',
@@ -458,7 +506,7 @@ const translations = {
     disconnect: 'Отключить',
     bindChannel: 'Привязать канал',
     predictions: 'Ставка за баллы канала',
-    spectatorPredictions: 'Ставки при просмотре игр',
+    spectatorPredictions: 'Настройки просмотра',
     spectatorProfileShort: 'просмотр',
     variablesTitle: 'Переменные шаблонов',
     variablesHelp: 'Нажми на переменную, чтобы вставить ее в активное поле заголовка.',
@@ -554,6 +602,18 @@ const translations = {
     descNoDeath: 'Случайная минута, до которой герой должен выжить.',
     typeLastHits: 'Ластхиты к минуте',
     descLastHits: 'Случайная цель по ластхитам и минута проверки.',
+    typeRadiantWin: 'Победа Radiant',
+    descRadiantWin: 'Прогноз на победу команды Radiant в просматриваемой игре.',
+    typeDireWin: 'Победа Dire',
+    descDireWin: 'Прогноз на победу команды Dire в просматриваемой игре.',
+    typeGameDuration: 'Длительность игры',
+    descGameDuration: 'Случайная минута, до которой должна дойти игра.',
+    typeTotalKillsMinute: 'Общие убийства к минуте',
+    descTotalKillsMinute: 'Суммарные убийства обеих команд к выбранной минуте.',
+    typeRadiantKillsMinute: 'Убийства Radiant к минуте',
+    descRadiantKillsMinute: 'Убийства Radiant к выбранной минуте.',
+    typeDireKillsMinute: 'Убийства Dire к минуте',
+    descDireKillsMinute: 'Убийства Dire к выбранной минуте.',
     typeCustom: 'Свой прогноз',
     descCustom: 'Пользовательское условие по времени игры или выбранной метрике.',
     deleteTemplate: 'Удалить шаблон',
@@ -582,6 +642,12 @@ const translations = {
     metricEnemyKills: 'Киллы противника',
     metricEnemyDeaths: 'Смерти противника',
     metricEnemyAssists: 'Ассисты противника',
+    metricRadiantKills: 'Киллы Radiant',
+    metricRadiantDeaths: 'Смерти Radiant',
+    metricRadiantAssists: 'Ассисты Radiant',
+    metricDireKills: 'Киллы Dire',
+    metricDireDeaths: 'Смерти Dire',
+    metricDireAssists: 'Ассисты Dire',
     metricTotalKills: 'Киллы обеих команд',
     metricTotalDeaths: 'Смерти обеих команд',
     metricTotalAssists: 'Ассисты обеих команд',
@@ -620,7 +686,7 @@ const translations = {
     pageProtection: 'Protection',
     pageIntel: 'Match intel',
     pagePredictions: 'Predictions',
-    pageSpectatorPredictions: 'Spectator bets',
+    pageSpectatorPredictions: 'Spectator settings',
     pageTwitch: 'Twitch',
     pageSetup: 'Setup',
     pageEvents: 'Log',
@@ -745,7 +811,7 @@ const translations = {
     disconnect: 'Disconnect',
     bindChannel: 'Bind channel',
     predictions: 'Channel Points prediction',
-    spectatorPredictions: 'Spectator game bets',
+    spectatorPredictions: 'Spectator settings',
     spectatorProfileShort: 'spectator',
     variablesTitle: 'Template variables',
     variablesHelp: 'Click a variable to insert it into the active title field.',
@@ -841,6 +907,18 @@ const translations = {
     descNoDeath: 'Random minute the hero must survive until.',
     typeLastHits: 'Last hits by minute',
     descLastHits: 'Random last-hit target and check minute.',
+    typeRadiantWin: 'Radiant win',
+    descRadiantWin: 'Prediction for Radiant winning the spectated game.',
+    typeDireWin: 'Dire win',
+    descDireWin: 'Prediction for Dire winning the spectated game.',
+    typeGameDuration: 'Game duration',
+    descGameDuration: 'Random minute the game needs to reach.',
+    typeTotalKillsMinute: 'Total kills by minute',
+    descTotalKillsMinute: 'Both teams total kills by the selected minute.',
+    typeRadiantKillsMinute: 'Radiant kills by minute',
+    descRadiantKillsMinute: 'Radiant kills by the selected minute.',
+    typeDireKillsMinute: 'Dire kills by minute',
+    descDireKillsMinute: 'Dire kills by the selected minute.',
     typeCustom: 'Custom prediction',
     descCustom: 'Custom condition based on game time or a selected metric.',
     deleteTemplate: 'Delete template',
@@ -869,6 +947,12 @@ const translations = {
     metricEnemyKills: 'Enemy kills',
     metricEnemyDeaths: 'Enemy deaths',
     metricEnemyAssists: 'Enemy assists',
+    metricRadiantKills: 'Radiant kills',
+    metricRadiantDeaths: 'Radiant deaths',
+    metricRadiantAssists: 'Radiant assists',
+    metricDireKills: 'Dire kills',
+    metricDireDeaths: 'Dire deaths',
+    metricDireAssists: 'Dire assists',
     metricTotalKills: 'Both teams kills',
     metricTotalDeaths: 'Both teams deaths',
     metricTotalAssists: 'Both teams assists',
@@ -910,9 +994,18 @@ const builtinPredictionTypeDefs = [
   { type: 'last_hits_by_minute', labelKey: 'typeLastHits', descriptionKey: 'descLastHits', ranges: ['min', 'max', 'minMinute', 'maxMinute'] }
 ];
 
+const spectatorBuiltinPredictionTypeDefs = [
+  { type: 'radiant_win', labelKey: 'typeRadiantWin', descriptionKey: 'descRadiantWin', ranges: [] },
+  { type: 'dire_win', labelKey: 'typeDireWin', descriptionKey: 'descDireWin', ranges: [] },
+  { type: 'game_duration_at_least', labelKey: 'typeGameDuration', descriptionKey: 'descGameDuration', ranges: ['minMinute', 'maxMinute'] },
+  { type: 'total_kills_by_minute', labelKey: 'typeTotalKillsMinute', descriptionKey: 'descTotalKillsMinute', ranges: ['min', 'max', 'minMinute', 'maxMinute'] },
+  { type: 'radiant_kills_by_minute', labelKey: 'typeRadiantKillsMinute', descriptionKey: 'descRadiantKillsMinute', ranges: ['min', 'max', 'minMinute', 'maxMinute'] },
+  { type: 'dire_kills_by_minute', labelKey: 'typeDireKillsMinute', descriptionKey: 'descDireKillsMinute', ranges: ['min', 'max', 'minMinute', 'maxMinute'] }
+];
+
 const predictionEditorStates = {
   own: { defs: [...builtinPredictionTypeDefs], controlKey: '' },
-  spectator: { defs: [...builtinPredictionTypeDefs], controlKey: '' }
+  spectator: { defs: [...spectatorBuiltinPredictionTypeDefs], controlKey: '' }
 };
 
 buildPredictionTypeControls('own');
@@ -954,6 +1047,59 @@ function setActivePage(page) {
 
 function t(key) {
   return translations[currentLang]?.[key] || translations.ru[key] || key;
+}
+
+function variableLabel(variable) {
+  const key = String(variable || '').replace(/[{}]/g, '');
+  const normalLabels = {
+    hero: 'varHero',
+    target: 'varTarget',
+    minute: 'varMinute',
+    clock_minutes: 'varClockMinutes',
+    kills: 'varKills',
+    deaths: 'varDeaths',
+    assists: 'varAssists',
+    last_hits: 'varLastHits',
+    denies: 'varDenies',
+    level: 'varLevel',
+    team_kills: 'varTeamKills',
+    team_deaths: 'varTeamDeaths',
+    team_assists: 'varTeamAssists',
+    enemy_kills: 'varEnemyKills',
+    enemy_deaths: 'varEnemyDeaths',
+    enemy_assists: 'varEnemyAssists',
+    total_kills: 'varTotalKills',
+    total_deaths: 'varTotalDeaths',
+    total_assists: 'varTotalAssists'
+  };
+  if (normalLabels[key]) return t(normalLabels[key]);
+  const spectatorLabels = spectatorVariableLabelMap();
+  return spectatorLabels[key] || key;
+}
+
+function spectatorVariableLabelMap() {
+  const ru = currentLang !== 'en';
+  const map = {
+    radiant_team: ru ? 'команда Radiant' : 'Radiant team',
+    dire_team: ru ? 'команда Dire' : 'Dire team',
+    winning_team: ru ? 'победившая команда после игры' : 'winning team after game',
+    match_id: ru ? 'ID матча' : 'match ID',
+    radiant_heroes: ru ? 'герои Radiant списком' : 'Radiant heroes list',
+    dire_heroes: ru ? 'герои Dire списком' : 'Dire heroes list',
+    radiant_kills: ru ? 'убийства Radiant' : 'Radiant kills',
+    dire_kills: ru ? 'убийства Dire' : 'Dire kills',
+    clock_minutes: t('varClockMinutes'),
+    target: t('varTarget'),
+    minute: t('varMinute'),
+    total_kills: t('varTotalKills')
+  };
+  for (let index = 1; index <= 5; index += 1) {
+    map[`radiant_hero_${index}`] = ru ? `герой Radiant слот ${index}` : `Radiant hero slot ${index}`;
+    map[`dire_hero_${index}`] = ru ? `герой Dire слот ${index}` : `Dire hero slot ${index}`;
+    map[`radiant_player_${index}`] = ru ? `игрок Radiant слот ${index}` : `Radiant player slot ${index}`;
+    map[`dire_player_${index}`] = ru ? `игрок Dire слот ${index}` : `Dire player slot ${index}`;
+  }
+  return map;
 }
 
 function resolveLanguage(setting) {
@@ -1093,11 +1239,11 @@ function applyLanguage(config) {
   setPrefixText(els.effectiveRedirectUri.parentElement, t('redirectUri'));
 
   setText(els.predictionForm.closest('article').querySelector('h2'), 'predictions');
-  setText('.variable-summary span', 'variablesTitle');
-  setText('.variable-guide p', 'variablesHelp');
-  const variableKeys = ['varHero', 'varTarget', 'varMinute', 'varClockMinutes', 'varKills', 'varDeaths', 'varAssists', 'varLastHits', 'varDenies', 'varLevel', 'varTeamKills', 'varTeamDeaths', 'varTeamAssists', 'varEnemyKills', 'varEnemyDeaths', 'varEnemyAssists', 'varTotalKills', 'varTotalDeaths', 'varTotalAssists'];
-  document.querySelectorAll('.variable-chip span').forEach((span, index) => {
-    span.textContent = t(variableKeys[index]);
+  document.querySelectorAll('.variable-summary span').forEach((item) => { item.textContent = t('variablesTitle'); });
+  document.querySelectorAll('.variable-guide p').forEach((item) => { item.textContent = t('variablesHelp'); });
+  document.querySelectorAll('.variable-chip').forEach((chip) => {
+    const span = chip.querySelector('span');
+    if (span) span.textContent = variableLabel(chip.dataset.var);
   });
   setLabelText(els.predictionWindow.closest('label'), t('windowSec'));
   setLabelText(els.autoCreate.closest('label'), t('autoCreate'));
@@ -1154,7 +1300,7 @@ function applyLanguage(config) {
     setLabelText(ctx.customNo.closest('label'), t('noOutcome'));
     ctx.customForm.querySelector('button[type="submit"]').textContent = t('saveTemplate');
     applyConditionOptions(ctx.customCondition);
-    applyMetricOptions(ctx.customMetric);
+    applyMetricOptions(ctx.customMetric, profile);
     updateCustomBuilderFieldVisibilityForProfile(profile);
   }
   els.createPrediction.textContent = t('create');
@@ -1267,14 +1413,26 @@ function applyConditionOptions(select) {
     option.textContent = t(key);
     select.append(option);
   });
-  select.value = current;
+  select.value = [...select.options].some((option) => option.value === current)
+    ? current
+    : (select.options[0]?.value || '');
 }
 
-function applyMetricOptions(select) {
+function applyMetricOptions(select, profile = 'own') {
   if (!select) return;
   const current = select.value || 'clock_minutes';
   select.innerHTML = '';
-  [
+  metricOptionDefs(profile).forEach(([value, key]) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = t(key);
+    select.append(option);
+  });
+  select.value = current;
+}
+
+function metricOptionDefs(profile = 'own') {
+  const base = [
     ['clock_minutes', 'metricClockMinutes'],
     ['kills', 'metricKills'],
     ['deaths', 'metricDeaths'],
@@ -1291,13 +1449,26 @@ function applyMetricOptions(select) {
     ['total_kills', 'metricTotalKills'],
     ['total_deaths', 'metricTotalDeaths'],
     ['total_assists', 'metricTotalAssists']
-  ].forEach(([value, key]) => {
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = t(key);
-    select.append(option);
-  });
-  select.value = current;
+  ];
+  if (profile !== 'spectator') return base;
+  return [
+    ['clock_minutes', 'metricClockMinutes'],
+    ['radiant_kills', 'metricRadiantKills'],
+    ['radiant_deaths', 'metricRadiantDeaths'],
+    ['radiant_assists', 'metricRadiantAssists'],
+    ['dire_kills', 'metricDireKills'],
+    ['dire_deaths', 'metricDireDeaths'],
+    ['dire_assists', 'metricDireAssists'],
+    ['total_kills', 'metricTotalKills'],
+    ['total_deaths', 'metricTotalDeaths'],
+    ['total_assists', 'metricTotalAssists']
+  ];
+}
+
+function metricOptionsHtml(profile = 'own') {
+  return metricOptionDefs(profile)
+    .map(([value, key]) => `<option value="${value}">${t(key)}</option>`)
+    .join('');
 }
 
 function render(data) {
@@ -1555,7 +1726,7 @@ function buildPredictionTypeControls(profile = 'own') {
       <div class="prediction-type-grid">
         <label data-field-label="weight">${t('weight')}<input data-field="weight" type="number" min="1" max="100"></label>
         ${def.custom ? `<label data-field-label="condition">${t('condition')}<select data-field="condition"><option value="game_duration_at_least">${t('conditionGameDuration')}</option><option value="metric_reaches_target">${t('conditionReachTarget')}</option><option value="metric_by_minute">${t('conditionByMinute')}</option></select></label>` : ''}
-        ${def.custom ? `<label data-field-label="metric">${t('metric')}<select data-field="metric"><option value="clock_minutes">${t('metricClockMinutes')}</option><option value="kills">${t('metricKills')}</option><option value="deaths">${t('metricDeaths')}</option><option value="assists">${t('metricAssists')}</option><option value="last_hits">${t('metricLastHits')}</option><option value="denies">${t('metricDenies')}</option><option value="level">${t('metricLevel')}</option><option value="team_kills">${t('metricTeamKills')}</option><option value="team_deaths">${t('metricTeamDeaths')}</option><option value="team_assists">${t('metricTeamAssists')}</option><option value="enemy_kills">${t('metricEnemyKills')}</option><option value="enemy_deaths">${t('metricEnemyDeaths')}</option><option value="enemy_assists">${t('metricEnemyAssists')}</option><option value="total_kills">${t('metricTotalKills')}</option><option value="total_deaths">${t('metricTotalDeaths')}</option><option value="total_assists">${t('metricTotalAssists')}</option></select></label>` : ''}
+        ${def.custom ? `<label data-field-label="metric">${t('metric')}<select data-field="metric">${metricOptionsHtml(ctx.profile)}</select></label>` : ''}
         ${def.ranges.includes('min') ? `<label data-field-label="min">${t('targetFrom')}<input data-field="min" type="number" min="0" max="999"></label>` : ''}
         ${def.ranges.includes('max') ? `<label data-field-label="max">${t('targetTo')}<input data-field="max" type="number" min="0" max="999"></label>` : ''}
         ${def.ranges.includes('minMinute') ? `<label data-field-label="minMinute">${t('minuteFrom')}<input data-field="minMinute" type="number" min="1" max="180"></label>` : ''}
@@ -1583,7 +1754,8 @@ function syncPredictionTypeDefinitions(predictions, profile = 'own') {
   const key = customDefs.map((def) => `${def.type}:${def.label}`).join('|');
   if (key === ctx.state.controlKey) return;
   ctx.state.controlKey = key;
-  ctx.state.defs = [...builtinPredictionTypeDefs, ...customDefs];
+  const builtins = ctx.profile === 'spectator' ? spectatorBuiltinPredictionTypeDefs : builtinPredictionTypeDefs;
+  ctx.state.defs = [...builtins, ...customDefs];
   buildPredictionTypeControls(profile);
 }
 
@@ -1636,6 +1808,12 @@ function applyPredictionTypeLanguage(profile = null) {
     setOptionText(card.querySelector('[data-field="metric"]'), 'enemy_kills', t('metricEnemyKills'));
     setOptionText(card.querySelector('[data-field="metric"]'), 'enemy_deaths', t('metricEnemyDeaths'));
     setOptionText(card.querySelector('[data-field="metric"]'), 'enemy_assists', t('metricEnemyAssists'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'radiant_kills', t('metricRadiantKills'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'radiant_deaths', t('metricRadiantDeaths'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'radiant_assists', t('metricRadiantAssists'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'dire_kills', t('metricDireKills'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'dire_deaths', t('metricDireDeaths'));
+    setOptionText(card.querySelector('[data-field="metric"]'), 'dire_assists', t('metricDireAssists'));
     setOptionText(card.querySelector('[data-field="metric"]'), 'total_kills', t('metricTotalKills'));
     setOptionText(card.querySelector('[data-field="metric"]'), 'total_deaths', t('metricTotalDeaths'));
     setOptionText(card.querySelector('[data-field="metric"]'), 'total_assists', t('metricTotalAssists'));
@@ -1860,10 +2038,19 @@ function updateCustomBuilderFieldVisibilityForProfile(profile = 'own') {
 
 function fillTemplate(template, typeConfig) {
   const gsi = snapshot?.state?.gsi || {};
+  const players = snapshot?.state?.matchIntel?.players || [];
+  const radiantPlayers = players.filter((player) => player.team === 'radiant').sort((left, right) => Number(left.slot) - Number(right.slot));
+  const direPlayers = players.filter((player) => player.team === 'dire').sort((left, right) => Number(left.slot) - Number(right.slot));
   const target = midpoint(typeConfig.min, typeConfig.max) || 8;
   const minute = midpoint(typeConfig.minMinute, typeConfig.maxMinute) || 10;
   const values = {
     hero: gsi.heroName || 'Pudge',
+    match_id: gsi.activeMatchId || gsi.matchId || '1234567890',
+    radiant_team: gsi.radiantTeamName || 'Radiant',
+    dire_team: gsi.direTeamName || 'Dire',
+    winning_team: gsi.winTeam === 'radiant' ? (gsi.radiantTeamName || 'Radiant') : gsi.winTeam === 'dire' ? (gsi.direTeamName || 'Dire') : 'Radiant',
+    radiant_heroes: previewHeroList(radiantPlayers, ['Pudge', 'Crystal Maiden', 'Lina', 'Axe', 'Lion']),
+    dire_heroes: previewHeroList(direPlayers, ['Juggernaut', 'Shadow Fiend', 'Warlock', 'Drow Ranger', 'Rubick']),
     target,
     minute,
     clock_minutes: Number.isFinite(gsi.clockTime) ? Math.max(0, Math.floor(gsi.clockTime / 60)) : 12,
@@ -1879,14 +2066,41 @@ function fillTemplate(template, typeConfig) {
     enemy_kills: Number.isFinite(gsi.enemyKills) ? gsi.enemyKills : 14,
     enemy_deaths: Number.isFinite(gsi.enemyDeaths) ? gsi.enemyDeaths : 16,
     enemy_assists: Number.isFinite(gsi.enemyAssists) ? gsi.enemyAssists : 21,
+    radiant_kills: Number.isFinite(gsi.radiantKills) ? gsi.radiantKills : 18,
+    radiant_deaths: Number.isFinite(gsi.radiantDeaths) ? gsi.radiantDeaths : 14,
+    radiant_assists: Number.isFinite(gsi.radiantAssists) ? gsi.radiantAssists : 31,
+    dire_kills: Number.isFinite(gsi.direKills) ? gsi.direKills : 14,
+    dire_deaths: Number.isFinite(gsi.direDeaths) ? gsi.direDeaths : 18,
+    dire_assists: Number.isFinite(gsi.direAssists) ? gsi.direAssists : 25,
     total_kills: Number.isFinite(gsi.totalKills) ? gsi.totalKills : 32,
     total_deaths: Number.isFinite(gsi.totalDeaths) ? gsi.totalDeaths : 27,
     total_assists: Number.isFinite(gsi.totalAssists) ? gsi.totalAssists : 45
   };
+  addPreviewSlotValues(values, 'radiant', radiantPlayers, ['Pudge', 'Crystal Maiden', 'Lina', 'Axe', 'Lion']);
+  addPreviewSlotValues(values, 'dire', direPlayers, ['Juggernaut', 'Shadow Fiend', 'Warlock', 'Drow Ranger', 'Rubick']);
 
   return Object.entries(values).reduce((text, [key, value]) => {
     return text.replaceAll(`{${key}}`, value);
   }, template);
+}
+
+function previewHeroList(players, fallbackHeroes) {
+  const heroes = players.map((player) => readableHeroName(player.hero)).filter(Boolean);
+  return (heroes.length ? heroes : fallbackHeroes).join(', ');
+}
+
+function addPreviewSlotValues(values, team, players, fallbackHeroes) {
+  for (let index = 1; index <= 5; index += 1) {
+    const player = players[index - 1] || {};
+    values[`${team}_hero_${index}`] = readableHeroName(player.hero) || fallbackHeroes[index - 1] || '';
+    values[`${team}_player_${index}`] = player.name || `${team === 'radiant' ? 'Radiant' : 'Dire'} ${index}`;
+    values[`${team}_account_${index}`] = player.accountId || '';
+  }
+}
+
+function readableHeroName(value) {
+  const raw = String(value || '').replace(/^npc_dota_hero_/, '').replace(/_/g, ' ').trim();
+  return raw ? raw.replace(/\b\w/g, (char) => char.toUpperCase()) : '';
 }
 
 function midpoint(min, max) {
