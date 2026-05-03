@@ -24,7 +24,7 @@ export function updateMatchIntel(previousIntel, payload, gsi, players) {
   const activeMatchId = gsi?.activeMatchId || gsi?.matchId || null;
   const matchChanged = previous.matchId && activeMatchId && String(previous.matchId) !== String(activeMatchId);
   const base = matchChanged ? {} : previous;
-  const aegisEvent = extractLatestAegisEvent(payload, players);
+  const aegisEvent = extractLatestAegisEvent(payload, players, clockTime);
   const rosterAegisHolder = players.find((player) => player.source === 'roster' && player.hasAegis) || null;
   const eventAegisHolder = aegisEvent?.holder || null;
   const aegisHolder = eventAegisHolder || rosterAegisHolder || players.find((player) => player.hasAegis) || null;
@@ -48,10 +48,11 @@ export function updateMatchIntel(previousIntel, payload, gsi, players) {
 
   if (aegisHolder && Number.isFinite(clockTime)) {
     const sameHolder = aegis && String(aegis.slot) === String(aegisHolder.slot);
-    const eventPickedAt = Number(aegisHolder.pickedAt);
+    const eventPickedAt = optionalNumber(aegisHolder.pickedAt);
     const pickedAt = sameHolder && Number.isFinite(Number(aegis.pickedAt))
       ? Number(aegis.pickedAt)
       : (Number.isFinite(eventPickedAt) ? eventPickedAt : clockTime);
+    const expiresAt = Math.min(pickedAt + aegisDurationSeconds, clockTime + aegisDurationSeconds);
     aegis = {
       slot: aegisHolder.slot,
       accountId: aegisHolder.accountId,
@@ -60,7 +61,7 @@ export function updateMatchIntel(previousIntel, payload, gsi, players) {
       holderAlive: typeof aegisHolder.alive === 'boolean' ? aegisHolder.alive : null,
       holderRespawnSeconds: Number.isFinite(Number(aegisHolder.respawnSeconds)) ? Number(aegisHolder.respawnSeconds) : null,
       pickedAt,
-      expiresAt: pickedAt + aegisDurationSeconds
+      expiresAt
     };
   } else if (aegis && Number.isFinite(clockTime)) {
     if (clockTime >= Number(aegis.expiresAt || 0) || didAegisHolderDieOrRespawn(aegis, players)) {
@@ -383,7 +384,7 @@ function hasRoshanRespawnEvent(value, depth = 0) {
   return Object.entries(value).some(([key, item]) => roshanRespawnPattern.test(key) || hasRoshanRespawnEvent(item, depth + 1));
 }
 
-function extractLatestAegisEvent(payload, players) {
+function extractLatestAegisEvent(payload, players, clockTime = null) {
   const events = collectEventEntries(payload);
   for (let index = events.length - 1; index >= 0; index -= 1) {
     const event = expandEventData(events[index]);
@@ -398,15 +399,33 @@ function extractLatestAegisEvent(payload, players) {
     if (!aegisPickupPattern.test(eventText)) continue;
     const holder = findAegisEventHolder(event, players);
     if (holder) {
+      const pickedAt = normalizeAegisEventTime(event, clockTime);
+      if (pickedAt === false) continue;
       return {
         holder: {
           ...holder,
-          pickedAt: normalizeEventTime(event)
+          pickedAt
         }
       };
     }
   }
   return null;
+}
+
+function normalizeAegisEventTime(event, clockTime) {
+  const eventTime = normalizeEventTime(event);
+  const current = normalizedClock(clockTime);
+  if (!Number.isFinite(eventTime)) return null;
+  if (!Number.isFinite(current)) return eventTime;
+  if (eventTime > current + 5) return null;
+  if (current - eventTime >= aegisDurationSeconds) return false;
+  return eventTime;
+}
+
+function optionalNumber(value) {
+  if (value === null || value === undefined || value === '') return NaN;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : NaN;
 }
 
 function collectEventEntries(payload) {

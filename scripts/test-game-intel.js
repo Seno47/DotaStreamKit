@@ -69,6 +69,18 @@ assert.equal(teammateAegis.aegis.slot, 7);
 assert.equal(teammateAegis.aegis.accountId, 777);
 assert.equal(teammateAegis.aegis.expiresAt, 2100);
 
+const futureTimestampAegis = updateMatchIntel(null, {
+  events: [{ event_type: 'aegis_picked_up', player_id: 7, time: 999999 }]
+}, { clockTime: 1800, activeMatchId: 43 }, teammateAegisPlayers);
+assert.equal(futureTimestampAegis.aegis.slot, 7);
+assert.equal(futureTimestampAegis.aegis.pickedAt, 1800);
+assert.equal(futureTimestampAegis.aegis.expiresAt, 2100);
+
+const expiredPickupEvent = updateMatchIntel(null, {
+  events: [{ event_type: 'aegis_picked_up', player_id: 7, game_time: 1400 }]
+}, { clockTime: 1800, activeMatchId: 43 }, teammateAegisPlayers);
+assert.equal(expiredPickupEvent.aegis, null);
+
 const keptTeammateAegis = updateMatchIntel(teammateAegis, {}, { clockTime: 1810, activeMatchId: 43 }, teammateAegisPlayers);
 assert.equal(keptTeammateAegis.aegis.slot, 7);
 

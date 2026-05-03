@@ -249,7 +249,7 @@ function applyMatchIntel(slots, reference, settings, state) {
     setNameBadge(el, showNames && rank?.name, rank?.name || '');
     setFlagBadge(el, showFlags && rank?.countryCode, rank?.countryCode || '');
     if (hasAegis) {
-      const remaining = Math.max(0, Math.ceil(Number(aegis.expiresAt) - clockTime));
+      const remaining = Math.max(0, Math.min(300, Math.ceil(Number(aegis.expiresAt) - clockTime)));
       setImageBadge(el, 'aegisBadge', true, `/assets/aegis.png?v=${version}`, formatClock(remaining));
     } else {
       setImageBadge(el, 'aegisBadge', false, `/assets/aegis.png?v=${version}`, '');
