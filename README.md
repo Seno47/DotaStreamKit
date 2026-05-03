@@ -81,6 +81,7 @@ http://localhost:37273/overlay.html
 - автоматическое создание Twitch Predictions после пика героя стримером;
 - автоматическое закрытие, отмена и ручное управление прогнозами;
 - оверлей Twitch-прогноза: название, таймер закрытия, баллы канала, проценты и анимированная полоса исходов;
+- отдельные настройки просмотра чужих игр: свои шаблоны прогнозов, переменные команд/героев и отдельный Match Intel без масок драфта или миникарты;
 - поддержка личного Twitch-аккаунта или отдельного аккаунта-модератора;
 - установщик Windows с выбором папки, ярлыками и нормальным отображением в поиске Windows;
 - проверка обновлений из опубликованных GitHub Releases, без установки сырого кода из ветки;
@@ -273,7 +274,7 @@ Match Intel добавляет на OBS-оверлей небольшие игр
 
 - отмеченные игроки - имена над слотами героев;
 - флаги игроков, если страна известна или задана вручную;
-- таймер Aegis под игроком, который держит Aegis;
+- таймер Aegis под игроком, который держит Aegis: ровно 5 минут после подбора;
 - таймер Рошана с окном возрождения;
 - статистику стримера: медаль, MMR, ранг в leaderboard и W-L за сессию.
 
@@ -288,6 +289,8 @@ MMR можно вести вручную или обновлять автома�
 Интерфейс Match Intel разбит на сворачиваемые секции: игровая информация, статистика стримера, позиции оверлея и кастомные notable players. Верхняя строка показывает короткий статус включённых подсказок и помогает быстро понять, что сейчас активно.
 
 Во время драфта медаль и W-L скрываются, чтобы не мешать защите пиков. После выхода из матча Match Intel очищается с оверлея, чтобы старые отметки, Aegis или таймер Рошана не оставались на экране.
+
+Для просмотра чужих игр есть отдельные настройки Match Intel. В этом режиме DotaStreamKit может показывать отмеченных игроков, флаги, Aegis и Рошана, но не включает защитные маски драфта, верхней панели или миникарты: при spectate-режиме карта и интерфейс остаются открытыми.
 
 ### Прогнозы за баллы канала
 
@@ -339,6 +342,27 @@ DotaStreamKit специально не подхватывает чужие ак
 Опция `Отменять незасчитанную игру` отменяет активный прогноз при сильных сигналах, что матч не должен засчитываться: долгий disconnect, новый match id при старом прогнозе, ранний post-game без победителя или выход из активного лобби/матча. Для краша/перезахода используется задержка, чтобы обычные 5 минут reconnect не отменяли прогноз сразу.
 
 Опция `Отменять, если один исход без ставок` отменяет прогноз после игры, если хотя бы на один исход не поставили баллы канала. Перед отменой или завершением программа перечитывает состояние прогноза с Twitch, чтобы не решать исход по устаревшим локальным данным.
+
+Для просмотра чужих игр есть отдельный раздел `Настройки просмотра`. Там можно держать свои шаблоны ставок и не смешивать их с обычными прогнозами стримера. Встроенные шаблоны для просмотра рассчитаны на команды и общий матч: победа Radiant/Dire, длительность игры, общий темп киллов и киллы сторон к выбранной минуте.
+
+В шаблонах просмотра доступны переменные для команд и состава матча:
+
+```text
+{radiant_team}
+{dire_team}
+{winning_team}
+{match_id}
+{radiant_heroes}
+{dire_heroes}
+{radiant_hero_1} ... {radiant_hero_5}
+{dire_hero_1} ... {dire_hero_5}
+{radiant_player_1} ... {radiant_player_5}
+{dire_player_1} ... {dire_player_5}
+{radiant_kills}
+{dire_kills}
+{total_kills}
+{minute}
+```
 
 ### Частые проблемы
 
@@ -440,6 +464,7 @@ Main features:
 - creates Twitch Channel Points Predictions after the streamer picks a hero;
 - supports manual prediction controls and automatic lock/resolve/cancel flows;
 - Twitch prediction overlay: title, close timer, channel points, percentages, and animated outcome bar;
+- separate spectator settings for watched games: independent prediction templates, team/hero variables, and Match Intel without draft or minimap masks;
 - supports personal Twitch account mode and separate moderator account mode;
 - Windows installer with install path selection, shortcuts, and Windows search/start menu integration;
 - update checks from published GitHub Releases only, never from raw branch commits;
@@ -615,7 +640,7 @@ Available overlay pieces:
 
 - notable players - marked player names above hero slots;
 - player flags when the country is known or set manually;
-- Aegis timer under the current Aegis holder;
+- Aegis timer under the current Aegis holder: exactly 5 minutes after pickup;
 - Roshan timer with the respawn window;
 - streamer stats: rank medal, MMR, leaderboard rank, and session W-L.
 
@@ -630,6 +655,8 @@ The same tab includes an overlay position editor. Choose a block, preview it on 
 The Match Intel page is grouped into collapsible sections for game information, streamer stats, overlay positions, and custom notable players. A small status row shows which helper groups are currently active.
 
 During draft, the medal and W-L are hidden so they do not interfere with pick protection. After leaving a match, Match Intel is cleared from the overlay so old player marks, Aegis, or Roshan timers do not stay on screen.
+
+Watched games have separate Match Intel settings. In spectator mode DotaStreamKit can still show notable players, flags, Aegis, and Roshan, but it does not enable draft, top-bar, or minimap protection masks: the watched game UI stays visible.
 
 ### Channel Points Predictions
 
@@ -681,6 +708,27 @@ DotaStreamKit intentionally does not adopt unrelated active predictions on the c
 The `Cancel invalid game` option cancels active predictions on strong signals that a match should not count: long disconnect, a new match id while an old prediction is active, early post-game without a winner, or leaving an active lobby/match view. Crash/reconnect handling uses a delay so a normal reconnect window does not cancel instantly.
 
 The `Cancel if one outcome has no points` option cancels the prediction after the game if at least one outcome received no Channel Points. Before canceling or resolving, DotaStreamKit refreshes the prediction from Twitch so it does not decide from stale local data.
+
+Watched games use a separate `Spectator settings` page. It has independent prediction templates, so regular streamer bets do not mix with bets for games you are watching. Built-in spectator templates focus on the teams and the full match: Radiant/Dire winner, game duration, total kills pace, and side kills by a selected minute.
+
+Spectator templates can use match and lineup variables:
+
+```text
+{radiant_team}
+{dire_team}
+{winning_team}
+{match_id}
+{radiant_heroes}
+{dire_heroes}
+{radiant_hero_1} ... {radiant_hero_5}
+{dire_hero_1} ... {dire_hero_5}
+{radiant_player_1} ... {radiant_player_5}
+{dire_player_1} ... {dire_player_5}
+{radiant_kills}
+{dire_kills}
+{total_kills}
+{minute}
+```
 
 ### Troubleshooting
 

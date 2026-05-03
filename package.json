@@ -1,6 +1,6 @@
 {
   "name": "dotastreamkit",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "private": true,
   "description": "Local Dota 2 stream protection and Twitch Channel Points prediction automation.",
   "type": "module",
