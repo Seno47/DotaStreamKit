@@ -2901,6 +2901,10 @@ async function syncOwnedActivePredictionFromTwitch({ force = false } = {}) {
     return active;
   }
 
+  if (!isCurrentOwnedPredictionId(active.id)) {
+    return runtime.state.activePrediction || null;
+  }
+
   runtime.state.activePredictionSyncedAt = new Date().toISOString();
   if (!latest) {
     clearActivePredictionState();
@@ -2946,6 +2950,8 @@ async function recoverOwnedActivePredictionFromTwitch({ force = false } = {}) {
   }
 
   runtime.state.activePredictionSyncedAt = new Date().toISOString();
+  if (!samePredictionId(runtime.state.activePredictionRecovery, recovery.id)) return null;
+  if (runtime.state.activePrediction) return runtime.state.activePrediction;
   if (!latest || !['ACTIVE', 'LOCKED'].includes(latest.status)) return null;
 
   const meta = recovery.meta || null;
@@ -3112,6 +3118,9 @@ async function refreshActivePredictionBeforeAutomaticCancel(active, candidate) {
 async function refreshActivePredictionFromTwitch(active) {
   if (!active?.id) return active;
   const item = await fetchPredictionById(active.id);
+  if (!isCurrentOwnedPredictionId(active.id)) {
+    return runtime.state.activePrediction || null;
+  }
   if (!item) throw new Error('Twitch did not return the active prediction');
   const meta = runtime.state.activePredictionMeta;
   const normalized = normalizePrediction(item, meta?.outcomes?.yesTitle, meta?.outcomes?.noTitle, meta);
@@ -3932,6 +3941,7 @@ async function twitchEndPrediction(id, status, winningOutcomeId = null) {
   }
   const item = result.data?.[0];
   if (item) {
+    if (!isCurrentOwnedPredictionId(id)) return result;
     const meta = runtime.state.activePredictionMeta;
     runtime.state.activePrediction = normalizePrediction(item, meta?.outcomes?.yesTitle, meta?.outcomes?.noTitle, meta);
     if (['RESOLVED', 'CANCELED'].includes(item.status)) {
@@ -3947,7 +3957,11 @@ async function twitchEndPrediction(id, status, winningOutcomeId = null) {
 }
 
 function isCurrentOwnedPredictionId(id) {
-  return Boolean(runtime.state.activePrediction?.id) && String(runtime.state.activePrediction.id) === String(id);
+  return samePredictionId(runtime.state.activePrediction, id);
+}
+
+function samePredictionId(prediction, id) {
+  return Boolean(prediction?.id) && String(prediction.id) === String(id);
 }
 
 function isMissingTwitchPredictionError(error) {
