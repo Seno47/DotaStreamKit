@@ -84,6 +84,16 @@ assert.equal(expiredPickupEvent.aegis, null);
 const keptTeammateAegis = updateMatchIntel(teammateAegis, {}, { clockTime: 1810, activeMatchId: 43 }, teammateAegisPlayers);
 assert.equal(keptTeammateAegis.aegis.slot, 7);
 
+const expiredStaleAegis = updateMatchIntel(teammateAegis, {}, { clockTime: 2100, activeMatchId: 43 }, teammateAegisPlayers.map((player) => (
+  player.slot === 7 ? { ...player, hasAegis: true } : player
+)));
+assert.equal(expiredStaleAegis.aegis, null);
+
+const staleAegisDoesNotRestart = updateMatchIntel(expiredStaleAegis, {}, { clockTime: 2110, activeMatchId: 43 }, teammateAegisPlayers.map((player) => (
+  player.slot === 7 ? { ...player, hasAegis: true } : player
+)));
+assert.equal(staleAegisDoesNotRestart.aegis, null);
+
 const ignoredDeniedEvent = updateMatchIntel(teammateAegis, {
   events: [{ event_type: 'aegis_denied', player_id: 7, game_time: 1815 }]
 }, { clockTime: 1815, activeMatchId: 43 }, teammateAegisPlayers);

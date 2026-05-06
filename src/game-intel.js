@@ -32,12 +32,28 @@ export function updateMatchIntel(previousIntel, payload, gsi, players) {
   const roshanRespawned = hasRoshanRespawnEvent(payload);
   let roshan = base.roshan ? { ...base.roshan } : null;
   let aegis = base.aegis ? { ...base.aegis } : null;
+  let expiredAegisHolderKey = aegisHolder ? String(base.expiredAegisHolderKey || '') : '';
+  const currentAegisHolderKey = aegisHolder ? aegisHolderKey(aegisHolder) : '';
+  const aegisEventPickedAt = optionalNumber(aegisHolder?.pickedAt);
+  const hasFreshAegisPickupEvent = Number.isFinite(aegisEventPickedAt);
+  const suppressStaleAegisHolder = Boolean(
+    aegisHolder
+    && !hasFreshAegisPickupEvent
+    && currentAegisHolderKey
+    && expiredAegisHolderKey === currentAegisHolderKey
+  );
 
   if (roshanRespawned && !roshanKilled) {
     roshan = null;
   }
 
-  if (Number.isFinite(clockTime) && shouldStartRoshanTimer({ roshan, roshanKilled, aegisHolder, aegis, clockTime })) {
+  if (Number.isFinite(clockTime) && shouldStartRoshanTimer({
+    roshan,
+    roshanKilled,
+    aegisHolder: suppressStaleAegisHolder ? null : aegisHolder,
+    aegis,
+    clockTime
+  })) {
     const killedAt = roshanKilled ? clockTime : Math.max(0, clockTime - 5);
     roshan = {
       killedAt,
@@ -47,24 +63,33 @@ export function updateMatchIntel(previousIntel, payload, gsi, players) {
   }
 
   if (aegisHolder && Number.isFinite(clockTime)) {
-    const sameHolder = aegis && String(aegis.slot) === String(aegisHolder.slot);
-    const eventPickedAt = optionalNumber(aegisHolder.pickedAt);
+    const currentHolderKey = currentAegisHolderKey;
+    const sameHolder = aegis && currentHolderKey && currentHolderKey === aegisHolderKey(aegis);
     const pickedAt = sameHolder && Number.isFinite(Number(aegis.pickedAt))
       ? Number(aegis.pickedAt)
-      : (Number.isFinite(eventPickedAt) ? eventPickedAt : clockTime);
+      : (Number.isFinite(aegisEventPickedAt) ? aegisEventPickedAt : clockTime);
     const expiresAt = Math.min(pickedAt + aegisDurationSeconds, clockTime + aegisDurationSeconds);
-    aegis = {
-      slot: aegisHolder.slot,
-      accountId: aegisHolder.accountId,
-      name: aegisHolder.name,
-      holderDeaths: Number.isFinite(Number(aegisHolder.deaths)) ? Number(aegisHolder.deaths) : null,
-      holderAlive: typeof aegisHolder.alive === 'boolean' ? aegisHolder.alive : null,
-      holderRespawnSeconds: Number.isFinite(Number(aegisHolder.respawnSeconds)) ? Number(aegisHolder.respawnSeconds) : null,
-      pickedAt,
-      expiresAt
-    };
+    if (suppressStaleAegisHolder) {
+      aegis = null;
+    } else if (clockTime >= expiresAt) {
+      expiredAegisHolderKey = currentHolderKey;
+      aegis = null;
+    } else {
+      expiredAegisHolderKey = '';
+      aegis = {
+        slot: aegisHolder.slot,
+        accountId: aegisHolder.accountId,
+        name: aegisHolder.name,
+        holderDeaths: Number.isFinite(Number(aegisHolder.deaths)) ? Number(aegisHolder.deaths) : null,
+        holderAlive: typeof aegisHolder.alive === 'boolean' ? aegisHolder.alive : null,
+        holderRespawnSeconds: Number.isFinite(Number(aegisHolder.respawnSeconds)) ? Number(aegisHolder.respawnSeconds) : null,
+        pickedAt,
+        expiresAt
+      };
+    }
   } else if (aegis && Number.isFinite(clockTime)) {
     if (clockTime >= Number(aegis.expiresAt || 0) || didAegisHolderDieOrRespawn(aegis, players)) {
+      expiredAegisHolderKey = aegisHolderKey(aegis);
       aegis = null;
     }
   }
@@ -79,8 +104,16 @@ export function updateMatchIntel(previousIntel, payload, gsi, players) {
     notablePlayers: Array.isArray(base.notablePlayers) ? base.notablePlayers : [],
     roshan,
     roshanStatus,
-    aegis
+    aegis,
+    expiredAegisHolderKey
   };
+}
+
+function aegisHolderKey(holder) {
+  const accountId = normalizeAccountId(holder?.accountId);
+  if (accountId) return `account:${accountId}`;
+  const slot = Number(holder?.slot);
+  return Number.isFinite(slot) ? `slot:${Math.trunc(slot)}` : '';
 }
 
 function shouldStartRoshanTimer({ roshan, roshanKilled, aegisHolder, aegis, clockTime }) {
