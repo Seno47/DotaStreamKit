@@ -499,9 +499,10 @@ function spectatorGameLabelBox(protection, reference) {
   const box = minimapBoxForProtection(protection, reference);
   const height = 34;
   const gap = 8;
+  const lowerOffset = height * 1.5;
   return {
     left: box.left,
-    bottom: Math.min(reference.height - height, box.bottom + box.height + gap),
+    bottom: Math.min(reference.height - height, Math.max(0, box.bottom + box.height + gap - lowerOffset)),
     width: Math.max(box.width, 330),
     height
   };
