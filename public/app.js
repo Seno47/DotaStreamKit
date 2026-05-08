@@ -384,6 +384,7 @@ const translations = {
     developer: 'Разработчик',
     supportDeveloper: 'Поддержать',
     installedVersion: 'Версия',
+    updateAvailableInline: 'доступна {version}',
     subtitle: 'Локальная защита стрима и автоматизация Twitch Predictions.',
     pageProtection: 'Защита',
     pageIntel: 'Match intel',
@@ -567,7 +568,7 @@ const translations = {
     installGsi: 'Установить GSI',
     gsiHelp: 'GSI встроен в Dota 2. DotaStreamKit устанавливает только маленький cfg-файл, который отправляет состояние игры на локальный сервер.',
     updatesTitle: 'Обновления',
-    autoCheckUpdates: 'Проверять обновления при запуске',
+    autoCheckUpdates: 'Проверять обновления при открытии панели',
     autoInstallUpdates: 'Автоматически устанавливать опубликованный релиз',
     checkUpdates: 'Проверить',
     installUpdate: 'Установить обновление',
@@ -692,6 +693,7 @@ const translations = {
     developer: 'Developer',
     supportDeveloper: 'Support',
     installedVersion: 'Version',
+    updateAvailableInline: 'available {version}',
     subtitle: 'Local stream protection and Twitch Predictions automation.',
     pageProtection: 'Protection',
     pageIntel: 'Match intel',
@@ -875,7 +877,7 @@ const translations = {
     installGsi: 'Install GSI',
     gsiHelp: 'GSI is built into Dota 2. DotaStreamKit installs only a small cfg file that sends game state to the local server.',
     updatesTitle: 'Updates',
-    autoCheckUpdates: 'Check for updates on startup',
+    autoCheckUpdates: 'Check for updates when dashboard opens',
     autoInstallUpdates: 'Automatically install published releases',
     checkUpdates: 'Check',
     installUpdate: 'Install update',
@@ -1130,7 +1132,7 @@ function applyLanguage(config) {
   setText('.sponsor-label', 'sponsor');
   setText('.developer-link:not(.support-link) span', 'developer');
   setText('.support-link span', 'supportDeveloper');
-  renderAppVersion(snapshot?.version);
+  renderAppVersion(snapshot?.version, snapshot?.state?.update);
   const sponsorLinkSpans = document.querySelectorAll('.sponsor-links span');
   if (sponsorLinkSpans[0]) sponsorLinkSpans[0].textContent = t('sitePrefix');
   if (sponsorLinkSpans[1]) sponsorLinkSpans[1].textContent = t('botPrefix');
@@ -1487,15 +1489,44 @@ function metricOptionsHtml(profile = 'own') {
     .join('');
 }
 
-function renderAppVersion(version) {
+function renderAppVersion(version, update = null) {
   if (!els.appVersion) return;
-  els.appVersion.textContent = `${t('installedVersion')}: ${version || '-'}`;
+  const base = `${t('installedVersion')}: ${version || '-'}`;
+  const available = update?.updateAvailable && update.latestVersion
+    ? t('updateAvailableInline').replace('{version}', update.latestVersion)
+    : '';
+  els.appVersion.textContent = available ? `${base} / ${available}` : base;
+  els.appVersion.classList.toggle('has-update', Boolean(available));
+  els.appVersion.title = update?.error || (update?.checking ? t('updateChecking') : '');
+}
+
+function renderServerUpdateStatus(update) {
+  if (!update?.checkedAt && !update?.checking && !update?.error) return;
+  latestUpdateStatus = {
+    currentVersion: update.currentVersion,
+    latestVersion: update.latestVersion,
+    updateAvailable: update.updateAvailable === true,
+    releaseUrl: update.releaseUrl || ''
+  };
+  els.installUpdate.disabled = !latestUpdateStatus.updateAvailable;
+  if (update.checking) {
+    els.updateStatus.dataset.custom = 'true';
+    els.updateStatus.textContent = t('updateChecking');
+  } else if (update.error) {
+    els.updateStatus.dataset.custom = 'true';
+    els.updateStatus.textContent = update.error;
+  } else {
+    els.updateStatus.dataset.custom = 'true';
+    els.updateStatus.textContent = update.updateAvailable
+      ? t('updateAvailable').replace('{version}', update.latestVersion)
+      : t('updateCurrent').replace('{version}', update.currentVersion);
+  }
 }
 
 function render(data) {
   const { config, state } = data;
   applyLanguage(config);
-  renderAppVersion(data.version);
+  renderAppVersion(data.version, state.update);
   els.gsiStatus.textContent = state.gsi.connected ? 'Dota GSI online' : 'Dota GSI offline';
   els.gsiStatus.className = `pill ${state.gsi.connected ? 'ok' : 'bad'}`;
   const liveSuffix = state.twitch.isLive === true ? ' / live' : state.twitch.isLive === false ? ' / offline' : '';
@@ -1576,6 +1607,7 @@ function render(data) {
   renderPredictionEditorConfig('spectator', config.spectatorPredictions || config.predictions);
   els.autoCheckUpdates.checked = config.updates?.autoCheck !== false;
   els.autoInstallUpdates.checked = config.updates?.autoInstall === true;
+  renderServerUpdateStatus(state.update);
 
   renderPrediction(state.activePrediction);
   renderEvents(state.events || []);

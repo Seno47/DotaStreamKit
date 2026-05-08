@@ -235,6 +235,10 @@ label input[type='checkbox']:focus-visible {
   font-weight: 600;
 }
 
+.app-version.has-update {
+  color: #f6c86b;
+}
+
 .developer-link span {
   color: #cbd5e1;
   font-size: 14px;

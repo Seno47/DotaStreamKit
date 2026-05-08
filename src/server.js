@@ -479,6 +479,15 @@ const runtime = {
     },
     protection: { draft: false, minimap: false, topBar: false, queue: false },
     twitch: { authenticated: false, broadcasterId: null, broadcasterLogin: null, tokenExpiresAt: null },
+    update: {
+      checking: false,
+      checkedAt: null,
+      currentVersion: appVersion,
+      latestVersion: null,
+      updateAvailable: false,
+      releaseUrl: '',
+      error: ''
+    },
     activePrediction: null,
     activePredictionMatchId: null,
     activePredictionMeta: null,
@@ -554,6 +563,7 @@ runtime.state.dota = {
   processRunning: null,
   processCheckedAt: null
 };
+runtime.state.update = normalizeUpdateState(runtime.state.update);
 runtime.state.matchIntel = {
   matchId: null,
   players: [],
@@ -1842,9 +1852,15 @@ async function importBackupApi(req, res) {
 }
 
 async function checkUpdatesApi(res) {
-  const release = await fetchLatestRelease();
-  const status = normalizeUpdateRelease(release);
-  sendJson(res, status);
+  try {
+    const release = await fetchLatestRelease();
+    const status = normalizeUpdateRelease(release);
+    setUpdateStatus(status);
+    sendJson(res, status);
+  } catch (error) {
+    setUpdateCheckError(error);
+    throw error;
+  }
 }
 
 async function installUpdateApi(req, res) {
@@ -1863,16 +1879,24 @@ async function installUpdateApi(req, res) {
 }
 
 function scheduleStartupUpdateCheck() {
-  const updates = runtime.config.updates || {};
-  if (updates.autoCheck === false && updates.autoInstall === false) return;
+  runtime.state.update = {
+    ...normalizeUpdateState(runtime.state.update),
+    checking: true,
+    error: ''
+  };
   setTimeout(() => {
-    startupUpdateCheck().catch((error) => logEvent('system', `Startup update check failed: ${error.message}`));
+    startupUpdateCheck().catch((error) => {
+      setUpdateCheckError(error);
+      logEvent('system', `Startup update check failed: ${error.message}`);
+      broadcast();
+    });
   }, 2000).unref();
 }
 
 async function startupUpdateCheck() {
   const release = await fetchLatestRelease();
   const status = normalizeUpdateRelease(release);
+  setUpdateStatus(status);
   if (!status.updateAvailable) {
     logEvent('system', `Startup update check: ${appVersion} is current`);
     broadcast();
@@ -1922,6 +1946,39 @@ async function beginUpdateInstall(status) {
   logEvent('system', `Update started: ${status.latestVersion}`);
   setTimeout(() => process.exit(47), 1000).unref();
   return { ok: true, status, message: 'Update started. DotaStreamKit will restart when the update is installed.' };
+}
+
+function normalizeUpdateState(value = {}) {
+  return {
+    checking: value.checking === true,
+    checkedAt: value.checkedAt || null,
+    currentVersion: appVersion,
+    latestVersion: value.latestVersion || null,
+    updateAvailable: value.updateAvailable === true,
+    releaseUrl: value.releaseUrl || '',
+    error: value.error || ''
+  };
+}
+
+function setUpdateStatus(status) {
+  runtime.state.update = {
+    checking: false,
+    checkedAt: new Date().toISOString(),
+    currentVersion: status.currentVersion || appVersion,
+    latestVersion: status.latestVersion || null,
+    updateAvailable: status.updateAvailable === true,
+    releaseUrl: status.releaseUrl || '',
+    error: ''
+  };
+}
+
+function setUpdateCheckError(error) {
+  runtime.state.update = {
+    ...normalizeUpdateState(runtime.state.update),
+    checking: false,
+    checkedAt: new Date().toISOString(),
+    error: error?.message || 'Update check failed'
+  };
 }
 
 async function downloadUpdateAsset(asset) {
