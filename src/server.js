@@ -74,6 +74,7 @@ function isInsideProtectedInstallDir(path) {
 const queueAutoOnDelayMs = 0;
 const queueAutoOffDelayMs = 2500;
 const queueAutoStaleKeepMs = 10 * 60 * 1000;
+const gsiConnectedTimeoutMs = 60 * 1000;
 const autoPredictionRetryMs = 30000;
 const activePredictionSyncMs = 15000;
 const leftGameViewPredictionCancelDelaySeconds = 15;
@@ -637,7 +638,7 @@ async function refreshRuntimePresence() {
   const processChanged = await refreshDotaProcessState();
   syncOwnedActivePredictionFromTwitch().catch((error) => logEvent('twitch', `Active prediction sync failed: ${error.message}`));
   const hasSeenGsi = Boolean(runtime.state.gsi.lastSeenAt);
-  const connected = hasSeenGsi && Date.now() - Date.parse(runtime.state.gsi.lastSeenAt) < 15000;
+  const connected = hasSeenGsi && Date.now() - Date.parse(runtime.state.gsi.lastSeenAt) < gsiConnectedTimeoutMs;
   if (hasSeenGsi && !connected) {
     maybeCancelPredictionForGsiTimeout().catch((error) => logEvent('twitch', `Auto cancel failed: ${error.message}`));
   }
@@ -2649,28 +2650,39 @@ function shouldInheritPlayerState({ previous, gameState, matchId, playerActivity
 function hasLocalPlayerPayload(payload) {
   const player = payload?.player || {};
   const hero = payload?.hero || {};
-  return Boolean(
+  const hasPlayerIdentity = Boolean(
     player.team
       || player.team_name
       || player.accountid
       || player.account_id
+      || player.accountId
+      || player.steamid
+      || player.steam_id
       || player.player_slot !== undefined
+      || player.playerSlot !== undefined
       || player.team_slot !== undefined
-      || player.kills !== undefined
+      || player.teamSlot !== undefined
+  );
+  const hasPlayerStats = Boolean(
+    player.kills !== undefined
       || player.deaths !== undefined
       || player.assists !== undefined
-      || hero.id !== undefined
+      || player.last_hits !== undefined
+      || player.lastHits !== undefined
+      || player.denies !== undefined
+  );
+  const hasHeroState = Boolean(
+    hero.id !== undefined
       || hero.hero_id !== undefined
       || hero.name
       || hero.localized_name
       || hero.level !== undefined
-      || hasPayloadObject(payload?.abilities)
-      || hasPayloadObject(payload?.items)
   );
-}
-
-function hasPayloadObject(value) {
-  return Boolean(value && typeof value === 'object' && Object.keys(value).length);
+  return Boolean(
+    hasPlayerIdentity
+      || hasPlayerStats
+      || hasHeroState
+  );
 }
 
 function collectTeamStats(payload, playerTeam) {
