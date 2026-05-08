@@ -1965,7 +1965,7 @@ async function handleGsi(req, res) {
   const gameState = map.game_state || null;
   const matchId = map.matchid || map.match_id || null;
   const lifecycle = inferGsiLifecycle(previous, gameState, matchId);
-  const playerActivity = player.activity || null;
+  const playerActivity = inferPlayerActivity({ previous, payload, gameState, matchId });
   const playerTeam = normalizeTeam(player.team_name || player.team || player.activity);
   const playerSlotRaw = player.player_slot ?? player.playerSlot ?? null;
   const playerTeamSlotRaw = player.team_slot ?? player.teamSlot ?? null;
@@ -2479,6 +2479,46 @@ function inferInGameScreen(gameState, playerActivity) {
   if (/DISCONNECT|POST_GAME/i.test(state)) return false;
   if (activity && !['playing', 'spectating'].includes(activity)) return false;
   return inGameStatePattern.test(state) && !/POST_GAME/i.test(state);
+}
+
+function inferPlayerActivity({ previous, payload, gameState, matchId }) {
+  const player = payload?.player || {};
+  const rawActivity = String(player.activity || '').trim().toLowerCase();
+  if (rawActivity) return rawActivity;
+
+  const state = String(gameState || '');
+  if (!/PRE_GAME|GAME_IN_PROGRESS/i.test(state)) return null;
+  if (!matchId && !previous?.activeMatchId && !previous?.matchId) return null;
+
+  if (hasLocalPlayerPayload(payload)) return 'playing';
+  return 'spectating';
+}
+
+function hasLocalPlayerPayload(payload) {
+  const player = payload?.player || {};
+  const hero = payload?.hero || {};
+  return Boolean(
+    player.team
+      || player.team_name
+      || player.accountid
+      || player.account_id
+      || player.player_slot !== undefined
+      || player.team_slot !== undefined
+      || player.kills !== undefined
+      || player.deaths !== undefined
+      || player.assists !== undefined
+      || hero.id !== undefined
+      || hero.hero_id !== undefined
+      || hero.name
+      || hero.localized_name
+      || hero.level !== undefined
+      || hasPayloadObject(payload?.abilities)
+      || hasPayloadObject(payload?.items)
+  );
+}
+
+function hasPayloadObject(value) {
+  return Boolean(value && typeof value === 'object' && Object.keys(value).length);
 }
 
 function collectTeamStats(payload, playerTeam) {

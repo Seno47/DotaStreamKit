@@ -41,7 +41,7 @@ function renderOverlay({ config, state }) {
   applyQueueParts(queueParts, reference, state);
   applyDraftParts(draftParts, reference, state);
   applyTopBarSlots(slots, reference, state);
-  const spectatorView = isSpectatingMatch(state);
+  const spectatorView = isSpectatingGameView(state);
   const matchIntelSettings = spectatorView
     ? (config.protection.spectatorMatchIntel || config.protection.matchIntel || {})
     : (config.protection.matchIntel || {});
@@ -797,7 +797,8 @@ function ensurePredictionOverlayNodes() {
 
 function applyStreamerStats(reference, protection, state) {
   if (!streamerStatsEl) return;
-  const settings = isSpectatingMatch(state)
+  const spectatorView = isSpectatingGameView(state);
+  const settings = spectatorView
     ? (protection.spectatorMatchIntel || protection.matchIntel || {})
     : (protection.matchIntel || {});
   const stats = state.streamerStats || {};
@@ -866,7 +867,7 @@ function applyStreamerStats(reference, protection, state) {
   }
 
   const minimapSide = protection.minimapSide === 'right' ? 'right' : 'left';
-  const inLiveGame = /PRE_GAME|GAME_IN_PROGRESS/i.test(gameState);
+  const inLiveGame = !spectatorView && /PRE_GAME|GAME_IN_PROGRESS/i.test(gameState);
   streamerStatsEl.classList.toggle('mainMenuScale', !inLiveGame);
   streamerStatsEl.classList.toggle('liveGameScale', inLiveGame);
   const left = inLiveGame
