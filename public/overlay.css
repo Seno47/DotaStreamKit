@@ -8,6 +8,7 @@ body {
 }
 
 #minimapMask,
+#spectatorGameLabel,
 .queueMaskPart,
 .draftMaskPart,
 .topBarSlot,
@@ -24,6 +25,7 @@ body {
 }
 
 #minimapMask.visible,
+#spectatorGameLabel.visible,
 .queueMaskPart.visible,
 .draftMaskPart.visible,
 .topBarSlot.visible,
@@ -43,6 +45,27 @@ body {
   overflow: hidden;
   border-radius: 2px;
   pointer-events: none;
+}
+
+#spectatorGameLabel {
+  z-index: 22;
+  box-sizing: border-box;
+  padding: 0 10px;
+  overflow: hidden;
+  border: 1px solid rgba(188, 214, 244, 0.42);
+  border-radius: 4px;
+  background: rgba(7, 10, 14, 0.76);
+  color: #f4f8ff;
+  font-family: "Arial Narrow", "Roboto Condensed", "Segoe UI Condensed", "Segoe UI", Arial, Helvetica, sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 34px;
+  pointer-events: none;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-shadow: 0 2px 3px #000, 0 0 4px #000;
+  white-space: nowrap;
 }
 
 .minimapMapLayer {

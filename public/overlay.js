@@ -1,6 +1,7 @@
 const queueMask = document.querySelector('#queueMask');
 const draftScreenMask = document.querySelector('#draftScreenMask');
 const minimapMask = document.querySelector('#minimapMask');
+const spectatorGameLabelEl = document.querySelector('#spectatorGameLabel');
 const topBarSlotsRoot = document.querySelector('#topBarSlots');
 const matchIntelRoot = document.querySelector('#matchIntel');
 const streamerStatsEl = document.querySelector('#streamerStats');
@@ -51,6 +52,7 @@ function renderOverlay({ config, state }) {
   applyStreamerStats(reference, config.protection || {}, state);
   applyPredictionOverlay(reference, predictionSettings, matchIntelSettings, state);
   applyMinimap(config.protection, reference, state);
+  applySpectatorGameLabel(config.protection, reference, state);
   setVisible(minimapMask, state.protection.minimap);
 }
 
@@ -293,6 +295,15 @@ function isSpectatingMatch(state) {
     && players.some((player) => player?.accountId);
 }
 
+function isSpectatingGameView(state) {
+  const activity = String(state.gsi?.playerActivity || '').toLowerCase();
+  const gameState = String(state.gsi?.gameState || '');
+  return activity === 'spectating'
+    && !state.gsi?.leftGameView
+    && /PRE_GAME|GAME_IN_PROGRESS/i.test(gameState)
+    && Boolean(state.gsi?.activeMatchId || state.gsi?.matchId);
+}
+
 function setImageBadge(parent, className, visible, src, text) {
   const badge = ensureBadge(parent, className);
   let img = badge.querySelector('img');
@@ -462,6 +473,67 @@ function applyMinimap(protection, reference, state) {
     minimapVisionImageEl.src = src;
   }
   minimapVisionImageEl.alt = '';
+}
+
+function applySpectatorGameLabel(protection, reference, state) {
+  if (!spectatorGameLabelEl) return;
+  const settings = protection.spectatorMatchIntel || {};
+  const gameId = state.gsi?.activeMatchId || state.gsi?.matchId || '';
+  if (settings.showSpectatorGameLabel === false || !isSpectatingGameView(state)) {
+    setVisible(spectatorGameLabelEl, false);
+    return;
+  }
+
+  const text = renderSpectatorGameLabelText(settings.spectatorGameLabelTemplate, gameId);
+  if (!text) {
+    setVisible(spectatorGameLabelEl, false);
+    return;
+  }
+
+  spectatorGameLabelEl.textContent = text;
+  applyScaledBox(spectatorGameLabelEl, spectatorGameLabelBox(protection, reference), reference, protection.minimapSide || 'left');
+  setVisible(spectatorGameLabelEl, true);
+}
+
+function spectatorGameLabelBox(protection, reference) {
+  const box = minimapBoxForProtection(protection, reference);
+  const height = 34;
+  const gap = 8;
+  return {
+    left: box.left,
+    bottom: Math.min(reference.height - height, box.bottom + box.height + gap),
+    width: Math.max(box.width, 330),
+    height
+  };
+}
+
+function minimapBoxForProtection(protection, reference) {
+  const size = protection.minimapSize || 'normal';
+  const boxes = protection.minimapBoxes || {};
+  const fallback = size === 'large'
+    ? { left: 0, bottom: 0, width: 326, height: 326 }
+    : { left: 0, bottom: 0, width: 272, height: 280 };
+  const source = boxes[size] || boxes.normal || protection.minimapBox || fallback;
+  const left = clampNumber(source.left, 0, reference.width, fallback.left);
+  const width = clampNumber(source.width, 1, reference.width - left, fallback.width);
+  const height = clampNumber(source.height, 1, reference.height, fallback.height);
+  const fallbackTop = reference.height - fallback.bottom - fallback.height;
+  const top = clampNumber(source.top, 0, reference.height - height, fallbackTop);
+  const rawBottom = source.bottom !== undefined ? source.bottom : reference.height - top - height;
+  const bottom = clampNumber(rawBottom, 0, reference.height - height, fallback.bottom);
+  return { left, bottom, width, height };
+}
+
+function renderSpectatorGameLabelText(template, gameId) {
+  const value = String(gameId || '').trim();
+  return String(template || 'Spectating game: {game_id}')
+    .replace(/\{game_id\}/g, value)
+    .replace(/\{match_id\}/g, value)
+    .replace(/\{gameId\}/g, value)
+    .replace(/<gameId>/g, value)
+    .replace(/<matchId>/g, value)
+    .trim()
+    .slice(0, 120);
 }
 
 function assetVersion(state) {

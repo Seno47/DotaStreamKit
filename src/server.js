@@ -397,6 +397,8 @@ defaultConfig.spectatorPredictions = {
 
 defaultConfig.protection.spectatorMatchIntel = {
   ...structuredClone(defaultConfig.protection.matchIntel),
+  showSpectatorGameLabel: true,
+  spectatorGameLabelTemplate: 'Spectating game: {game_id}',
   showStreamerStats: false
 };
 
@@ -892,7 +894,7 @@ async function migrateConfig(config) {
   } else {
     const beforeSpectatorMatchIntel = JSON.stringify(config.protection.spectatorMatchIntel);
     config.protection.spectatorMatchIntel = merge(structuredClone(defaultConfig.protection.spectatorMatchIntel), config.protection.spectatorMatchIntel);
-    normalizeMatchIntelConfig(config.protection.spectatorMatchIntel);
+    normalizeMatchIntelConfig(config.protection.spectatorMatchIntel, { spectatorLabel: true });
     if (JSON.stringify(config.protection.spectatorMatchIntel) !== beforeSpectatorMatchIntel) changed = true;
   }
 
@@ -1541,7 +1543,7 @@ async function applyBackup(backup, sections) {
   normalizePredictionSettings(nextConfig.predictions, defaultConfig.predictions);
   normalizePredictionSettings(nextConfig.spectatorPredictions, defaultConfig.spectatorPredictions);
   if (nextConfig.protection?.matchIntel) normalizeMatchIntelConfig(nextConfig.protection.matchIntel);
-  if (nextConfig.protection?.spectatorMatchIntel) normalizeMatchIntelConfig(nextConfig.protection.spectatorMatchIntel);
+  if (nextConfig.protection?.spectatorMatchIntel) normalizeMatchIntelConfig(nextConfig.protection.spectatorMatchIntel, { spectatorLabel: true });
   runtime.config = nextConfig;
 
   if (selected.has('streamerStats') && source.streamerStats !== undefined) {
@@ -1786,7 +1788,7 @@ async function updateConfig(req, res) {
   next.spectatorPredictions.autoCancelDisconnectSeconds = clampInt(next.spectatorPredictions.autoCancelDisconnectSeconds, 300, 1800);
   normalizePredictionSettings(next.spectatorPredictions, defaultConfig.spectatorPredictions);
   if (next.protection?.matchIntel) normalizeMatchIntelConfig(next.protection.matchIntel);
-  if (next.protection?.spectatorMatchIntel) normalizeMatchIntelConfig(next.protection.spectatorMatchIntel);
+  if (next.protection?.spectatorMatchIntel) normalizeMatchIntelConfig(next.protection.spectatorMatchIntel, { spectatorLabel: true });
   runtime.config = next;
   if (body.twitch?.channelMode || body.twitch?.targetChannelLogin) {
     resetTwitchStreamStatus();
@@ -1926,7 +1928,7 @@ async function updateProtection(req, res) {
       structuredClone(runtime.config.protection.spectatorMatchIntel || defaultConfig.protection.spectatorMatchIntel),
       body.spectatorMatchIntel
     );
-    normalizeMatchIntelConfig(runtime.config.protection.spectatorMatchIntel);
+    normalizeMatchIntelConfig(runtime.config.protection.spectatorMatchIntel, { spectatorLabel: true });
     runtime.state.matchIntel = buildMatchIntel({}, runtime.state.gsi, runtime.state.matchIntel?.players || []);
   }
   runtime.state.protection = computeProtection(runtime.config, runtime.state.gsi);
@@ -3247,10 +3249,17 @@ function normalizeUpdateConfig(config) {
   config.autoInstall = config.autoInstall !== false;
 }
 
-function normalizeMatchIntelConfig(config) {
+function normalizeMatchIntelConfig(config, options = {}) {
   config.enabled = config.enabled !== false;
   config.showPlayerRanks = config.showPlayerRanks !== false;
   config.showPlayerFlags = config.showPlayerFlags === true;
+  if (options.spectatorLabel) {
+    config.showSpectatorGameLabel = config.showSpectatorGameLabel !== false;
+    config.spectatorGameLabelTemplate = predictionTextOrDefault(config.spectatorGameLabelTemplate, 'Spectating game: {game_id}', 120);
+  } else {
+    delete config.showSpectatorGameLabel;
+    delete config.spectatorGameLabelTemplate;
+  }
   const legacyAegisRoshan = config.showAegisRoshan;
   config.showAegisTimer = config.showAegisTimer !== false && legacyAegisRoshan !== false;
   config.showRoshanTimer = config.showRoshanTimer !== false && legacyAegisRoshan !== false;

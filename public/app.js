@@ -40,6 +40,8 @@ function cloneSpectatorPredictionPanel() {
     </div>
     <div class="control-row">
       <label class="check"><input type="checkbox" id="spectatorMatchIntelEnabled"> Match intel overlay</label>
+      <label class="check"><input type="checkbox" id="spectatorGameLabelEnabled"> Spectating game label</label>
+      <label id="spectatorGameLabelTemplateWrap" class="wide-control">Label text<input id="spectatorGameLabelTemplate" type="text" maxlength="120" placeholder="Spectating game: {game_id}"></label>
       <label class="check"><input type="checkbox" id="spectatorShowPlayerRanks"> Notable players</label>
       <label class="check"><input type="checkbox" id="spectatorShowPlayerFlags"> Флаги игроков</label>
       <label class="check"><input type="checkbox" id="spectatorShowAegisTimer"> Aegis timer</label>
@@ -265,6 +267,9 @@ const els = {
   spectatorIntelTitle: document.querySelector('#spectatorIntelTitle'),
   spectatorIntelHelp: document.querySelector('#spectatorIntelHelp'),
   spectatorMatchIntelEnabled: document.querySelector('#spectatorMatchIntelEnabled'),
+  spectatorGameLabelEnabled: document.querySelector('#spectatorGameLabelEnabled'),
+  spectatorGameLabelTemplateWrap: document.querySelector('#spectatorGameLabelTemplateWrap'),
+  spectatorGameLabelTemplate: document.querySelector('#spectatorGameLabelTemplate'),
   spectatorShowPlayerRanks: document.querySelector('#spectatorShowPlayerRanks'),
   spectatorShowPlayerFlags: document.querySelector('#spectatorShowPlayerFlags'),
   spectatorShowAegisTimer: document.querySelector('#spectatorShowAegisTimer'),
@@ -411,6 +416,8 @@ const translations = {
     partial: 'Только области поиска',
     full: 'Фуллскрин',
     matchIntelEnabled: 'Игровая аналитика в overlay',
+    spectatorGameLabel: 'Подпись просматриваемой игры',
+    spectatorGameLabelText: 'Текст подписи',
     showPlayerRanks: 'Ники notable игроков',
     showPlayerFlags: 'Флаги игроков',
     showAegisTimer: 'Таймер Aegis',
@@ -717,6 +724,8 @@ const translations = {
     partial: 'Queue areas only',
     full: 'Fullscreen',
     matchIntelEnabled: 'Match intel overlay',
+    spectatorGameLabel: 'Spectating game label',
+    spectatorGameLabelText: 'Label text',
     showPlayerRanks: 'Notable player names',
     showPlayerFlags: 'Player flags',
     showAegisTimer: 'Aegis timer',
@@ -1320,6 +1329,9 @@ function applyLanguage(config) {
   if (els.spectatorIntelTitle) els.spectatorIntelTitle.textContent = currentLang === 'en' ? 'Spectator Match Intel' : 'Match Intel при просмотре';
   if (els.spectatorIntelHelp) els.spectatorIntelHelp.textContent = currentLang === 'en' ? 'Separate overlay intel settings for spectated games.' : 'Отдельные настройки подсказок для чужих игр.';
   setLabelText(els.spectatorMatchIntelEnabled?.closest('label'), t('matchIntelEnabled'));
+  setLabelText(els.spectatorGameLabelEnabled?.closest('label'), t('spectatorGameLabel'));
+  setLabelText(els.spectatorGameLabelTemplateWrap, t('spectatorGameLabelText'));
+  if (els.spectatorGameLabelTemplate) els.spectatorGameLabelTemplate.placeholder = 'Spectating game: {game_id}';
   setLabelText(els.spectatorShowPlayerRanks?.closest('label'), t('showPlayerRanks'));
   setLabelText(els.spectatorShowPlayerFlags?.closest('label'), t('showPlayerFlags'));
   setLabelText(els.spectatorShowAegisTimer?.closest('label'), t('showAegisTimer'));
@@ -1620,6 +1632,8 @@ function renderPredictionEditorConfig(profile, config) {
 function renderSpectatorMatchIntelConfig(config) {
   if (!els.spectatorMatchIntelEnabled || !config) return;
   els.spectatorMatchIntelEnabled.checked = config.enabled !== false;
+  if (els.spectatorGameLabelEnabled) els.spectatorGameLabelEnabled.checked = config.showSpectatorGameLabel !== false;
+  setInputValue(els.spectatorGameLabelTemplate, config.spectatorGameLabelTemplate || 'Spectating game: {game_id}');
   els.spectatorShowPlayerRanks.checked = config.showPlayerRanks !== false;
   els.spectatorShowPlayerFlags.checked = config.showPlayerFlags === true;
   els.spectatorShowAegisTimer.checked = config.showAegisTimer !== false && config.showAegisRoshan !== false;
@@ -1632,6 +1646,8 @@ function renderSpectatorMatchIntelConfig(config) {
 function spectatorMatchIntelConfigFromForm() {
   return {
     enabled: els.spectatorMatchIntelEnabled.checked,
+    showSpectatorGameLabel: els.spectatorGameLabelEnabled?.checked !== false,
+    spectatorGameLabelTemplate: els.spectatorGameLabelTemplate?.value || 'Spectating game: {game_id}',
     showPlayerRanks: els.spectatorShowPlayerRanks.checked,
     showPlayerFlags: els.spectatorShowPlayerFlags.checked,
     showAegisTimer: els.spectatorShowAegisTimer.checked,
@@ -1644,6 +1660,9 @@ function spectatorMatchIntelConfigFromForm() {
 function updateSpectatorMatchIntelFieldVisibility() {
   if (!els.spectatorRankDisplayMinutesWrap) return;
   els.spectatorRankDisplayMinutesWrap.hidden = els.spectatorRankDisplayMode.value !== 'minutes';
+  if (els.spectatorGameLabelTemplateWrap) {
+    els.spectatorGameLabelTemplateWrap.hidden = els.spectatorGameLabelEnabled?.checked === false;
+  }
 }
 
 function renderPrediction(prediction) {
@@ -2473,6 +2492,7 @@ els.rankDisplayMode.addEventListener('change', () => {
 els.rankDisplayMinutes.addEventListener('change', () => saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert));
 [
   els.spectatorMatchIntelEnabled,
+  els.spectatorGameLabelEnabled,
   els.spectatorShowPlayerRanks,
   els.spectatorShowPlayerFlags,
   els.spectatorShowAegisTimer,
@@ -2483,6 +2503,7 @@ els.rankDisplayMinutes.addEventListener('change', () => saveProtection({ matchIn
   saveProtection({ spectatorMatchIntel: spectatorMatchIntelConfigFromForm() }).catch(alert);
 }));
 els.spectatorRankDisplayMinutes?.addEventListener('change', () => saveProtection({ spectatorMatchIntel: spectatorMatchIntelConfigFromForm() }).catch(alert));
+els.spectatorGameLabelTemplate?.addEventListener('change', () => saveProtection({ spectatorMatchIntel: spectatorMatchIntelConfigFromForm() }).catch(alert));
 [
   els.showStreamerStats,
   els.showStreamerRankMedal,

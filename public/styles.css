@@ -389,6 +389,11 @@ h2 {
   margin-bottom: 16px;
 }
 
+.control-row .wide-control {
+  flex: 1 1 280px;
+  max-width: 460px;
+}
+
 .pill {
   border: 1px solid #4b5565;
   color: #cbd5e1;
