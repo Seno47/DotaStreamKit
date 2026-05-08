@@ -3,6 +3,7 @@ import { copyFile, readFile, writeFile, mkdir, stat, rm, readdir } from 'node:fs
 import { createReadStream } from 'node:fs';
 import { basename, dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { tmpdir } from 'node:os';
 import { randomBytes } from 'node:crypto';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -1844,9 +1845,12 @@ async function installUpdateApi(req, res) {
   const updater = await findUpdaterExecutable();
   if (!updater) return sendJson(res, { error: 'Updater is not available in this build', status }, 400);
 
+  const archivePath = await downloadUpdateAsset(asset);
   const args = [
     '--app-root', rootDir,
     '--download-url', asset.url,
+    '--archive-path', archivePath,
+    '--delete-archive', '1',
     '--version', status.latestVersion,
     '--asset-name', asset.name,
     '--pid', String(process.pid)
@@ -1862,6 +1866,24 @@ async function installUpdateApi(req, res) {
   logEvent('system', `Update started: ${status.latestVersion}`);
   sendJson(res, { ok: true, status, message: 'Update started. DotaStreamKit will restart when the update is installed.' });
   setTimeout(() => process.exit(47), 1000).unref();
+}
+
+async function downloadUpdateAsset(asset) {
+  const tempRoot = join(tmpdir(), `DotaStreamKit-update-${randomBytes(8).toString('hex')}`);
+  await mkdir(tempRoot, { recursive: true });
+  const archivePath = join(tempRoot, basename(asset.name || 'update.zip') || 'update.zip');
+  const response = await fetch(asset.url, {
+    headers: {
+      'user-agent': `DotaStreamKit/${appVersion}`
+    }
+  });
+  if (!response.ok) {
+    throw new Error(`Update download failed: ${response.status}`);
+  }
+  const buffer = Buffer.from(await response.arrayBuffer());
+  if (!buffer.length) throw new Error('Update download failed: empty archive');
+  await writeFile(archivePath, buffer);
+  return archivePath;
 }
 
 async function updateProtection(req, res) {

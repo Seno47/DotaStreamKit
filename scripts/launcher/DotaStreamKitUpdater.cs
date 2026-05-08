@@ -11,12 +11,14 @@ internal static class DotaStreamKitUpdater
     {
         string appRoot = GetArg(args, "--app-root");
         string downloadUrl = GetArg(args, "--download-url");
+        string providedArchivePath = GetArg(args, "--archive-path");
+        bool deleteProvidedArchive = GetArg(args, "--delete-archive") == "1";
         string version = GetArg(args, "--version");
         string assetName = GetArg(args, "--asset-name");
         int pid = ParseInt(GetArg(args, "--pid"));
         int launcherPid = ParseInt(GetArg(args, "--launcher-pid"));
 
-        if (string.IsNullOrWhiteSpace(appRoot) || string.IsNullOrWhiteSpace(downloadUrl))
+        if (string.IsNullOrWhiteSpace(appRoot) || (string.IsNullOrWhiteSpace(downloadUrl) && string.IsNullOrWhiteSpace(providedArchivePath)))
         {
             Console.Error.WriteLine("Missing update arguments.");
             return 1;
@@ -35,13 +37,32 @@ internal static class DotaStreamKitUpdater
         {
             Console.Title = "DotaStreamKit Updater";
             Console.WriteLine("Updating DotaStreamKit to " + version);
-            Console.WriteLine("Downloading release asset...");
             Directory.CreateDirectory(tempRoot);
 
-            using (WebClient client = new WebClient())
+            if (!string.IsNullOrWhiteSpace(providedArchivePath))
             {
-                client.Headers.Add("User-Agent", "DotaStreamKitUpdater/" + version);
-                client.DownloadFile(downloadUrl, archivePath);
+                Console.WriteLine("Using downloaded release asset...");
+                File.Copy(providedArchivePath, archivePath, true);
+                if (deleteProvidedArchive)
+                {
+                    try
+                    {
+                        File.Delete(providedArchivePath);
+                        string parent = Path.GetDirectoryName(providedArchivePath);
+                        if (!string.IsNullOrWhiteSpace(parent)) Directory.Delete(parent, false);
+                    }
+                    catch { }
+                }
+            }
+            else
+            {
+                Console.WriteLine("Downloading release asset...");
+                EnableModernTls();
+                using (WebClient client = new WebClient())
+                {
+                    client.Headers.Add("User-Agent", "DotaStreamKitUpdater/" + version);
+                    client.DownloadFile(downloadUrl, archivePath);
+                }
             }
 
             WaitForProcessExit(pid, 30000);
@@ -82,6 +103,19 @@ internal static class DotaStreamKitUpdater
             if (string.Equals(args[i], name, StringComparison.OrdinalIgnoreCase)) return args[i + 1];
         }
         return "";
+    }
+
+    private static void EnableModernTls()
+    {
+        try
+        {
+            ServicePointManager.Expect100Continue = false;
+            ServicePointManager.SecurityProtocol =
+                (SecurityProtocolType)3072 |
+                (SecurityProtocolType)768 |
+                SecurityProtocolType.Tls;
+        }
+        catch { }
     }
 
     private static bool IsRunningFromInstallRoot(string installRoot)
