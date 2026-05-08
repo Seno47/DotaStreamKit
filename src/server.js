@@ -1965,27 +1965,43 @@ async function handleGsi(req, res) {
   const gameState = map.game_state || null;
   const matchId = map.matchid || map.match_id || null;
   const lifecycle = inferGsiLifecycle(previous, gameState, matchId);
-  const playerActivity = inferPlayerActivity({ previous, payload, gameState, matchId });
-  const playerTeam = normalizeTeam(player.team_name || player.team || player.activity);
+  const matchPlayers = collectMatchPlayers(payload);
+  const localPlayerPayload = hasLocalPlayerPayload(payload);
+  const streamerMatchPlayer = findStreamerMatchPlayer(payload, matchPlayers);
+  const playerActivity = inferPlayerActivity({
+    previous,
+    payload,
+    gameState,
+    matchId,
+    localPlayerPayload,
+    streamerInMatch: Boolean(streamerMatchPlayer)
+  });
+  const canInheritPlayerState = shouldInheritPlayerState({ previous, gameState, matchId, playerActivity, localPlayerPayload });
+  const playerTeam = normalizeTeam(player.team_name || player.team || (playerActivity === 'playing' ? streamerMatchPlayer?.team : null) || player.activity);
   const playerSlotRaw = player.player_slot ?? player.playerSlot ?? null;
   const playerTeamSlotRaw = player.team_slot ?? player.teamSlot ?? null;
   const teamStats = collectTeamStats(payload, playerTeam);
-  const heroId = hero.id ?? hero.hero_id ?? (!lifecycle.newDraft ? previous.heroId : null) ?? null;
-  const heroName = resolveHeroName(hero, heroId, previous, lifecycle);
-  const kills = statNumber(player.kills, previous.kills);
-  const deaths = statNumber(player.deaths, previous.deaths);
-  const assists = statNumber(player.assists, previous.assists);
-  const lastHits = statNumber(player.last_hits ?? player.lastHits, previous.lastHits);
-  const denies = statNumber(player.denies, previous.denies);
-  const level = statNumber(hero.level, previous.level);
-  const playerHeroPicked = inferPlayerHeroPicked(previous, gameState, hero, lifecycle);
+  const playerStateLifecycle = {
+    ...lifecycle,
+    inheritPlayerState: canInheritPlayerState,
+    fallbackHeroName: playerActivity === 'playing' ? streamerMatchPlayer?.hero : ''
+  };
+  const previousPlayerState = canInheritPlayerState ? previous : {};
+  const heroId = hero.id ?? hero.hero_id ?? previousPlayerState.heroId ?? null;
+  const heroName = resolveHeroName(hero, heroId, previousPlayerState, playerStateLifecycle);
+  const kills = statNumber(player.kills, previousPlayerState.kills);
+  const deaths = statNumber(player.deaths, previousPlayerState.deaths);
+  const assists = statNumber(player.assists, previousPlayerState.assists);
+  const lastHits = statNumber(player.last_hits ?? player.lastHits, previousPlayerState.lastHits);
+  const denies = statNumber(player.denies, previousPlayerState.denies);
+  const level = statNumber(hero.level, previousPlayerState.level);
+  const playerHeroPicked = inferPlayerHeroPicked(previousPlayerState, gameState, hero, playerStateLifecycle);
   const draftActiveTeam = inferDraftActiveTeam(draft);
-  const ownPickPhase = inferOwnPickPhase({ previous, payload, gameState, playerHeroPicked, playerTeam, lifecycle });
+  const ownPickPhase = inferOwnPickPhase({ previous: previousPlayerState, payload, gameState, playerHeroPicked, playerTeam, lifecycle: playerStateLifecycle });
   const ownPickPhaseEnded = ownPickPhase.ownPickPhaseEnded;
-  const activeMatchId = inferActiveMatchId(previous, gameState, matchId, lifecycle);
+  const activeMatchId = inferActiveMatchId(previous, gameState, matchId, { ...lifecycle, playerActivity });
   const queueSearchSignal = inferQueueSearchSignal(payload);
   const inGameScreen = inferInGameScreen(gameState, playerActivity);
-  const matchPlayers = collectMatchPlayers(payload);
   const matchTeams = inferMatchTeams(payload, matchPlayers);
   const rosterDebug = buildRosterDebug(payload);
   const leftGameView = inferLeftGameView({
@@ -1993,7 +2009,7 @@ async function handleGsi(req, res) {
     activeMatchId,
     gameState,
     playerActivity,
-    hasLivePayload: Boolean(payload.hero || payload.abilities || payload.items)
+    hasLivePayload: localPlayerPayload || Boolean(streamerMatchPlayer)
   });
   const gsi = {
     connected: true,
@@ -2176,6 +2192,29 @@ function buildRosterDebug(payload) {
       teamSlot: player.team_slot ?? player.teamSlot ?? null
     }))
     .sort((left, right) => String(left.key).localeCompare(String(right.key), undefined, { numeric: true }));
+}
+
+function findStreamerMatchPlayer(payload, players) {
+  const streamerAccountId = normalizeAccountId(runtime.state.streamerStats?.streamerAccountId);
+  if (!streamerAccountId) return null;
+  const normalizedPlayer = Array.isArray(players)
+    ? players.find((player) => String(player?.accountId || '') === String(streamerAccountId))
+    : null;
+  if (normalizedPlayer) return normalizedPlayer;
+
+  const source = payload?.allplayers || payload?.players || {};
+  for (const player of Object.values(source)) {
+    if (!player || typeof player !== 'object') continue;
+    const accountId = normalizeAccountId(player.accountid ?? player.account_id ?? player.accountId ?? player.steamid ?? player.steam_id);
+    if (String(accountId || '') !== String(streamerAccountId)) continue;
+    const teamValue = player.team_name || player.team || (player.player_slot ?? player.team_slot);
+    return {
+      accountId,
+      team: normalizeTeam(teamValue),
+      hero: String(player.hero_name || player.heroName || player.hero || '').slice(0, 60)
+    };
+  }
+  return null;
 }
 
 function getCachedPlayerRank(accountId) {
@@ -2447,9 +2486,9 @@ function inferGsiLifecycle(previous, gameState, matchId) {
 
 function inferPlayerHeroPicked(previous, gameState, hero, lifecycle = {}) {
   if (/POST_GAME/i.test(String(gameState || ''))) return false;
-  const hasHero = Boolean(hero?.name || hero?.localized_name || hero?.id || hero?.hero_id);
+  const hasHero = Boolean(hero?.name || hero?.localized_name || hero?.id || hero?.hero_id || lifecycle.fallbackHeroName);
   if (/HERO_SELECTION/i.test(String(gameState || '')) && lifecycle.newDraft && !hasHero) return false;
-  const inheritedHero = !lifecycle.newDraft && Boolean(previous.playerHeroPicked || previous.heroName || previous.heroId);
+  const inheritedHero = lifecycle.inheritPlayerState && Boolean(previous.playerHeroPicked || previous.heroName || previous.heroId);
   return hasHero || inheritedHero;
 }
 
@@ -2470,6 +2509,8 @@ function inferActiveMatchId(previous, gameState, matchId, lifecycle = {}) {
   if (/POST_GAME/i.test(String(gameState || ''))) return null;
   if (matchId) return matchId;
   if (lifecycle.newDraft) return null;
+  if (lifecycle.playerActivity === 'spectating') return null;
+  if (!previous.connected) return null;
   return previous.activeMatchId || previous.matchId || null;
 }
 
@@ -2481,17 +2522,35 @@ function inferInGameScreen(gameState, playerActivity) {
   return inGameStatePattern.test(state) && !/POST_GAME/i.test(state);
 }
 
-function inferPlayerActivity({ previous, payload, gameState, matchId }) {
+function inferPlayerActivity({ previous, payload, gameState, matchId, localPlayerPayload, streamerInMatch }) {
   const player = payload?.player || {};
   const rawActivity = String(player.activity || '').trim().toLowerCase();
-  if (rawActivity) return rawActivity;
+  if (rawActivity === 'spectating') return 'spectating';
 
   const state = String(gameState || '');
-  if (!/PRE_GAME|GAME_IN_PROGRESS/i.test(state)) return null;
-  if (!matchId && !previous?.activeMatchId && !previous?.matchId) return null;
+  const previousMatchId = previous?.activeMatchId || previous?.matchId || null;
+  const sameMatch = Boolean(matchId && previousMatchId && String(matchId) === String(previousMatchId));
+  if (rawActivity === 'playing') {
+    if (localPlayerPayload || streamerInMatch || (sameMatch && String(previous?.playerActivity || '').toLowerCase() === 'playing')) return 'playing';
+    if (/PRE_GAME|GAME_IN_PROGRESS/i.test(state)) return 'spectating';
+    return 'playing';
+  }
+  if (rawActivity) return rawActivity;
 
-  if (hasLocalPlayerPayload(payload)) return 'playing';
+  if (!/PRE_GAME|GAME_IN_PROGRESS/i.test(state)) return null;
+
+  if (localPlayerPayload || streamerInMatch) return 'playing';
+  if (sameMatch && previous.connected && String(previous?.playerActivity || '').toLowerCase() === 'playing') return 'playing';
   return 'spectating';
+}
+
+function shouldInheritPlayerState({ previous, gameState, matchId, playerActivity, localPlayerPayload }) {
+  if (playerActivity !== 'playing') return false;
+  if (localPlayerPayload) return true;
+  if (!/HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS/i.test(String(gameState || ''))) return false;
+  const previousMatchId = previous?.activeMatchId || previous?.matchId || null;
+  if (matchId && previousMatchId && String(matchId) !== String(previousMatchId)) return false;
+  return String(previous?.playerActivity || '').toLowerCase() === 'playing';
 }
 
 function hasLocalPlayerPayload(payload) {
@@ -3492,9 +3551,10 @@ function resolveHeroName(hero, heroId, previous, lifecycle = {}) {
   const rawName = String(hero?.name || '').trim();
   if (rawName) return formatHeroName(rawName);
 
-  if (!lifecycle.newDraft && previous?.heroName) return formatHeroName(previous.heroName);
+  if (lifecycle.fallbackHeroName) return formatHeroName(lifecycle.fallbackHeroName);
+  if (lifecycle.inheritPlayerState && previous?.heroName) return formatHeroName(previous.heroName);
 
-  const previousById = !lifecycle.newDraft ? dotaHeroNamesById[Number(previous?.heroId)] : null;
+  const previousById = lifecycle.inheritPlayerState ? dotaHeroNamesById[Number(previous?.heroId)] : null;
   return previousById || null;
 }
 
