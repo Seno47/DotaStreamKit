@@ -408,6 +408,7 @@ const runtime = {
   oauthStates: new Set(),
   queueAuto: { active: false, desired: false, desiredSince: 0 },
   dotaProcess: { running: null, checkedAt: null },
+  updateInstallStarted: false,
   twitchStreamStatus: { broadcasterId: null, checkedAt: 0, isLive: null, streamId: null, gameName: null, title: null },
   playerRankCache: new Map(),
   pendingPlayerRankFetches: new Map(),
@@ -628,6 +629,7 @@ server.listen(port, listenHost, () => {
   logEvent('system', `DotaStreamKit started on ${dashboardUrl}`);
   console.log(`DotaStreamKit: ${dashboardUrl}`);
   console.log(`OBS overlay:   ${dashboardUrl}/overlay.html`);
+  scheduleStartupUpdateCheck();
 });
 
 setInterval(() => {
@@ -1850,10 +1852,53 @@ async function installUpdateApi(req, res) {
   const release = await fetchLatestRelease();
   const status = normalizeUpdateRelease(release);
   if (!status.updateAvailable) return sendJson(res, { ok: true, message: 'Already up to date', status });
+  if (!status.assets.find((item) => item.platform === currentUpdatePlatform())) {
+    return sendJson(res, { error: 'No update asset is available for this platform', status }, 400);
+  }
+  if (!await findUpdaterExecutable()) {
+    return sendJson(res, { error: 'Updater is not available in this build', status }, 400);
+  }
+  const result = await beginUpdateInstall(status);
+  sendJson(res, result);
+}
+
+function scheduleStartupUpdateCheck() {
+  const updates = runtime.config.updates || {};
+  if (updates.autoCheck === false && updates.autoInstall === false) return;
+  setTimeout(() => {
+    startupUpdateCheck().catch((error) => logEvent('system', `Startup update check failed: ${error.message}`));
+  }, 2000).unref();
+}
+
+async function startupUpdateCheck() {
+  const release = await fetchLatestRelease();
+  const status = normalizeUpdateRelease(release);
+  if (!status.updateAvailable) {
+    logEvent('system', `Startup update check: ${appVersion} is current`);
+    broadcast();
+    return status;
+  }
+
+  logEvent('system', `Startup update check: ${status.latestVersion} is available`);
+  broadcast();
+  if (runtime.config.updates?.autoInstall === false) return status;
+
   const asset = status.assets.find((item) => item.platform === currentUpdatePlatform());
-  if (!asset) return sendJson(res, { error: 'No update asset is available for this platform', status }, 400);
+  if (!asset) throw new Error(`No update asset is available for ${currentUpdatePlatform()}`);
   const updater = await findUpdaterExecutable();
-  if (!updater) return sendJson(res, { error: 'Updater is not available in this build', status }, 400);
+  if (!updater) throw new Error('Updater is not available in this build');
+  return await beginUpdateInstall(status);
+}
+
+async function beginUpdateInstall(status) {
+  if (runtime.updateInstallStarted) {
+    return { ok: true, status, message: 'Update is already running. DotaStreamKit will restart when the update is installed.' };
+  }
+
+  const asset = status.assets.find((item) => item.platform === currentUpdatePlatform());
+  if (!asset) throw new Error('No update asset is available for this platform');
+  const updater = await findUpdaterExecutable();
+  if (!updater) throw new Error('Updater is not available in this build');
 
   const archivePath = await downloadUpdateAsset(asset);
   const args = [
@@ -1873,9 +1918,10 @@ async function installUpdateApi(req, res) {
     windowsHide: false
   });
   child.unref();
+  runtime.updateInstallStarted = true;
   logEvent('system', `Update started: ${status.latestVersion}`);
-  sendJson(res, { ok: true, status, message: 'Update started. DotaStreamKit will restart when the update is installed.' });
   setTimeout(() => process.exit(47), 1000).unref();
+  return { ok: true, status, message: 'Update started. DotaStreamKit will restart when the update is installed.' };
 }
 
 async function downloadUpdateAsset(asset) {

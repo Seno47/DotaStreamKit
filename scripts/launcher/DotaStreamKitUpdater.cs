@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
+using System.Security.Principal;
 using System.Threading;
 
 internal static class DotaStreamKitUpdater
@@ -28,6 +29,10 @@ internal static class DotaStreamKitUpdater
         if (GetArg(args, "--relocated") != "1" && IsRunningFromInstallRoot(installRoot))
         {
             return RelaunchFromTemp(args);
+        }
+        if (IsInsideProtectedInstallDir(installRoot) && !IsElevated())
+        {
+            return RelaunchElevated(args);
         }
 
         string tempRoot = Path.Combine(Path.GetTempPath(), "DotaStreamKit-update-" + Guid.NewGuid().ToString("N"));
@@ -133,6 +138,42 @@ internal static class DotaStreamKitUpdater
         }
     }
 
+    private static bool IsInsideProtectedInstallDir(string path)
+    {
+        try
+        {
+            string fullPath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string[] roots = new string[]
+            {
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+            };
+            foreach (string root in roots)
+            {
+                if (string.IsNullOrWhiteSpace(root)) continue;
+                string fullRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                if (fullPath.Equals(fullRoot, StringComparison.OrdinalIgnoreCase)) return true;
+                if (fullPath.StartsWith(fullRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+        }
+        catch { }
+        return false;
+    }
+
+    private static bool IsElevated()
+    {
+        try
+        {
+            WindowsIdentity identity = WindowsIdentity.GetCurrent();
+            WindowsPrincipal principal = new WindowsPrincipal(identity);
+            return principal.IsInRole(WindowsBuiltInRole.Administrator);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private static int RelaunchFromTemp(string[] args)
     {
         try
@@ -149,6 +190,29 @@ internal static class DotaStreamKitUpdater
         catch (Exception error)
         {
             Console.Error.WriteLine("Failed to relocate updater: " + error.Message);
+            return 1;
+        }
+    }
+
+    private static int RelaunchElevated(string[] args)
+    {
+        try
+        {
+            string ownPath = Process.GetCurrentProcess().MainModule.FileName;
+            string arguments = BuildCommandLine(args);
+            Process.Start(new ProcessStartInfo(ownPath, arguments)
+            {
+                UseShellExecute = true,
+                Verb = "runas"
+            });
+            return 0;
+        }
+        catch (Exception error)
+        {
+            Console.Error.WriteLine("Administrator permission is required to update DotaStreamKit in Program Files.");
+            Console.Error.WriteLine("Failed to request administrator permission: " + error.Message);
+            Console.Error.WriteLine("Press Enter to close.");
+            Console.ReadLine();
             return 1;
         }
     }
