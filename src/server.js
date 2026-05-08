@@ -421,6 +421,8 @@ const runtime = {
       matchId: null,
       activeMatchId: null,
       playerActivity: null,
+      playerActivitySource: null,
+      activityDebug: null,
       playerTeam: null,
       radiantTeamName: null,
       direTeamName: null,
@@ -505,6 +507,8 @@ runtime.state.gsi = {
   matchId: null,
   activeMatchId: null,
   playerActivity: null,
+  playerActivitySource: null,
+  activityDebug: null,
   playerTeam: null,
   radiantTeamName: null,
   direTeamName: null,
@@ -641,6 +645,9 @@ async function refreshRuntimePresence() {
   runtime.state.gsi.connected = connected;
   if (connectionChanged && !connected) {
     runtime.state.gsi.gameState = null;
+    runtime.state.gsi.playerActivity = null;
+    runtime.state.gsi.playerActivitySource = null;
+    runtime.state.gsi.activityDebug = null;
     runtime.state.gsi.playerHeroPicked = false;
     runtime.state.gsi.draftActiveTeam = null;
     runtime.state.gsi.ownPickPhaseEnded = false;
@@ -1968,34 +1975,46 @@ async function handleGsi(req, res) {
   const matchPlayers = collectMatchPlayers(payload);
   const localPlayerPayload = hasLocalPlayerPayload(payload);
   const streamerMatchPlayer = findStreamerMatchPlayer(payload, matchPlayers);
+  const activitySignal = extractActivitySignal(payload);
   const playerActivity = inferPlayerActivity({
     previous,
-    payload,
+    activitySignal,
     gameState,
     matchId,
     localPlayerPayload,
     streamerInMatch: Boolean(streamerMatchPlayer)
   });
+  const activityDebug = buildActivityDebug({
+    payload,
+    activitySignal,
+    playerActivity,
+    localPlayerPayload,
+    streamerMatchPlayer,
+    matchPlayers
+  });
+  const isStreamerPlaying = playerActivity === 'playing';
   const canInheritPlayerState = shouldInheritPlayerState({ previous, gameState, matchId, playerActivity, localPlayerPayload });
-  const playerTeam = normalizeTeam(player.team_name || player.team || (playerActivity === 'playing' ? streamerMatchPlayer?.team : null) || player.activity);
-  const playerSlotRaw = player.player_slot ?? player.playerSlot ?? null;
-  const playerTeamSlotRaw = player.team_slot ?? player.teamSlot ?? null;
+  const playerTeam = normalizeTeam(isStreamerPlaying ? (player.team_name || player.team || streamerMatchPlayer?.team || player.activity) : null);
+  const playerSlotRaw = isStreamerPlaying ? (player.player_slot ?? player.playerSlot ?? null) : null;
+  const playerTeamSlotRaw = isStreamerPlaying ? (player.team_slot ?? player.teamSlot ?? null) : null;
   const teamStats = collectTeamStats(payload, playerTeam);
   const playerStateLifecycle = {
     ...lifecycle,
     inheritPlayerState: canInheritPlayerState,
-    fallbackHeroName: playerActivity === 'playing' ? streamerMatchPlayer?.hero : ''
+    fallbackHeroName: isStreamerPlaying ? streamerMatchPlayer?.hero : ''
   };
+  const playerStatsPayload = isStreamerPlaying ? player : {};
+  const heroPayload = isStreamerPlaying ? hero : {};
   const previousPlayerState = canInheritPlayerState ? previous : {};
-  const heroId = hero.id ?? hero.hero_id ?? previousPlayerState.heroId ?? null;
-  const heroName = resolveHeroName(hero, heroId, previousPlayerState, playerStateLifecycle);
-  const kills = statNumber(player.kills, previousPlayerState.kills);
-  const deaths = statNumber(player.deaths, previousPlayerState.deaths);
-  const assists = statNumber(player.assists, previousPlayerState.assists);
-  const lastHits = statNumber(player.last_hits ?? player.lastHits, previousPlayerState.lastHits);
-  const denies = statNumber(player.denies, previousPlayerState.denies);
-  const level = statNumber(hero.level, previousPlayerState.level);
-  const playerHeroPicked = inferPlayerHeroPicked(previousPlayerState, gameState, hero, playerStateLifecycle);
+  const heroId = heroPayload.id ?? heroPayload.hero_id ?? previousPlayerState.heroId ?? null;
+  const heroName = resolveHeroName(heroPayload, heroId, previousPlayerState, playerStateLifecycle);
+  const kills = statNumber(playerStatsPayload.kills, previousPlayerState.kills);
+  const deaths = statNumber(playerStatsPayload.deaths, previousPlayerState.deaths);
+  const assists = statNumber(playerStatsPayload.assists, previousPlayerState.assists);
+  const lastHits = statNumber(playerStatsPayload.last_hits ?? playerStatsPayload.lastHits, previousPlayerState.lastHits);
+  const denies = statNumber(playerStatsPayload.denies, previousPlayerState.denies);
+  const level = statNumber(heroPayload.level, previousPlayerState.level);
+  const playerHeroPicked = inferPlayerHeroPicked(previousPlayerState, gameState, heroPayload, playerStateLifecycle);
   const draftActiveTeam = inferDraftActiveTeam(draft);
   const ownPickPhase = inferOwnPickPhase({ previous: previousPlayerState, payload, gameState, playerHeroPicked, playerTeam, lifecycle: playerStateLifecycle });
   const ownPickPhaseEnded = ownPickPhase.ownPickPhaseEnded;
@@ -2019,6 +2038,8 @@ async function handleGsi(req, res) {
     matchId,
     activeMatchId,
     playerActivity,
+    playerActivitySource: activityDebug.source,
+    activityDebug,
     playerTeam,
     radiantTeamName: matchTeams.radiant,
     direTeamName: matchTeams.dire,
@@ -2522,26 +2543,98 @@ function inferInGameScreen(gameState, playerActivity) {
   return inGameStatePattern.test(state) && !/POST_GAME/i.test(state);
 }
 
-function inferPlayerActivity({ previous, payload, gameState, matchId, localPlayerPayload, streamerInMatch }) {
-  const player = payload?.player || {};
-  const rawActivity = String(player.activity || '').trim().toLowerCase();
-  if (rawActivity === 'spectating') return 'spectating';
+function extractActivitySignal(payload) {
+  const candidates = activityCandidates(payload);
+  for (const candidate of candidates) {
+    const normalized = normalizeActivityValue(candidate.value);
+    if (normalized) return { ...candidate, normalized };
+  }
+  return {
+    source: 'fallback',
+    value: '',
+    normalized: null,
+    candidates
+  };
+}
+
+function activityCandidates(payload) {
+  return [
+    activityCandidate('player.activity', payload?.player?.activity),
+    activityCandidate('player.status', payload?.player?.status),
+    activityCandidate('player.state', payload?.player?.state),
+    activityCandidate('provider.activity', payload?.provider?.activity),
+    activityCandidate('provider.status', payload?.provider?.status),
+    activityCandidate('provider.player_activity', payload?.provider?.player_activity),
+    activityCandidate('provider.playerActivity', payload?.provider?.playerActivity),
+    activityCandidate('map.activity', payload?.map?.activity),
+    activityCandidate('map.status', payload?.map?.status),
+    activityCandidate('map.player_activity', payload?.map?.player_activity),
+    activityCandidate('map.playerActivity', payload?.map?.playerActivity)
+  ].filter(Boolean);
+}
+
+function activityCandidate(source, value) {
+  const text = String(value ?? '').trim();
+  return text ? { source, value: text } : null;
+}
+
+function normalizeActivityValue(value) {
+  const text = String(value || '').trim().toLowerCase();
+  if (!text) return null;
+  if (/spectat|watch/.test(text)) return 'spectating';
+  if (/play|player|ingame|in_game|in-game/.test(text)) return 'playing';
+  if (/menu|idle|none|away|afk|disconnect|offline|unknown/.test(text)) return text.replace(/[^a-z0-9_ -]/g, '').slice(0, 40) || null;
+  return text.replace(/[^a-z0-9_ -]/g, '').slice(0, 40) || null;
+}
+
+function inferPlayerActivity({ previous, activitySignal, gameState, matchId, localPlayerPayload, streamerInMatch }) {
+  const explicitActivity = activitySignal?.normalized;
+  if (explicitActivity === 'spectating') return 'spectating';
+  if (explicitActivity === 'playing') return 'playing';
+  if (explicitActivity) return explicitActivity;
 
   const state = String(gameState || '');
   const previousMatchId = previous?.activeMatchId || previous?.matchId || null;
   const sameMatch = Boolean(matchId && previousMatchId && String(matchId) === String(previousMatchId));
-  if (rawActivity === 'playing') {
-    if (localPlayerPayload || streamerInMatch || (sameMatch && String(previous?.playerActivity || '').toLowerCase() === 'playing')) return 'playing';
-    if (/PRE_GAME|GAME_IN_PROGRESS/i.test(state)) return 'spectating';
-    return 'playing';
-  }
-  if (rawActivity) return rawActivity;
-
   if (!/PRE_GAME|GAME_IN_PROGRESS/i.test(state)) return null;
 
   if (localPlayerPayload || streamerInMatch) return 'playing';
   if (sameMatch && previous.connected && String(previous?.playerActivity || '').toLowerCase() === 'playing') return 'playing';
   return 'spectating';
+}
+
+function buildActivityDebug({ payload, activitySignal, playerActivity, localPlayerPayload, streamerMatchPlayer, matchPlayers }) {
+  const streamerAccountId = normalizeAccountId(runtime.state.streamerStats?.streamerAccountId);
+  return {
+    inferred: playerActivity || null,
+    source: activitySignal?.source || 'fallback',
+    explicitValue: activitySignal?.value || '',
+    explicitNormalized: activitySignal?.normalized || null,
+    candidates: (activitySignal?.candidates || activityCandidates(payload)).slice(0, 20),
+    fallback: {
+      localPlayerPayload,
+      streamerAccountId,
+      streamerInMatch: Boolean(streamerMatchPlayer),
+      streamerMatchHero: streamerMatchPlayer?.hero || '',
+      streamerMatchTeam: streamerMatchPlayer?.team || null,
+      matchPlayerCount: Array.isArray(matchPlayers) ? matchPlayers.length : 0
+    },
+    payloadKeys: Object.keys(payload || {}).sort().slice(0, 50),
+    provider: pickDebugFields(payload?.provider, ['name', 'appid', 'version', 'timestamp', 'activity', 'status', 'player_activity', 'playerActivity']),
+    map: pickDebugFields(payload?.map, ['name', 'matchid', 'match_id', 'game_state', 'clock_time', 'activity', 'status', 'player_activity', 'playerActivity']),
+    player: pickDebugFields(payload?.player, ['activity', 'status', 'state', 'team_name', 'team', 'accountid', 'account_id', 'steamid', 'player_slot', 'team_slot'])
+  };
+}
+
+function pickDebugFields(source, keys) {
+  const result = {};
+  if (!source || typeof source !== 'object') return result;
+  for (const key of keys) {
+    if (source[key] === undefined || source[key] === null) continue;
+    result[key] = String(source[key]).slice(0, 120);
+  }
+  result.keys = Object.keys(source).sort().slice(0, 30);
+  return result;
 }
 
 function shouldInheritPlayerState({ previous, gameState, matchId, playerActivity, localPlayerPayload }) {
