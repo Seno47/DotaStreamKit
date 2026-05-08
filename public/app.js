@@ -92,6 +92,7 @@ function spectatorVariableChips() {
 const els = {
   gsiStatus: document.querySelector('#gsiStatus'),
   twitchStatus: document.querySelector('#twitchStatus'),
+  appVersion: document.querySelector('#appVersion'),
   languageSelect: document.querySelector('#languageSelect'),
   pageTabs: document.querySelectorAll('[data-page-target]'),
   pagePanels: document.querySelectorAll('[data-page]'),
@@ -377,6 +378,7 @@ const translations = {
     botPrefix: 'Бот: @XyraNet_bot',
     developer: 'Разработчик',
     supportDeveloper: 'Поддержать',
+    installedVersion: 'Версия',
     subtitle: 'Локальная защита стрима и автоматизация Twitch Predictions.',
     pageProtection: 'Защита',
     pageIntel: 'Match intel',
@@ -682,6 +684,7 @@ const translations = {
     botPrefix: 'Bot: @XyraNet_bot',
     developer: 'Developer',
     supportDeveloper: 'Support',
+    installedVersion: 'Version',
     subtitle: 'Local stream protection and Twitch Predictions automation.',
     pageProtection: 'Protection',
     pageIntel: 'Match intel',
@@ -1118,6 +1121,7 @@ function applyLanguage(config) {
   setText('.sponsor-label', 'sponsor');
   setText('.developer-link:not(.support-link) span', 'developer');
   setText('.support-link span', 'supportDeveloper');
+  renderAppVersion(snapshot?.version);
   const sponsorLinkSpans = document.querySelectorAll('.sponsor-links span');
   if (sponsorLinkSpans[0]) sponsorLinkSpans[0].textContent = t('sitePrefix');
   if (sponsorLinkSpans[1]) sponsorLinkSpans[1].textContent = t('botPrefix');
@@ -1471,9 +1475,15 @@ function metricOptionsHtml(profile = 'own') {
     .join('');
 }
 
+function renderAppVersion(version) {
+  if (!els.appVersion) return;
+  els.appVersion.textContent = `${t('installedVersion')}: ${version || '-'}`;
+}
+
 function render(data) {
   const { config, state } = data;
   applyLanguage(config);
+  renderAppVersion(data.version);
   els.gsiStatus.textContent = state.gsi.connected ? 'Dota GSI online' : 'Dota GSI offline';
   els.gsiStatus.className = `pill ${state.gsi.connected ? 'ok' : 'bad'}`;
   const liveSuffix = state.twitch.isLive === true ? ' / live' : state.twitch.isLive === false ? ' / offline' : '';

@@ -25,6 +25,7 @@ internal static class DotaStreamKitLauncher
 internal sealed class LauncherForm : Form
 {
     private const string LocalUrl = "http://localhost:37273";
+    private const int UpdateExitCode = 47;
 
     private readonly Label statusLabel;
     private readonly TextBox logBox;
@@ -140,6 +141,7 @@ internal sealed class LauncherForm : Form
         server.StartInfo.RedirectStandardError = true;
         server.StartInfo.CreateNoWindow = true;
         server.StartInfo.EnvironmentVariables["DOTASTREAMKIT_LAUNCHER"] = "1";
+        server.StartInfo.EnvironmentVariables["DOTASTREAMKIT_LAUNCHER_PID"] = Process.GetCurrentProcess().Id.ToString();
         if (!string.IsNullOrWhiteSpace(dataDir)) server.StartInfo.EnvironmentVariables["DOTASTREAMKIT_DATA_DIR"] = dataDir;
         server.EnableRaisingEvents = true;
         server.OutputDataReceived += delegate(object sender, DataReceivedEventArgs args) { if (args.Data != null) AppendLog(args.Data); };
@@ -149,6 +151,12 @@ internal sealed class LauncherForm : Form
             ExitCode = server.ExitCode;
             BeginInvoke((Action)delegate
             {
+                if (ExitCode == UpdateExitCode)
+                {
+                    stopping = true;
+                    Close();
+                    return;
+                }
                 statusLabel.Text = stopping ? "Stopped." : "DotaStreamKit stopped. Exit code: " + ExitCode;
                 stopButton.Text = "Close";
             });

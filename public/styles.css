@@ -217,9 +217,22 @@ label input[type='checkbox']:focus-visible {
 
 .developer-strip {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   gap: 10px;
   margin-bottom: 18px;
+}
+
+.developer-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-version {
+  color: #9aa6b8;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .developer-link span {
@@ -1291,6 +1304,7 @@ code {
 
   .developer-strip {
     justify-content: flex-start;
+    flex-wrap: wrap;
   }
 
   .sponsor-main {

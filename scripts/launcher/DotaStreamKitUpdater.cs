@@ -14,6 +14,7 @@ internal static class DotaStreamKitUpdater
         string version = GetArg(args, "--version");
         string assetName = GetArg(args, "--asset-name");
         int pid = ParseInt(GetArg(args, "--pid"));
+        int launcherPid = ParseInt(GetArg(args, "--launcher-pid"));
 
         if (string.IsNullOrWhiteSpace(appRoot) || string.IsNullOrWhiteSpace(downloadUrl))
         {
@@ -22,6 +23,11 @@ internal static class DotaStreamKitUpdater
         }
 
         string installRoot = Path.GetFullPath(Path.Combine(appRoot, ".."));
+        if (GetArg(args, "--relocated") != "1" && IsRunningFromInstallRoot(installRoot))
+        {
+            return RelaunchFromTemp(args);
+        }
+
         string tempRoot = Path.Combine(Path.GetTempPath(), "DotaStreamKit-update-" + Guid.NewGuid().ToString("N"));
         string archivePath = Path.Combine(tempRoot, string.IsNullOrWhiteSpace(assetName) ? "update.zip" : assetName);
 
@@ -39,6 +45,7 @@ internal static class DotaStreamKitUpdater
             }
 
             WaitForProcessExit(pid, 30000);
+            WaitForProcessExit(launcherPid, 30000);
 
             string extractDir = Path.Combine(tempRoot, "extract");
             ZipFile.ExtractToDirectory(archivePath, extractDir);
@@ -48,8 +55,8 @@ internal static class DotaStreamKitUpdater
             Console.WriteLine("Installing files...");
             CopyDirectory(Path.Combine(releaseRoot, "app"), Path.Combine(installRoot, "app"));
             CopyDirectory(Path.Combine(releaseRoot, "runtime"), Path.Combine(installRoot, "runtime"));
-            CopyFileIfExists(Path.Combine(releaseRoot, "DotaStreamKit.exe"), Path.Combine(installRoot, "DotaStreamKit.exe"));
-            CopyFileIfExists(Path.Combine(releaseRoot, "DotaStreamKitUpdater.exe"), Path.Combine(installRoot, "DotaStreamKitUpdater.exe"));
+            TryCopyFileIfExists(Path.Combine(releaseRoot, "DotaStreamKit.exe"), Path.Combine(installRoot, "DotaStreamKit.exe"));
+            TryCopyFileIfExists(Path.Combine(releaseRoot, "DotaStreamKitUpdater.exe"), Path.Combine(installRoot, "DotaStreamKitUpdater.exe"));
 
             Console.WriteLine("Starting DotaStreamKit...");
             Process.Start(new ProcessStartInfo(Path.Combine(installRoot, "DotaStreamKit.exe")) { UseShellExecute = true });
@@ -75,6 +82,57 @@ internal static class DotaStreamKitUpdater
             if (string.Equals(args[i], name, StringComparison.OrdinalIgnoreCase)) return args[i + 1];
         }
         return "";
+    }
+
+    private static bool IsRunningFromInstallRoot(string installRoot)
+    {
+        try
+        {
+            string ownPath = Process.GetCurrentProcess().MainModule.FileName;
+            string ownDir = Path.GetDirectoryName(Path.GetFullPath(ownPath)).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string fullRoot = Path.GetFullPath(installRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return ownDir.Equals(fullRoot, StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static int RelaunchFromTemp(string[] args)
+    {
+        try
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), "DotaStreamKit-updater-run-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+            string tempExe = Path.Combine(tempDir, "DotaStreamKitUpdater.exe");
+            File.Copy(Process.GetCurrentProcess().MainModule.FileName, tempExe, true);
+
+            string arguments = BuildCommandLine(args) + " --relocated 1";
+            Process.Start(new ProcessStartInfo(tempExe, arguments) { UseShellExecute = false });
+            return 0;
+        }
+        catch (Exception error)
+        {
+            Console.Error.WriteLine("Failed to relocate updater: " + error.Message);
+            return 1;
+        }
+    }
+
+    private static string BuildCommandLine(string[] args)
+    {
+        string[] quoted = new string[args.Length];
+        for (int i = 0; i < args.Length; i++)
+        {
+            quoted[i] = QuoteArg(args[i]);
+        }
+        return string.Join(" ", quoted);
+    }
+
+    private static string QuoteArg(string value)
+    {
+        if (value == null) return "\"\"";
+        return "\"" + value.Replace("\"", "\\\"") + "\"";
     }
 
     private static int ParseInt(string value)
@@ -122,5 +180,17 @@ internal static class DotaStreamKitUpdater
         if (!File.Exists(source)) return;
         Directory.CreateDirectory(Path.GetDirectoryName(target));
         File.Copy(source, target, true);
+    }
+
+    private static void TryCopyFileIfExists(string source, string target)
+    {
+        try
+        {
+            CopyFileIfExists(source, target);
+        }
+        catch (Exception error)
+        {
+            Console.WriteLine("Warning: could not replace " + Path.GetFileName(target) + ": " + error.Message);
+        }
     }
 }

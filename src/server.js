@@ -1442,6 +1442,7 @@ function publicState() {
   const { twitchToken, ...safeRuntimeState } = runtime.state;
   const streamerStats = publicStreamerStats();
   return {
+    version: appVersion,
     config: sanitizeConfig(runtime.config),
     state: {
       ...safeRuntimeState,
@@ -1850,6 +1851,8 @@ async function installUpdateApi(req, res) {
     '--asset-name', asset.name,
     '--pid', String(process.pid)
   ];
+  const launcherPid = Number(process.env.DOTASTREAMKIT_LAUNCHER_PID || 0);
+  if (launcherPid > 0) args.push('--launcher-pid', String(launcherPid));
   const child = spawn(updater, args, {
     detached: true,
     stdio: 'ignore',
@@ -1858,7 +1861,7 @@ async function installUpdateApi(req, res) {
   child.unref();
   logEvent('system', `Update started: ${status.latestVersion}`);
   sendJson(res, { ok: true, status, message: 'Update started. DotaStreamKit will restart when the update is installed.' });
-  setTimeout(() => process.exit(0), 1000).unref();
+  setTimeout(() => process.exit(47), 1000).unref();
 }
 
 async function updateProtection(req, res) {
@@ -3215,7 +3218,11 @@ function normalizeUiConfig(config) {
 
 function normalizeUpdateConfig(config) {
   config.autoCheck = config.autoCheck !== false;
-  config.autoInstall = config.autoInstall === true;
+  if (config.autoInstallDefaultVersion !== 2) {
+    config.autoInstall = true;
+    config.autoInstallDefaultVersion = 2;
+  }
+  config.autoInstall = config.autoInstall !== false;
 }
 
 function normalizeMatchIntelConfig(config) {

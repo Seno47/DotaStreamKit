@@ -115,6 +115,66 @@ begin
     RegQueryStringValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{8D79D8EC-4F69-47CB-850C-D1B3F5D39D0B}_is1', 'UninstallString', UninstallString);
 end;
 
+function ShowExistingInstallChoice(): Integer;
+var
+  Form: TSetupForm;
+  TitleLabel: TNewStaticText;
+  HintLabel: TNewStaticText;
+  RepairButton: TNewButton;
+  RemoveButton: TNewButton;
+  CancelButton: TNewButton;
+begin
+  Form := CreateCustomForm(ScaleX(360), ScaleY(220), False, True);
+  try
+    Form.Caption := 'DotaStreamKit';
+
+    TitleLabel := TNewStaticText.Create(Form);
+    TitleLabel.Parent := Form;
+    TitleLabel.Left := ScaleX(16);
+    TitleLabel.Top := ScaleY(16);
+    TitleLabel.Width := ScaleX(328);
+    TitleLabel.Caption := 'DotaStreamKit уже установлен.';
+
+    HintLabel := TNewStaticText.Create(Form);
+    HintLabel.Parent := Form;
+    HintLabel.Left := ScaleX(16);
+    HintLabel.Top := ScaleY(42);
+    HintLabel.Width := ScaleX(328);
+    HintLabel.Caption := 'Выберите действие установщика:';
+
+    RepairButton := TNewButton.Create(Form);
+    RepairButton.Parent := Form;
+    RepairButton.Left := ScaleX(16);
+    RepairButton.Top := ScaleY(78);
+    RepairButton.Width := ScaleX(180);
+    RepairButton.Height := ScaleY(32);
+    RepairButton.Caption := 'Починить';
+    RepairButton.ModalResult := mrOk;
+
+    RemoveButton := TNewButton.Create(Form);
+    RemoveButton.Parent := Form;
+    RemoveButton.Left := ScaleX(16);
+    RemoveButton.Top := ScaleY(118);
+    RemoveButton.Width := ScaleX(180);
+    RemoveButton.Height := ScaleY(32);
+    RemoveButton.Caption := 'Удалить';
+    RemoveButton.ModalResult := mrAbort;
+
+    CancelButton := TNewButton.Create(Form);
+    CancelButton.Parent := Form;
+    CancelButton.Left := ScaleX(16);
+    CancelButton.Top := ScaleY(158);
+    CancelButton.Width := ScaleX(180);
+    CancelButton.Height := ScaleY(32);
+    CancelButton.Caption := 'Отмена';
+    CancelButton.ModalResult := mrCancel;
+
+    Result := Form.ShowModal;
+  finally
+    Form.Free;
+  end;
+end;
+
 function InitializeSetup(): Boolean;
 var
   Choice: Integer;
@@ -127,17 +187,10 @@ begin
   if not QueryUninstallString(UninstallString) then exit;
   if WizardSilent() then exit;
 
-  Choice := MsgBox(
-    'DotaStreamKit is already installed.' + #13#10#13#10 +
-    'Yes: repair or update the current installation.' + #13#10 +
-    'No: remove the current installation.' + #13#10 +
-    'Cancel: close setup.',
-    mbConfirmation,
-    MB_YESNOCANCEL
-  );
+  Choice := ShowExistingInstallChoice();
 
-  if Choice = IDYES then exit;
-  if Choice = IDNO then begin
+  if Choice = mrOk then exit;
+  if Choice = mrAbort then begin
     if SplitCommandLine(UninstallString, FileName, Params) then begin
       Exec(FileName, Params + ' /SILENT /NORESTART', '', SW_SHOW, ewWaitUntilTerminated, ResultCode);
     end;
