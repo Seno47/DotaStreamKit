@@ -16,7 +16,9 @@ let roshanIntelEl = null;
 let streamerStatsNodes = null;
 let predictionOverlayNodes = null;
 let predictionOverlayAnimation = null;
+let predictionOverlayFinalSync = null;
 let lastOverlaySnapshot = null;
+const predictionOverlayFinalHoldMs = 4000;
 
 const stream = new EventSource('/api/events');
 stream.onmessage = (event) => {
@@ -614,7 +616,16 @@ function roshanText(status) {
 function applyPredictionOverlay(reference, predictionsConfig, overlaySettings, state) {
   if (!predictionOverlayEl) return;
   const prediction = state.activePrediction;
-  if (!shouldShowPredictionOverlay(prediction)) {
+  if (!prediction?.id) {
+    maybeRefreshPredictionOverlayAtClose(prediction, 0);
+    resetPredictionOverlayAnimation();
+    setVisible(predictionOverlayEl, false);
+    return;
+  }
+
+  const remainingSeconds = predictionRemainingSeconds(prediction, predictionsConfig);
+  maybeRefreshPredictionOverlayAtClose(prediction, remainingSeconds);
+  if (!shouldShowPredictionOverlay(prediction, remainingSeconds)) {
     resetPredictionOverlayAnimation();
     setVisible(predictionOverlayEl, false);
     return;
@@ -632,7 +643,7 @@ function applyPredictionOverlay(reference, predictionsConfig, overlaySettings, s
   const layoutPercentages = outcomeLayoutPercentages(outcomes, totalPoints);
   const displayPercentages = outcomeDisplayPercentages(outcomes, totalPoints);
   setTextContent(nodes.title, prediction.title || '');
-  setTextContent(nodes.timer, formatClock(predictionRemainingSeconds(prediction, predictionsConfig)));
+  setTextContent(nodes.timer, formatClock(remainingSeconds));
 
   outcomes.forEach((outcome, index) => {
     const colorClass = outcome.kind === 'no' || /pink|no/i.test(String(outcome.color || '')) ? 'no' : 'yes';
@@ -652,8 +663,57 @@ function applyPredictionOverlay(reference, predictionsConfig, overlaySettings, s
   setVisible(predictionOverlayEl, true);
 }
 
-function shouldShowPredictionOverlay(prediction) {
-  return Boolean(prediction?.id) && String(prediction.status || '').toUpperCase() === 'ACTIVE';
+function shouldShowPredictionOverlay(prediction, remainingSeconds) {
+  if (!prediction?.id) return false;
+  const status = String(prediction.status || '').toUpperCase();
+  if (status === 'ACTIVE') return remainingSeconds > 0 || isPredictionOverlayFinalHoldActive(prediction.id);
+  if (status === 'LOCKED') return isPredictionOverlayFinalHoldActive(prediction.id);
+  return false;
+}
+
+function maybeRefreshPredictionOverlayAtClose(prediction, remainingSeconds) {
+  if (!prediction?.id) {
+    predictionOverlayFinalSync = null;
+    return;
+  }
+
+  const predictionId = String(prediction.id);
+  if (predictionOverlayFinalSync?.predictionId !== predictionId) {
+    predictionOverlayFinalSync = {
+      predictionId,
+      requested: false,
+      holdUntil: 0
+    };
+  }
+
+  if (remainingSeconds > 0 || predictionOverlayFinalSync.requested) return;
+
+  predictionOverlayFinalSync.requested = true;
+  predictionOverlayFinalSync.holdUntil = Math.max(
+    predictionOverlayFinalSync.holdUntil,
+    Date.now() + predictionOverlayFinalHoldMs
+  );
+
+  fetch('/api/twitch/predictions/active/refresh', { method: 'POST' })
+    .then((response) => response.ok ? response.json() : null)
+    .then((snapshot) => {
+      if (predictionOverlayFinalSync?.predictionId !== predictionId) return;
+      predictionOverlayFinalSync.holdUntil = Date.now() + predictionOverlayFinalHoldMs;
+      if (snapshot?.config && snapshot?.state) {
+        lastOverlaySnapshot = snapshot;
+        renderOverlay(snapshot);
+      }
+    })
+    .catch(() => {
+      if (predictionOverlayFinalSync?.predictionId === predictionId) {
+        predictionOverlayFinalSync.holdUntil = Date.now() + predictionOverlayFinalHoldMs;
+      }
+    });
+}
+
+function isPredictionOverlayFinalHoldActive(predictionId) {
+  return predictionOverlayFinalSync?.predictionId === String(predictionId || '')
+    && Date.now() < Number(predictionOverlayFinalSync.holdUntil || 0);
 }
 
 function predictionOverlayOutcomes(prediction) {

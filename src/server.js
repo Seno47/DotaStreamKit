@@ -608,6 +608,7 @@ const server = createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/api/twitch/resolve-channel') return await resolveTwitchChannelApi(req, res);
     if (req.method === 'POST' && url.pathname === '/api/twitch/chat') return await sendChatMessage(req, res);
     if (req.method === 'POST' && url.pathname === '/api/twitch/predictions') return await createPrediction(req, res);
+    if (req.method === 'POST' && url.pathname === '/api/twitch/predictions/active/refresh') return await refreshActivePredictionApi(res);
     if (req.method === 'GET' && url.pathname === '/api/twitch/predictions') return await getPredictions(res);
 
     const predictionAction = url.pathname.match(/^\/api\/twitch\/predictions\/([^/]+)\/(lock|cancel|resolve)$/);
@@ -4254,6 +4255,14 @@ async function getPredictions(res) {
   if (!broadcaster) throw new Error('Twitch is not authenticated');
   const result = await twitchRequest(`/predictions?broadcaster_id=${encodeURIComponent(broadcaster)}`);
   sendJson(res, result);
+}
+
+async function refreshActivePredictionApi(res) {
+  const active = runtime.state.activePrediction;
+  if (active?.id && ['ACTIVE', 'LOCKED'].includes(active.status)) {
+    await syncOwnedActivePredictionFromTwitch({ force: true });
+  }
+  sendJson(res, publicState());
 }
 
 async function endPrediction(req, res, id, action) {
