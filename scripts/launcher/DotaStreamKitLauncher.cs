@@ -25,6 +25,7 @@ internal static class DotaStreamKitLauncher
 internal sealed class LauncherForm : Form
 {
     private const string LocalUrl = "http://localhost:37273";
+    private const string HealthUrl = "http://127.0.0.1:37273/api/state";
     private const int UpdateExitCode = 47;
 
     private readonly Label statusLabel;
@@ -178,26 +179,44 @@ internal sealed class LauncherForm : Form
         {
             if (WaitForDashboard(15000))
             {
-                BeginInvoke((Action)delegate
-                {
-                    statusLabel.Text = "Running. Keep this window open while streaming.";
-                    dashboardButton.Enabled = true;
-                    overlayButton.Enabled = true;
-                });
-                if (Environment.GetEnvironmentVariable("DOTASTREAMKIT_NO_BROWSER") != "1") OpenBrowser(LocalUrl);
+                MarkDashboardReady(true);
             }
             else
             {
                 BeginInvoke((Action)delegate
                 {
-                    statusLabel.Text = "Dashboard did not respond yet. You can keep waiting or restart.";
+                    statusLabel.Text = "Still starting. Dashboard will open when the local server responds.";
                     dashboardButton.Enabled = true;
                     overlayButton.Enabled = true;
                 });
+                WaitForDashboardContinuously();
             }
         }));
         waitThread.IsBackground = true;
         waitThread.Start();
+    }
+
+    private void MarkDashboardReady(bool openDashboard)
+    {
+        BeginInvoke((Action)delegate
+        {
+            statusLabel.Text = "Running. Keep this window open while streaming.";
+            dashboardButton.Enabled = true;
+            overlayButton.Enabled = true;
+        });
+        if (openDashboard && Environment.GetEnvironmentVariable("DOTASTREAMKIT_NO_BROWSER") != "1") OpenBrowser(LocalUrl);
+    }
+
+    private void WaitForDashboardContinuously()
+    {
+        while (!stopping && server != null && !server.HasExited)
+        {
+            if (WaitForDashboard(5000))
+            {
+                MarkDashboardReady(true);
+                return;
+            }
+        }
     }
 
     private static string ResolveDataDir(string installRoot)
@@ -271,9 +290,11 @@ internal sealed class LauncherForm : Form
         {
             try
             {
-                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(LocalUrl + "/api/state");
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(HealthUrl);
                 request.Method = "GET";
                 request.Timeout = 1000;
+                request.Proxy = null;
+                request.KeepAlive = false;
                 using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
                 {
                     if ((int)response.StatusCode >= 200 && (int)response.StatusCode < 500) return true;
