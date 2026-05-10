@@ -82,6 +82,7 @@ const playerRankCacheTtlMs = 12 * 60 * 60 * 1000;
 const playerRankFailureTtlMs = 15 * 60 * 1000;
 const inGameStatePattern = /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS|POST_GAME/i;
 const queueSearchPattern = /queue|search|matchmaking|match_making|find.?match|finding.?match|game.?search|party.?search/i;
+const heroDemoPattern = /hero.?demo|demo.?hero/i;
 const dotaProcessName = 'dota2.exe';
 const customPredictionConditions = ['game_duration_at_least', 'metric_reaches_target', 'metric_by_minute'];
 const customPredictionMetrics = [
@@ -462,7 +463,8 @@ const runtime = {
       draftCycle: 0,
       queueSearchSignal: false,
       inGameScreen: false,
-      leftGameView: false
+      leftGameView: false,
+      heroDemoMode: false
     },
     matchIntel: {
       matchId: null,
@@ -557,7 +559,8 @@ runtime.state.gsi = {
   draftCycle: 0,
   queueSearchSignal: false,
   inGameScreen: false,
-  leftGameView: false
+  leftGameView: false,
+  heroDemoMode: false
 };
 runtime.state.dota = {
   processRunning: null,
@@ -671,6 +674,7 @@ async function refreshRuntimePresence() {
     runtime.state.gsi.ownPickPhaseSource = null;
     runtime.state.gsi.inGameScreen = false;
     runtime.state.gsi.leftGameView = false;
+    runtime.state.gsi.heroDemoMode = false;
   }
   const protection = computeProtection(runtime.config, runtime.state.gsi);
   const protectionChanged = !sameProtection(runtime.state.protection, protection);
@@ -2128,6 +2132,7 @@ async function handleGsi(req, res) {
   const inGameScreen = inferInGameScreen(gameState, playerActivity);
   const matchTeams = inferMatchTeams(payload, matchPlayers);
   const rosterDebug = buildRosterDebug(payload);
+  const heroDemoMode = inferHeroDemoMode(payload);
   const leftGameView = inferLeftGameView({
     connected: true,
     activeMatchId,
@@ -2171,6 +2176,7 @@ async function handleGsi(req, res) {
     queueSearchSignal,
     inGameScreen,
     leftGameView,
+    heroDemoMode,
     rosterDebug
   };
 
@@ -2592,6 +2598,27 @@ function objectHasQueueSearchSignal(value, depth) {
   if (typeof value !== 'object') return queueSearchPattern.test(String(value));
   if (Array.isArray(value)) return value.some((item) => objectHasQueueSearchSignal(item, depth + 1));
   return Object.entries(value).some(([key, item]) => queueSearchPattern.test(key) || objectHasQueueSearchSignal(item, depth + 1));
+}
+
+function inferHeroDemoMode(payload) {
+  const map = payload?.map || {};
+  const candidates = [
+    map.name,
+    map.map_name,
+    map.mapName,
+    map.customgamename,
+    map.custom_game_name,
+    map.customGameName,
+    map.game_mode,
+    map.gameMode,
+    payload?.provider?.map,
+    payload?.provider?.map_name,
+    payload?.provider?.mapName,
+    payload?.provider?.customgamename,
+    payload?.provider?.custom_game_name,
+    payload?.provider?.customGameName
+  ];
+  return candidates.some((value) => heroDemoPattern.test(String(value || '')));
 }
 
 function inferGsiLifecycle(previous, gameState, matchId) {
@@ -3159,6 +3186,7 @@ function shouldAutoCreatePredictionAfterPick(previous, gsi) {
 }
 
 function shouldAutoCreatePrediction(previous, gsi, profile) {
+  if (gsi.heroDemoMode) return false;
   if (profile === 'spectator') return shouldAutoCreateSpectatorPrediction(gsi);
   return shouldAutoCreatePredictionAfterPick(previous, gsi);
 }
@@ -4051,6 +4079,9 @@ async function createPrediction(req, res) {
 async function createPredictionFromSettings(overrides = {}, options = {}) {
   const profile = options.profile || (overrides.profile === 'spectator' ? 'spectator' : predictionProfileForGsi(runtime.state.gsi));
   const settings = predictionSettingsForProfile(profile);
+  if (runtime.state.gsi?.heroDemoMode) {
+    throw new Error('Predictions are disabled in Demo Hero mode');
+  }
   await syncOwnedActivePredictionFromTwitch({ force: true });
   if (runtime.state.activePrediction && ['ACTIVE', 'LOCKED'].includes(runtime.state.activePrediction.status)) {
     throw new Error('A prediction is already active or locked');
