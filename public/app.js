@@ -166,13 +166,21 @@ const els = {
   streamerAccountId: document.querySelector('#streamerAccountId'),
   streamerAccountLabelWrap: document.querySelector('#streamerAccountLabelWrap'),
   streamerAccountLabel: document.querySelector('#streamerAccountLabel'),
+  streamerAccountMmrWrap: document.querySelector('#streamerAccountMmrWrap'),
+  streamerAccountMmr: document.querySelector('#streamerAccountMmr'),
   addStreamerAccount: document.querySelector('#addStreamerAccount'),
   cancelStreamerAccountEdit: document.querySelector('#cancelStreamerAccountEdit'),
   streamerAccountListCurrent: document.querySelector('#streamerAccountListCurrent'),
   streamerAccountListId: document.querySelector('#streamerAccountListId'),
   streamerAccountListLabel: document.querySelector('#streamerAccountListLabel'),
+  streamerAccountListMmr: document.querySelector('#streamerAccountListMmr'),
+  streamerAccountListSession: document.querySelector('#streamerAccountListSession'),
   streamerAccountListActions: document.querySelector('#streamerAccountListActions'),
   streamerAccountRows: document.querySelector('#streamerAccountRows'),
+  streamerMmrAutomationWrap: document.querySelector('#streamerMmrAutomationWrap'),
+  streamerMmrAutomationTitle: document.querySelector('#streamerMmrAutomationTitle'),
+  streamerMmrAutomationSectionSummary: document.querySelector('#streamerMmrAutomationSectionSummary'),
+  streamerMmrAutomationHint: document.querySelector('#streamerMmrAutomationHint'),
   overlayPositionWrap: document.querySelector('#overlayPositionWrap'),
   overlayPositionTitle: document.querySelector('#overlayPositionTitle'),
   overlayPositionHint: document.querySelector('#overlayPositionHint'),
@@ -488,15 +496,21 @@ const translations = {
     autoBindStreamerAccounts: 'Автоматически добавлять текущий аккаунт',
     streamerAccountId: 'Dota ID',
     streamerAccountLabel: 'Название',
+    streamerAccountMmr: 'MMR',
     addStreamerAccount: 'Добавить',
     saveStreamerAccount: 'Сохранить',
     cancelStreamerAccountEdit: 'Отмена',
     editStreamerAccount: 'Редактировать',
     removeStreamerAccount: 'Удалить',
     streamerAccountListCurrent: 'Сейчас',
+    streamerAccountListMmr: 'MMR',
+    streamerAccountListSession: 'W-L за стрим',
     streamerAccountListActions: 'Действия',
     streamerAccountCurrentBadge: 'активен',
     noStreamerAccounts: 'Привязанных аккаунтов пока нет.',
+    streamerMmrAutomation: 'Автоподсчёт MMR',
+    streamerMmrAutomationSectionSummary: 'Изменения MMR по аккаунтам',
+    streamerMmrAutomationHint: 'Если включено, после засчитанного матча обновляется MMR именно текущего Dota аккаунта.',
     showStreamerStats: 'Статистика стримера в overlay',
     showStreamerRankMedal: 'Медаль ранга',
     showStreamerMmr: 'MMR',
@@ -821,15 +835,21 @@ const translations = {
     autoBindStreamerAccounts: 'Automatically add current account',
     streamerAccountId: 'Dota ID',
     streamerAccountLabel: 'Label',
+    streamerAccountMmr: 'MMR',
     addStreamerAccount: 'Add',
     saveStreamerAccount: 'Save',
     cancelStreamerAccountEdit: 'Cancel',
     editStreamerAccount: 'Edit',
     removeStreamerAccount: 'Remove',
     streamerAccountListCurrent: 'Current',
+    streamerAccountListMmr: 'MMR',
+    streamerAccountListSession: 'Stream W-L',
     streamerAccountListActions: 'Actions',
     streamerAccountCurrentBadge: 'active',
     noStreamerAccounts: 'No bound accounts yet.',
+    streamerMmrAutomation: 'MMR automation',
+    streamerMmrAutomationSectionSummary: 'Per-account MMR changes',
+    streamerMmrAutomationHint: 'When enabled, the current Dota account MMR is updated after each scored match.',
     showStreamerStats: 'Streamer stats overlay',
     showStreamerRankMedal: 'Rank medal',
     showStreamerMmr: 'MMR',
@@ -1283,12 +1303,18 @@ function applyLanguage(config) {
   setLabelText(els.autoBindStreamerAccounts.closest('label'), t('autoBindStreamerAccounts'));
   setLabelText(els.streamerAccountIdWrap, t('streamerAccountId'));
   setLabelText(els.streamerAccountLabelWrap, t('streamerAccountLabel'));
+  setLabelText(els.streamerAccountMmrWrap, t('streamerAccountMmr'));
   els.addStreamerAccount.textContent = editingStreamerAccountId ? t('saveStreamerAccount') : t('addStreamerAccount');
   els.cancelStreamerAccountEdit.textContent = t('cancelStreamerAccountEdit');
   els.streamerAccountListCurrent.textContent = t('streamerAccountListCurrent');
   els.streamerAccountListId.textContent = t('streamerAccountId');
   els.streamerAccountListLabel.textContent = t('streamerAccountLabel');
+  els.streamerAccountListMmr.textContent = t('streamerAccountListMmr');
+  els.streamerAccountListSession.textContent = t('streamerAccountListSession');
   els.streamerAccountListActions.textContent = t('streamerAccountListActions');
+  els.streamerMmrAutomationTitle.textContent = t('streamerMmrAutomation');
+  els.streamerMmrAutomationSectionSummary.textContent = t('streamerMmrAutomationSectionSummary');
+  els.streamerMmrAutomationHint.textContent = t('streamerMmrAutomationHint');
   els.overlayPositionTitle.textContent = t('overlayPositionTitle');
   els.overlayPositionHint.textContent = t('overlayPositionHint');
   setLabelText(els.overlayPositionTargetWrap, t('overlayPositionTarget'));
@@ -1661,7 +1687,7 @@ function render(data) {
   els.showStreamerMmr.checked = matchIntel.showStreamerMmr !== false;
   els.showStreamerWinLoss.checked = matchIntel.showStreamerWinLoss !== false;
   els.streamerMedalSource.value = matchIntel.streamerMedalSource || 'auto';
-  setInputValue(els.streamerMmr, matchIntel.streamerMmr || 0);
+  setInputValue(els.streamerMmr, state.streamerStats?.currentMmr ?? matchIntel.streamerMmr ?? 0);
   els.autoUpdateStreamerMmr.checked = matchIntel.autoUpdateStreamerMmr !== false;
   els.autoBindStreamerAccounts.checked = matchIntel.autoBindStreamerAccounts !== false;
   setInputValue(els.streamerMmrWinDelta, matchIntel.streamerMmrWinDelta ?? 25);
@@ -2367,8 +2393,9 @@ function renderStreamerStatsPreview(stats, settings) {
   const mmr = Number(stats.currentMmr || settings.streamerMmr || 0);
   const medalId = medal?.id ?? 0;
   const stars = Number(medal?.stars || 0);
-  els.streamerStatWins.textContent = String(stats.wins || 0);
-  els.streamerStatLosses.textContent = String(stats.losses || 0);
+  const accountSession = accountId ? stats.accountSessions?.[accountId] : null;
+  els.streamerStatWins.textContent = String(accountSession?.wins ?? stats.wins ?? 0);
+  els.streamerStatLosses.textContent = String(accountSession?.losses ?? stats.losses ?? 0);
   els.streamerCurrentAccount.textContent = accountId || '-';
   els.streamerMedalName.textContent = medal?.name || t('streamerMedalNoData');
   const details = [];
@@ -2397,14 +2424,17 @@ function renderStreamerStatsPreview(stats, settings) {
 function renderStreamerAccounts(accounts, stats) {
   els.streamerAccountRows.innerHTML = '';
   const currentAccountId = String(stats.streamerAccountId || '').trim();
+  const sessions = stats.accountSessions || {};
   let rowCount = 0;
   for (const account of Array.isArray(accounts) ? accounts : []) {
     const accountId = String(account.accountId || '').trim();
     if (!accountId) continue;
+    const session = sessions[accountId] || {};
     const row = document.createElement('div');
     row.className = 'streamer-account-row';
     row.dataset.accountId = accountId;
     row.dataset.label = String(account.label || '').trim();
+    row.dataset.mmr = Number.isFinite(Number(account.mmr)) ? String(Math.trunc(Number(account.mmr))) : '0';
     row.dataset.current = accountId === currentAccountId ? 'true' : 'false';
 
     const current = document.createElement('span');
@@ -2416,6 +2446,12 @@ function renderStreamerAccounts(accounts, stats) {
     const label = document.createElement('span');
     label.className = 'streamer-account-label';
     label.textContent = row.dataset.label || '-';
+    const mmr = document.createElement('span');
+    mmr.className = 'streamer-account-mmr';
+    mmr.textContent = Number(row.dataset.mmr) > 0 ? row.dataset.mmr : '-';
+    const wl = document.createElement('span');
+    wl.className = 'streamer-account-session';
+    wl.textContent = `${session.wins || 0}-${session.losses || 0}`;
     const actions = document.createElement('div');
     actions.className = 'streamer-account-actions';
     const edit = document.createElement('button');
@@ -2428,7 +2464,7 @@ function renderStreamerAccounts(accounts, stats) {
     remove.textContent = t('removeStreamerAccount');
     actions.append(edit, remove);
 
-    row.append(current, id, label, actions);
+    row.append(current, id, label, mmr, wl, actions);
     els.streamerAccountRows.append(row);
     rowCount += 1;
   }
@@ -2441,10 +2477,13 @@ function renderStreamerAccounts(accounts, stats) {
 }
 
 function streamerAccountsFromForm() {
+  const currentAccountId = String(snapshot?.state?.streamerStats?.streamerAccountId || '').trim();
+  const currentMmr = Math.max(0, Math.trunc(Number(els.streamerMmr.value) || 0));
   return [...els.streamerAccountRows.querySelectorAll('.streamer-account-row')]
     .map((row) => ({
       accountId: Number(row.dataset.accountId),
-      label: row.dataset.label || ''
+      label: row.dataset.label || '',
+      mmr: String(row.dataset.accountId) === currentAccountId ? currentMmr : Number(row.dataset.mmr || 0)
     }))
     .filter((account) => Number.isFinite(account.accountId) && account.accountId > 0);
 }
@@ -2452,6 +2491,7 @@ function streamerAccountsFromForm() {
 function addStreamerAccount() {
   const accountId = normalizeDotaAccountIdInput(els.streamerAccountId.value);
   const label = els.streamerAccountLabel.value.trim();
+  const mmr = Math.max(0, Math.trunc(Number(els.streamerAccountMmr.value) || 0));
   if (!accountId) {
     alert(t('streamerAccountId'));
     return;
@@ -2459,7 +2499,10 @@ function addStreamerAccount() {
   const previousAccountId = editingStreamerAccountId || accountId;
   const accounts = streamerAccountsFromForm()
     .filter((account) => String(account.accountId) !== previousAccountId && String(account.accountId) !== accountId);
-  accounts.push({ accountId: Number(accountId), label });
+  accounts.push({ accountId: Number(accountId), label, mmr });
+  if (String(snapshot?.state?.streamerStats?.streamerAccountId || '') === accountId) {
+    els.streamerMmr.value = String(mmr);
+  }
   renderStreamerAccounts(accounts, snapshot?.state?.streamerStats || {});
   resetStreamerAccountEditor();
   saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
@@ -2470,6 +2513,7 @@ function editStreamerAccount(row) {
   editingStreamerAccountId = row.dataset.accountId || '';
   els.streamerAccountId.value = editingStreamerAccountId;
   els.streamerAccountLabel.value = row.dataset.label || '';
+  els.streamerAccountMmr.value = row.dataset.mmr || '0';
   updateStreamerAccountEditorMode();
   els.streamerAccountId.focus();
 }
@@ -2478,6 +2522,7 @@ function resetStreamerAccountEditor() {
   editingStreamerAccountId = '';
   els.streamerAccountId.value = '';
   els.streamerAccountLabel.value = '';
+  els.streamerAccountMmr.value = '';
   updateStreamerAccountEditorMode();
 }
 
@@ -2902,10 +2947,10 @@ function updateMatchIntelFieldVisibility() {
   els.showStreamerMmr.closest('label').hidden = !streamerStatsEnabled;
   els.showStreamerWinLoss.closest('label').hidden = !streamerStatsEnabled;
   els.streamerMedalSourceWrap.hidden = !streamerStatsEnabled || !els.showStreamerRankMedal.checked;
-  els.streamerMmrWrap.hidden = !streamerStatsEnabled || (!els.showStreamerMmr.checked && els.streamerMedalSource.value === 'account');
-  els.autoUpdateStreamerMmr.closest('label').hidden = !streamerStatsEnabled;
-  els.streamerMmrWinDeltaWrap.hidden = !streamerStatsEnabled || !els.autoUpdateStreamerMmr.checked;
-  els.streamerMmrLossDeltaWrap.hidden = !streamerStatsEnabled || !els.autoUpdateStreamerMmr.checked;
+  els.streamerMmrWrap.hidden = false;
+  els.autoUpdateStreamerMmr.closest('label').hidden = false;
+  els.streamerMmrWinDeltaWrap.hidden = !els.autoUpdateStreamerMmr.checked;
+  els.streamerMmrLossDeltaWrap.hidden = !els.autoUpdateStreamerMmr.checked;
   els.streamerStatsStatus.hidden = !streamerStatsEnabled;
   els.resetStreamerStats.hidden = !streamerStatsEnabled;
   els.restoreStreamerStats.hidden = !streamerStatsEnabled;

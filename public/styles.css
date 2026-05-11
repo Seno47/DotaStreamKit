@@ -691,6 +691,10 @@ dd {
   min-width: 0;
 }
 
+.streamer-medal-copy label {
+  margin-top: 4px;
+}
+
 .streamer-medal-copy span,
 .streamer-stat-kpi span {
   color: #8b96a8;
@@ -1090,10 +1094,11 @@ dd {
 }
 
 .streamer-account-form {
-  grid-template-columns: minmax(130px, 1fr) minmax(180px, 1.5fr) auto auto;
+  grid-template-columns: minmax(130px, 1fr) minmax(160px, 1.3fr) minmax(100px, 0.8fr) auto auto;
 }
 
-.streamer-stats-grid {
+.streamer-stats-grid,
+.streamer-mmr-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(150px, 1fr));
   gap: 10px;
@@ -1118,7 +1123,7 @@ dd {
 .streamer-account-list-head,
 .streamer-account-row {
   display: grid;
-  grid-template-columns: minmax(110px, 1fr) minmax(140px, 1.4fr) minmax(92px, 0.8fr) minmax(150px, auto);
+  grid-template-columns: minmax(82px, 0.8fr) minmax(110px, 1fr) minmax(140px, 1.2fr) minmax(72px, 0.7fr) minmax(80px, 0.7fr) minmax(150px, auto);
   gap: 10px;
   align-items: center;
 }
@@ -1174,7 +1179,9 @@ dd {
 .notable-player-id,
 .notable-player-country,
 .streamer-account-current,
-.streamer-account-id {
+.streamer-account-id,
+.streamer-account-mmr,
+.streamer-account-session {
   color: #9aa5b5;
   font-size: 13px;
 }
@@ -1429,6 +1436,7 @@ code {
   .streamer-stat-hero,
   .streamer-stat-now,
   .streamer-stats-grid,
+  .streamer-mmr-grid,
   .notable-player-form,
   .streamer-account-form,
   .notable-player-list-head,

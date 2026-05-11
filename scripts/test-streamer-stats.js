@@ -41,8 +41,8 @@ const normalizedAccountsConfig = {
 };
 normalizeStreamerStatsConfig(normalizedAccountsConfig);
 assert.deepEqual(normalizedAccountsConfig.streamerAccounts, [
-  { accountId: 123, label: 'Duplicate', boundAt: null },
-  { accountId: 456, label: 'Smurf', boundAt: null }
+  { accountId: 123, label: 'Duplicate', mmr: 0, boundAt: null },
+  { accountId: 456, label: 'Smurf', mmr: 0, boundAt: null }
 ]);
 
 const config = {
@@ -82,6 +82,26 @@ assert.equal(applied.config.streamerMmr, 0);
 assert.equal(applied.state.lastMmrChange, 0);
 assert.equal(applied.configChanged, false);
 
+applied = applyStreamerMatchResult(
+  { streamerAccountId: 456 },
+  {
+    ...config,
+    streamerMmr: 5000,
+    streamerAccounts: [
+      { accountId: 123, label: 'Main', mmr: 4000 },
+      { accountId: 456, label: 'Second', mmr: 6000 }
+    ]
+  },
+  'lose',
+  '128',
+  new Date('2026-05-01T11:00:00Z')
+);
+assert.equal(applied.config.streamerMmr, 5000);
+assert.equal(applied.config.streamerAccounts[1].mmr, 5975);
+assert.equal(applied.state.accountSessions['456'].wins, 0);
+assert.equal(applied.state.accountSessions['456'].losses, 1);
+assert.equal(applied.state.lastMmrChange, -25);
+
 let session = updateStreamerSessionPresence(
   { wins: 2, losses: 1, sessionStartedAt: '2026-05-01T08:00:00Z' },
   false,
@@ -93,6 +113,7 @@ assert.ok(session.state.offlineSince);
 session = updateStreamerSessionPresence(session.state, false, new Date('2026-05-01T11:01:00Z'));
 assert.equal(session.state.wins, 0);
 assert.equal(session.state.losses, 0);
+assert.deepEqual(session.state.accountSessions, {});
 assert.equal(session.state.previousSession.wins, 2);
 
 const restored = restorePreviousStreamerSession(session.state, new Date('2026-05-01T11:02:00Z'));

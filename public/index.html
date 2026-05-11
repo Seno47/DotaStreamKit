@@ -251,6 +251,30 @@
         <article class="panel wide" data-page="streamerStats">
           <h2>Streamer stats</h2>
           <div class="streamer-stats-page">
+            <details class="intel-section streamer-account-settings" id="streamerAccountsWrap" data-collapsible-section="streamerAccounts" open>
+              <summary><span id="streamerAccountsTitle">Dota accounts</span><span id="streamerAccountsSectionSummary">Auto and manual binding</span></summary>
+              <div class="intel-section-body">
+                <p class="muted" id="streamerAccountsHint">DotaStreamKit always tracks the account sent by GSI and can remember accounts automatically.</p>
+                <label class="check"><input type="checkbox" id="autoBindStreamerAccounts"> Auto-bind current account</label>
+                <div class="streamer-account-form">
+                  <label id="streamerAccountIdWrap">Dota ID<input id="streamerAccountId" inputmode="numeric" maxlength="20"></label>
+                  <label id="streamerAccountLabelWrap">Label<input id="streamerAccountLabel" maxlength="40"></label>
+                  <label id="streamerAccountMmrWrap">MMR<input id="streamerAccountMmr" type="number" min="0" max="99999" step="1"></label>
+                  <button id="addStreamerAccount" type="button">Add</button>
+                  <button id="cancelStreamerAccountEdit" type="button" hidden>Cancel</button>
+                </div>
+                <div class="streamer-account-list-head">
+                  <span id="streamerAccountListCurrent">Current</span>
+                  <span id="streamerAccountListId">Dota ID</span>
+                  <span id="streamerAccountListLabel">Label</span>
+                  <span id="streamerAccountListMmr">MMR</span>
+                  <span id="streamerAccountListSession">Stream W-L</span>
+                  <span id="streamerAccountListActions">Actions</span>
+                </div>
+                <div class="streamer-account-rows" id="streamerAccountRows"></div>
+              </div>
+            </details>
+
             <section class="streamer-stat-hero">
               <div class="streamer-medal-card" id="streamerMedalCard">
                 <div class="streamer-medal-art" id="streamerMedalArt">
@@ -261,6 +285,7 @@
                   <span id="streamerMedalEyebrow">Current medal</span>
                   <strong id="streamerMedalName">-</strong>
                   <small id="streamerMedalDetails">-</small>
+                  <label id="streamerMmrWrap">Current MMR<input id="streamerMmr" type="number" min="0" max="99999" step="1"></label>
                 </div>
               </div>
               <div class="streamer-stat-now">
@@ -289,10 +314,6 @@
                   <label class="check"><input type="checkbox" id="showStreamerMmr"> MMR</label>
                   <label class="check"><input type="checkbox" id="showStreamerWinLoss"> Win-Lose</label>
                   <label id="streamerMedalSourceWrap">Medal source<select id="streamerMedalSource"><option value="auto">Account, then MMR</option><option value="account">Dota account</option><option value="mmr">Manual MMR</option></select></label>
-                  <label id="streamerMmrWrap">Current MMR<input id="streamerMmr" type="number" min="0" max="99999" step="1"></label>
-                  <label class="check"><input type="checkbox" id="autoUpdateStreamerMmr"> Auto update MMR</label>
-                  <label id="streamerMmrWinDeltaWrap">Win MMR<input id="streamerMmrWinDelta" type="number" min="0" max="200" step="1"></label>
-                  <label id="streamerMmrLossDeltaWrap">Loss MMR<input id="streamerMmrLossDelta" type="number" min="0" max="200" step="1"></label>
                 </div>
                 <div class="streamer-stats-status" id="streamerStatsStatus">-</div>
                 <div class="button-row streamer-stats-actions">
@@ -302,24 +323,15 @@
               </div>
             </details>
 
-            <details class="intel-section streamer-account-settings" id="streamerAccountsWrap" data-collapsible-section="streamerAccounts" open>
-              <summary><span id="streamerAccountsTitle">Dota accounts</span><span id="streamerAccountsSectionSummary">Auto and manual binding</span></summary>
+            <details class="intel-section streamer-mmr-settings" id="streamerMmrAutomationWrap" data-collapsible-section="streamerMmrAutomation" open>
+              <summary><span id="streamerMmrAutomationTitle">MMR automation</span><span id="streamerMmrAutomationSectionSummary">Per-account MMR changes</span></summary>
               <div class="intel-section-body">
-                <p class="muted" id="streamerAccountsHint">DotaStreamKit always tracks the account sent by GSI and can remember accounts automatically.</p>
-                <label class="check"><input type="checkbox" id="autoBindStreamerAccounts"> Auto-bind current account</label>
-                <div class="streamer-account-form">
-                  <label id="streamerAccountIdWrap">Dota ID<input id="streamerAccountId" inputmode="numeric" maxlength="20"></label>
-                  <label id="streamerAccountLabelWrap">Label<input id="streamerAccountLabel" maxlength="40"></label>
-                  <button id="addStreamerAccount" type="button">Add</button>
-                  <button id="cancelStreamerAccountEdit" type="button" hidden>Cancel</button>
+                <p class="muted" id="streamerMmrAutomationHint">When enabled, the current account MMR is updated after each scored match.</p>
+                <div class="streamer-mmr-grid">
+                  <label class="check"><input type="checkbox" id="autoUpdateStreamerMmr"> Auto update MMR</label>
+                  <label id="streamerMmrWinDeltaWrap">Win MMR<input id="streamerMmrWinDelta" type="number" min="0" max="200" step="1"></label>
+                  <label id="streamerMmrLossDeltaWrap">Loss MMR<input id="streamerMmrLossDelta" type="number" min="0" max="200" step="1"></label>
                 </div>
-                <div class="streamer-account-list-head">
-                  <span id="streamerAccountListCurrent">Current</span>
-                  <span id="streamerAccountListId">Dota ID</span>
-                  <span id="streamerAccountListLabel">Label</span>
-                  <span id="streamerAccountListActions">Actions</span>
-                </div>
-                <div class="streamer-account-rows" id="streamerAccountRows"></div>
               </div>
             </details>
           </div>

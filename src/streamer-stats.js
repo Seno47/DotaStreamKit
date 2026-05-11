@@ -25,7 +25,7 @@ export function normalizeStreamerStatsConfig(config) {
   config.streamerMmr = clampInt(config.streamerMmr, 0, 99999, 0);
   config.streamerMmrWinDelta = clampInt(config.streamerMmrWinDelta, 0, 200, 25);
   config.streamerMmrLossDelta = clampInt(config.streamerMmrLossDelta, 0, 200, 25);
-  config.streamerAccounts = normalizeStreamerAccounts(config.streamerAccounts);
+  config.streamerAccounts = normalizeStreamerAccounts(config.streamerAccounts, config.streamerMmr);
 }
 
 export function normalizeStreamerStatsState(value) {
@@ -43,6 +43,7 @@ export function normalizeStreamerStatsState(value) {
     accountRankTier: normalizePositiveInt(state.accountRankTier),
     accountLeaderboardRank: normalizePositiveInt(state.accountLeaderboardRank),
     accountRankCheckedAt: stringOrNull(state.accountRankCheckedAt),
+    accountSessions: normalizeAccountSessions(state.accountSessions),
     previousSession: normalizePreviousSession(state.previousSession)
   };
 }
@@ -80,7 +81,7 @@ export function applyStreamerMatchResult(state, config, result, matchId, now = n
   if (!config?.showStreamerStats || !['win', 'lose'].includes(result) || !matchId) {
     return { state, config, changed: false, configChanged: false };
   }
-  if (String(state.lastMatchId || '') === String(matchId)) {
+  if (String(state?.lastMatchId || '') === String(matchId)) {
     return { state, config, changed: false, configChanged: false };
   }
 
@@ -94,16 +95,39 @@ export function applyStreamerMatchResult(state, config, result, matchId, now = n
   nextState.lastMmrChange = 0;
   if (result === 'win') nextState.wins += 1;
   if (result === 'lose') nextState.losses += 1;
+  const streamerAccountId = normalizePositiveInt(nextState.streamerAccountId);
+  if (streamerAccountId) {
+    const accountKey = String(streamerAccountId);
+    const accountSession = normalizeAccountSession(nextState.accountSessions[accountKey]);
+    accountSession.accountId = streamerAccountId;
+    accountSession.sessionStartedAt ||= nextState.sessionStartedAt || iso;
+    accountSession.lastMatchId = String(matchId);
+    accountSession.lastResult = result;
+    accountSession.lastResultAt = iso;
+    if (result === 'win') accountSession.wins += 1;
+    if (result === 'lose') accountSession.losses += 1;
+    nextState.accountSessions[accountKey] = accountSession;
+  }
 
   let configChanged = false;
-  if (nextConfig.autoUpdateStreamerMmr !== false && Number(nextConfig.streamerMmr) > 0) {
-    const previousMmr = Math.trunc(Number(nextConfig.streamerMmr));
+  const activeMmrTarget = activeAccountMmrTarget(nextConfig, streamerAccountId);
+  if (nextConfig.autoUpdateStreamerMmr !== false && activeMmrTarget.mmr > 0) {
+    const previousMmr = activeMmrTarget.mmr;
     const delta = result === 'win'
       ? Math.max(0, Math.trunc(Number(nextConfig.streamerMmrWinDelta) || 25))
       : -Math.max(0, Math.trunc(Number(nextConfig.streamerMmrLossDelta) || 25));
-    nextConfig.streamerMmr = clampInt(previousMmr + delta, 1, 99999, 1);
-    nextState.lastMmrChange = nextConfig.streamerMmr - previousMmr;
-    configChanged = nextConfig.streamerMmr !== previousMmr;
+    const nextMmr = clampInt(previousMmr + delta, 1, 99999, 1);
+    if (activeMmrTarget.accountIndex >= 0) {
+      nextConfig.streamerAccounts = [...(nextConfig.streamerAccounts || [])];
+      nextConfig.streamerAccounts[activeMmrTarget.accountIndex] = {
+        ...nextConfig.streamerAccounts[activeMmrTarget.accountIndex],
+        mmr: nextMmr
+      };
+    } else {
+      nextConfig.streamerMmr = nextMmr;
+    }
+    nextState.lastMmrChange = nextMmr - previousMmr;
+    configChanged = nextMmr !== previousMmr;
   }
 
   return { state: nextState, config: nextConfig, changed: true, configChanged };
@@ -138,6 +162,7 @@ export function updateStreamerSessionPresence(state, effectiveOnline, now = new 
     next.previousSession = {
       wins: next.wins,
       losses: next.losses,
+      accountSessions: next.accountSessions,
       sessionStartedAt: next.sessionStartedAt,
       sessionEndedAt: next.offlineSince,
       archivedAt: iso,
@@ -147,6 +172,7 @@ export function updateStreamerSessionPresence(state, effectiveOnline, now = new 
   }
   next.wins = 0;
   next.losses = 0;
+  next.accountSessions = {};
   next.sessionStartedAt = null;
   next.offlineSince = iso;
   next.lastMatchId = null;
@@ -162,6 +188,7 @@ export function restorePreviousStreamerSession(state, now = new Date()) {
   const previous = next.previousSession;
   next.wins = previous.wins;
   next.losses = previous.losses;
+  next.accountSessions = normalizeAccountSessions(previous.accountSessions);
   next.sessionStartedAt = previous.sessionStartedAt || now.toISOString();
   next.lastMatchId = previous.lastMatchId || null;
   next.lastResult = previous.lastResult || null;
@@ -176,6 +203,7 @@ export function resetStreamerSession(state, now = new Date()) {
     next.previousSession = {
       wins: next.wins,
       losses: next.losses,
+      accountSessions: next.accountSessions,
       sessionStartedAt: next.sessionStartedAt,
       sessionEndedAt: now.toISOString(),
       archivedAt: now.toISOString(),
@@ -185,6 +213,7 @@ export function resetStreamerSession(state, now = new Date()) {
   }
   next.wins = 0;
   next.losses = 0;
+  next.accountSessions = {};
   next.sessionStartedAt = now.toISOString();
   next.offlineSince = null;
   next.lastMatchId = null;
@@ -199,6 +228,7 @@ function normalizePreviousSession(value) {
   return {
     wins: clampInt(value.wins, 0, 10000, 0),
     losses: clampInt(value.losses, 0, 10000, 0),
+    accountSessions: normalizeAccountSessions(value.accountSessions),
     sessionStartedAt: stringOrNull(value.sessionStartedAt),
     sessionEndedAt: stringOrNull(value.sessionEndedAt),
     archivedAt: stringOrNull(value.archivedAt),
@@ -217,7 +247,7 @@ function normalizePositiveInt(value) {
   return Number.isFinite(number) && number > 0 ? Math.trunc(number) : null;
 }
 
-function normalizeStreamerAccounts(value) {
+function normalizeStreamerAccounts(value, fallbackMmr = 0) {
   const rows = Array.isArray(value) ? value : [];
   const byAccountId = new Map();
   for (const row of rows) {
@@ -227,10 +257,55 @@ function normalizeStreamerAccounts(value) {
     byAccountId.set(String(accountId), {
       accountId,
       label: String(row.label || row.name || '').trim().slice(0, 40),
+      mmr: row.mmr === undefined || row.mmr === null || row.mmr === ''
+        ? clampInt(fallbackMmr, 0, 99999, 0)
+        : clampInt(row.mmr, 0, 99999, 0),
       boundAt: stringOrNull(row.boundAt)
     });
   }
   return [...byAccountId.values()].slice(0, 20);
+}
+
+function normalizeAccountSessions(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  const sessions = {};
+  for (const [key, row] of Object.entries(source)) {
+    const accountId = normalizePositiveInt(row?.accountId ?? key);
+    if (!accountId) continue;
+    const session = normalizeAccountSession({ ...row, accountId });
+    sessions[String(accountId)] = session;
+  }
+  return sessions;
+}
+
+function normalizeAccountSession(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  return {
+    accountId: normalizePositiveInt(source.accountId),
+    wins: clampInt(source.wins, 0, 10000, 0),
+    losses: clampInt(source.losses, 0, 10000, 0),
+    sessionStartedAt: stringOrNull(source.sessionStartedAt),
+    lastMatchId: stringOrNull(source.lastMatchId),
+    lastResult: ['win', 'lose'].includes(source.lastResult) ? source.lastResult : null,
+    lastResultAt: stringOrNull(source.lastResultAt)
+  };
+}
+
+function activeAccountMmrTarget(config, accountId) {
+  const accounts = Array.isArray(config.streamerAccounts) ? config.streamerAccounts : [];
+  const accountIndex = accountId
+    ? accounts.findIndex((account) => String(account?.accountId || '') === String(accountId))
+    : -1;
+  if (accountIndex >= 0) {
+    return {
+      accountIndex,
+      mmr: clampInt(accounts[accountIndex].mmr, 0, 99999, 0)
+    };
+  }
+  return {
+    accountIndex: -1,
+    mmr: clampInt(config.streamerMmr, 0, 99999, 0)
+  };
 }
 
 function stringOrNull(value) {

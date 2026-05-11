@@ -1486,7 +1486,7 @@ function publicState() {
 function publicStreamerStats() {
   const stats = normalizeStreamerStatsState(runtime.state.streamerStats);
   const settings = runtime.config.protection.matchIntel || {};
-  const configuredMmr = Number(settings.streamerMmr || 0);
+  const configuredMmr = streamerMmrForAccount(settings, stats.streamerAccountId);
   const medalMmr = settings.streamerMedalSource === 'account' && stats.accountRankTier
     ? null
     : Math.max(0, configuredMmr);
@@ -1511,6 +1511,15 @@ function publicStreamerStats() {
     } : null,
     effectiveStreamOnline: effectiveStreamerStreamOnline()
   };
+}
+
+function streamerMmrForAccount(settings, accountId) {
+  const account = Array.isArray(settings.streamerAccounts) && accountId
+    ? settings.streamerAccounts.find((item) => String(item?.accountId || '') === String(accountId))
+    : null;
+  const value = account ? account.mmr : settings.streamerMmr;
+  const number = Number(value || 0);
+  return Number.isFinite(number) && number > 0 ? Math.trunc(number) : 0;
 }
 
 function sanitizeConfig(config) {
@@ -2260,6 +2269,7 @@ function updateStreamerStatsIdentity(payload) {
         {
           accountId,
           label: streamerAccountLabelFromPayload(payload),
+          mmr: Number(settings.streamerMmr || 0) > 0 ? Math.trunc(Number(settings.streamerMmr || 0)) : 0,
           boundAt: new Date().toISOString()
         }
       ];
