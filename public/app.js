@@ -132,6 +132,17 @@ const els = {
   streamerGoalTitle: document.querySelector('#streamerGoalTitle'),
   streamerGoalSectionSummary: document.querySelector('#streamerGoalSectionSummary'),
   streamerGoalHint: document.querySelector('#streamerGoalHint'),
+  streamerGoalPreview: document.querySelector('#streamerGoalPreview'),
+  streamerGoalPreviewTitle: document.querySelector('#streamerGoalPreviewTitle'),
+  streamerGoalPreviewPercent: document.querySelector('#streamerGoalPreviewPercent'),
+  streamerGoalPreviewBar: document.querySelector('#streamerGoalPreviewBar'),
+  streamerGoalPreviewFill: document.querySelector('#streamerGoalPreviewFill'),
+  streamerGoalPreviewCurrent: document.querySelector('#streamerGoalPreviewCurrent'),
+  streamerGoalPreviewTarget: document.querySelector('#streamerGoalPreviewTarget'),
+  streamerGoalPreviewDelta: document.querySelector('#streamerGoalPreviewDelta'),
+  streamerGoalPreviewRecord: document.querySelector('#streamerGoalPreviewRecord'),
+  streamerGoalPreviewWinRate: document.querySelector('#streamerGoalPreviewWinRate'),
+  streamerGoalPreviewEta: document.querySelector('#streamerGoalPreviewEta'),
   streamerMedalCard: document.querySelector('#streamerMedalCard'),
   streamerMedalArt: document.querySelector('#streamerMedalArt'),
   streamerMedalImage: document.querySelector('#streamerMedalImage'),
@@ -556,6 +567,8 @@ const translations = {
     streamerGoal: 'Цель MMR',
     streamerGoalSectionSummary: 'Прогресс выбранного аккаунта',
     streamerGoalHint: 'Укажи цель для выбранного аккаунта настроек и выбери, что показывать в оверлее цели.',
+    streamerGoalPreviewTitle: 'MMR GOAL',
+    streamerGoalPreviewNoGoal: 'Цель не задана',
     showStreamerStats: 'Статистика стримера в overlay',
     showStreamerRankMedal: 'Медаль ранга',
     showStreamerMmr: 'MMR',
@@ -907,6 +920,8 @@ const translations = {
     streamerGoal: 'MMR goal',
     streamerGoalSectionSummary: 'Selected account progress',
     streamerGoalHint: 'Set the target for the selected settings account and choose what the goal overlay shows.',
+    streamerGoalPreviewTitle: 'MMR GOAL',
+    streamerGoalPreviewNoGoal: 'No goal set',
     showStreamerStats: 'Streamer stats overlay',
     showStreamerRankMedal: 'Rank medal',
     showStreamerMmr: 'MMR',
@@ -1778,6 +1793,7 @@ function render(data) {
   renderIntelSummary(matchIntel);
   renderStreamerStatsStatus(state.streamerStats || {}, matchIntel);
   renderStreamerStatsPreview(state.streamerStats || {}, matchIntel, settingsAccountId);
+  renderStreamerGoalPreview(state.streamerStats || {}, matchIntel, settingsAccountId);
   renderStreamerAccounts(matchIntel.streamerAccounts || [], state.streamerStats || {}, settingsAccountId);
   renderCustomNotablePlayers(matchIntel.customPlayers || []);
   updateMatchIntelFieldVisibility();
@@ -2547,6 +2563,12 @@ function streamerGoalMmrForSettingsAccount(settings, accountId) {
   return Number.isFinite(number) && number > 0 ? Math.trunc(number) : 0;
 }
 
+function streamerAccountForSettingsAccount(settings, accountId) {
+  return Array.isArray(settings.streamerAccounts) && accountId
+    ? settings.streamerAccounts.find((item) => String(item.accountId || '') === String(accountId))
+    : null;
+}
+
 function renderStreamerStatsPreview(stats, settings, selectedAccountId = '') {
   const accountId = String(selectedAccountId || '').trim();
   const mmr = streamerMmrForSettingsAccount(settings, accountId);
@@ -2581,6 +2603,101 @@ function renderStreamerStatsPreview(stats, settings, selectedAccountId = '') {
       if (!pipsImage.hidden) pipsImage.src = els.streamerMedalPips.src;
     }
   });
+}
+
+function renderStreamerGoalPreview(stats, settings, selectedAccountId = '') {
+  const goal = streamerGoalPreviewState(stats, settings, selectedAccountId);
+  applyStreamerGoalPreview(els.streamerGoalPreview, goal, settings);
+  document.querySelectorAll('.overlay-position-item.streamer-goal-preview').forEach((preview) => {
+    applyStreamerGoalPreview(preview, goal, settings);
+  });
+}
+
+function streamerGoalPreviewState(stats, settings, selectedAccountId = '') {
+  const accountId = String(selectedAccountId || '').trim();
+  const account = streamerAccountForSettingsAccount(settings, accountId);
+  const currentMmr = streamerMmrForSettingsAccount(settings, accountId);
+  const targetMmr = Math.max(0, Math.trunc(Number(els.streamerGoalMmr?.value || account?.goalMmr || 0)));
+  const startMmrRaw = Math.max(0, Math.trunc(Number(account?.goalStartMmr || 0)));
+  const startMmr = startMmrRaw > 0 ? startMmrRaw : Math.min(currentMmr, targetMmr || currentMmr);
+  const session = accountId ? stats.accountSessions?.[accountId] : null;
+  const wins = Math.max(0, Math.trunc(Number(accountId ? session?.wins || 0 : stats.wins || 0)));
+  const losses = Math.max(0, Math.trunc(Number(accountId ? session?.losses || 0 : stats.losses || 0)));
+  const total = wins + losses;
+  const winRate = total > 0 ? Math.round((wins / total) * 1000) / 10 : null;
+  const distance = targetMmr - startMmr;
+  const gained = currentMmr - startMmr;
+  const progress = targetMmr > 0
+    ? distance > 0
+      ? Math.max(0, Math.min(100, Math.round((gained / distance) * 1000) / 10))
+      : currentMmr >= targetMmr ? 100 : 0
+    : 0;
+  const remainingMmr = targetMmr > 0 ? Math.max(0, targetMmr - currentMmr) : 0;
+  const winDelta = Math.max(1, Math.trunc(Number(settings.streamerMmrWinDelta || 25)));
+  return {
+    title: account?.label || t('streamerGoalPreviewTitle'),
+    currentMmr,
+    targetMmr,
+    remainingMmr,
+    progress,
+    wins,
+    losses,
+    winRate,
+    requiredWins: remainingMmr > 0 ? Math.ceil(remainingMmr / winDelta) : 0
+  };
+}
+
+function applyStreamerGoalPreview(root, goal, settings) {
+  if (!root) return;
+  const title = root.querySelector('#streamerGoalPreviewTitle, [data-goal-preview=\"title\"]') || root.querySelector('.streamer-goal-preview-top span');
+  const percent = root.querySelector('#streamerGoalPreviewPercent, [data-goal-preview=\"percent\"]') || root.querySelector('.streamer-goal-preview-top b');
+  const bar = root.querySelector('#streamerGoalPreviewBar, [data-goal-preview=\"bar\"]') || root.querySelector('.streamer-goal-preview-bar');
+  const fill = root.querySelector('#streamerGoalPreviewFill, [data-goal-preview=\"fill\"]') || root.querySelector('.streamer-goal-preview-bar span');
+  const current = root.querySelector('#streamerGoalPreviewCurrent, [data-goal-preview=\"current\"]') || root.querySelector('.streamer-goal-preview-meta b');
+  const target = root.querySelector('#streamerGoalPreviewTarget, [data-goal-preview=\"target\"]') || root.querySelector('.streamer-goal-preview-meta span');
+  const delta = root.querySelector('#streamerGoalPreviewDelta, [data-goal-preview=\"delta\"]') || root.querySelector('.streamer-goal-preview-meta em');
+  const record = root.querySelector('#streamerGoalPreviewRecord, [data-goal-preview=\"record\"]') || root.querySelector('.streamer-goal-preview-kpis span:nth-child(1)');
+  const winRate = root.querySelector('#streamerGoalPreviewWinRate, [data-goal-preview=\"winrate\"]') || root.querySelector('.streamer-goal-preview-kpis span:nth-child(2)');
+  const eta = root.querySelector('#streamerGoalPreviewEta, [data-goal-preview=\"eta\"]') || root.querySelector('.streamer-goal-preview-kpis span:nth-child(3)');
+  const hasGoal = Number(goal?.targetMmr || 0) > 0;
+  root.dataset.empty = hasGoal ? 'false' : 'true';
+  root.classList.toggle('complete', hasGoal && Number(goal.remainingMmr || 0) <= 0);
+  setTextContent(title, hasGoal ? goal.title || t('streamerGoalPreviewTitle') : t('streamerGoalPreviewNoGoal'));
+  setTextContent(percent, `${formatGoalPercent(goal?.progress || 0)}%`);
+  setTextContent(current, formatStreamerMmr(goal?.currentMmr || 0));
+  setTextContent(target, `/ ${formatStreamerMmr(goal?.targetMmr || 0)}`);
+  setTextContent(delta, hasGoal ? goal.remainingMmr > 0 ? `+${formatStreamerMmr(goal.remainingMmr)}` : 'DONE' : '+0');
+  setTextContent(record, `W ${goal?.wins || 0} - L ${goal?.losses || 0}`);
+  setTextContent(winRate, goal?.winRate !== null && goal?.winRate !== undefined ? `${formatGoalPercent(goal.winRate)}% WR` : '- WR');
+  setTextContent(eta, hasGoal ? goal.remainingMmr > 0 ? `${goal.requiredWins || 0}W left` : 'Goal hit' : '0W left');
+  if (fill) fill.style.width = `${Math.max(0, Math.min(100, Number(goal?.progress || 0)))}%`;
+  toggleHidden(bar, settings.showStreamerMmrGoalProgress === false);
+  toggleHidden(percent, settings.showStreamerMmrGoalProgress === false);
+  toggleHidden(record, settings.showStreamerMmrGoalRecord === false);
+  toggleHidden(winRate, settings.showStreamerMmrGoalWinRate === false);
+  toggleHidden(eta, settings.showStreamerMmrGoalEta === false);
+  toggleHidden(delta, settings.showStreamerMmrGoalDelta === false);
+}
+
+function toggleHidden(element, hidden) {
+  if (element) element.hidden = Boolean(hidden);
+}
+
+function setTextContent(element, value) {
+  if (!element) return;
+  const text = String(value ?? '');
+  if (element.textContent !== text) element.textContent = text;
+}
+
+function formatGoalPercent(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return '0';
+  return number % 1 === 0 ? String(Math.trunc(number)) : number.toFixed(1);
+}
+
+function formatStreamerMmr(value) {
+  const number = Math.max(0, Math.trunc(Number(value) || 0));
+  return number.toLocaleString('en-US');
 }
 
 function streamerPreviewMedal(stats, settings, accountId, mmr) {
@@ -2729,6 +2846,7 @@ function addStreamerAccount() {
   els.streamerGoalMmr.value = String(goalMmr);
   renderStreamerAccounts(accounts, snapshot?.state?.streamerStats || {}, activeStreamerSettingsAccountId);
   renderStreamerStatsPreview(snapshot?.state?.streamerStats || {}, { ...(snapshot?.config?.protection?.matchIntel || {}), streamerAccounts: accounts }, activeStreamerSettingsAccountId);
+  renderStreamerGoalPreview(snapshot?.state?.streamerStats || {}, { ...(snapshot?.config?.protection?.matchIntel || {}), streamerAccounts: accounts }, activeStreamerSettingsAccountId);
   resetStreamerAccountEditor();
   saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
 }
@@ -2959,6 +3077,9 @@ function renderOverlayPositionPreviews() {
     if (!preview || !item || !box) continue;
     card.hidden = key !== activeOverlayPositionKey;
     if (card.hidden) continue;
+    if (key === 'streamerMmrGoal') {
+      renderStreamerGoalPreview(snapshot?.state?.streamerStats || {}, protectionMatchIntelFromForm(), activeStreamerSettingsAccountId);
+    }
     const offset = normalizeOverlayOffset(positions[key]);
     const base = overlayVisualBase(box);
     const range = overlayPositionRange(box);
@@ -3055,6 +3176,7 @@ els.spectatorGameLabelTemplate?.addEventListener('change', () => saveProtection(
 ].forEach((input) => input.addEventListener('change', () => {
   if (input === els.streamerMedalSource) markStreamerSettingsAccountInteraction();
   updateMatchIntelFieldVisibility();
+  renderStreamerGoalPreview(snapshot?.state?.streamerStats || {}, protectionMatchIntelFromForm(), activeStreamerSettingsAccountId);
   saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
 }));
 els.streamerSettingsAccount.addEventListener('change', () => {
@@ -3064,10 +3186,12 @@ els.streamerSettingsAccount.addEventListener('change', () => {
   setInputValue(els.streamerMmr, streamerMmrForSettingsAccount(matchIntel, activeStreamerSettingsAccountId));
   setInputValue(els.streamerGoalMmr, streamerGoalMmrForSettingsAccount(matchIntel, activeStreamerSettingsAccountId));
   renderStreamerStatsPreview(stats, matchIntel, activeStreamerSettingsAccountId);
+  renderStreamerGoalPreview(stats, matchIntel, activeStreamerSettingsAccountId);
   renderStreamerAccounts(matchIntel.streamerAccounts || [], stats, activeStreamerSettingsAccountId);
 });
 els.streamerMmr.addEventListener('input', () => {
   markStreamerSettingsAccountInteraction();
+  renderStreamerGoalPreview(snapshot?.state?.streamerStats || {}, snapshot?.config?.protection?.matchIntel || {}, activeStreamerSettingsAccountId);
 });
 els.streamerMmr.addEventListener('change', () => {
   markStreamerSettingsAccountInteraction();
@@ -3075,6 +3199,7 @@ els.streamerMmr.addEventListener('change', () => {
 });
 els.streamerGoalMmr.addEventListener('input', () => {
   markStreamerSettingsAccountInteraction();
+  renderStreamerGoalPreview(snapshot?.state?.streamerStats || {}, snapshot?.config?.protection?.matchIntel || {}, activeStreamerSettingsAccountId);
 });
 els.streamerGoalMmr.addEventListener('change', () => {
   markStreamerSettingsAccountInteraction();

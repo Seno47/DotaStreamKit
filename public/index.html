@@ -327,6 +327,14 @@
               <summary><span id="streamerGoalTitle">MMR goal</span><span id="streamerGoalSectionSummary">Progress bar for selected account</span></summary>
               <div class="intel-section-body">
                 <p class="muted" id="streamerGoalHint">Set the MMR target for the selected settings account and choose what the goal overlay shows.</p>
+                <div class="streamer-goal-live-preview" id="streamerGoalPreview">
+                  <div class="streamer-goal-preview">
+                    <div class="streamer-goal-preview-top"><span id="streamerGoalPreviewTitle">MMR GOAL</span><b id="streamerGoalPreviewPercent">0%</b></div>
+                    <div class="streamer-goal-preview-bar" id="streamerGoalPreviewBar"><span id="streamerGoalPreviewFill"></span></div>
+                    <div class="streamer-goal-preview-meta"><b id="streamerGoalPreviewCurrent">0</b><span id="streamerGoalPreviewTarget">/ 0</span><em id="streamerGoalPreviewDelta">+0</em></div>
+                    <div class="streamer-goal-preview-kpis"><span id="streamerGoalPreviewRecord">W 0 - L 0</span><span id="streamerGoalPreviewWinRate">- WR</span><span id="streamerGoalPreviewEta">0W left</span></div>
+                  </div>
+                </div>
                 <div class="streamer-goal-grid">
                   <label id="streamerGoalMmrWrap">MMR goal<input id="streamerGoalMmr" type="number" min="0" max="99999" step="1"></label>
                   <label class="check"><input type="checkbox" id="showStreamerMmrGoal"> MMR goal overlay</label>
