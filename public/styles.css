@@ -1162,6 +1162,10 @@ dd {
   background: rgba(22, 70, 42, 0.25);
 }
 
+.streamer-account-row[data-selected="true"] {
+  box-shadow: inset 0 0 0 1px rgba(125, 201, 255, 0.28);
+}
+
 .notable-player-id,
 .notable-player-name,
 .notable-player-country,

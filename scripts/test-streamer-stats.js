@@ -98,6 +98,7 @@ applied = applyStreamerMatchResult(
 );
 assert.equal(applied.config.streamerMmr, 5000);
 assert.equal(applied.config.streamerAccounts[1].mmr, 5975);
+assert.equal(applied.state.lastStreamerAccountId, 456);
 assert.equal(applied.state.accountSessions['456'].wins, 0);
 assert.equal(applied.state.accountSessions['456'].losses, 1);
 assert.equal(applied.state.lastMmrChange, -25);

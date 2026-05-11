@@ -1486,7 +1486,8 @@ function publicState() {
 function publicStreamerStats() {
   const stats = normalizeStreamerStatsState(runtime.state.streamerStats);
   const settings = runtime.config.protection.matchIntel || {};
-  const configuredMmr = streamerMmrForAccount(settings, stats.streamerAccountId);
+  const overlayAccountId = stats.streamerAccountId || stats.lastStreamerAccountId;
+  const configuredMmr = streamerMmrForAccount(settings, overlayAccountId);
   const medalMmr = settings.streamerMedalSource === 'account' && stats.accountRankTier
     ? null
     : Math.max(0, configuredMmr);
@@ -1497,6 +1498,7 @@ function publicStreamerStats() {
   });
   return {
     ...stats,
+    streamerAccountId: overlayAccountId,
     currentMmr: configuredMmr,
     medal: medal ? {
       id: medal.medal,
@@ -2254,6 +2256,7 @@ function updateStreamerStatsIdentity(payload) {
     runtime.state.streamerStats = {
       ...normalizeStreamerStatsState(previous),
       streamerAccountId: accountId,
+      lastStreamerAccountId: accountId,
       accountRankTier: null,
       accountLeaderboardRank: null,
       accountRankCheckedAt: null

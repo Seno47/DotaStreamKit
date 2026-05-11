@@ -40,6 +40,7 @@ export function normalizeStreamerStatsState(value) {
     lastMmrChange: Number.isFinite(Number(state.lastMmrChange)) ? Math.trunc(Number(state.lastMmrChange)) : 0,
     lastResultAt: stringOrNull(state.lastResultAt),
     streamerAccountId: normalizePositiveInt(state.streamerAccountId),
+    lastStreamerAccountId: normalizePositiveInt(state.lastStreamerAccountId ?? state.streamerAccountId),
     accountRankTier: normalizePositiveInt(state.accountRankTier),
     accountLeaderboardRank: normalizePositiveInt(state.accountLeaderboardRank),
     accountRankCheckedAt: stringOrNull(state.accountRankCheckedAt),

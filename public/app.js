@@ -162,6 +162,8 @@ const els = {
   streamerAccountsSectionSummary: document.querySelector('#streamerAccountsSectionSummary'),
   streamerAccountsHint: document.querySelector('#streamerAccountsHint'),
   autoBindStreamerAccounts: document.querySelector('#autoBindStreamerAccounts'),
+  streamerSettingsAccountWrap: document.querySelector('#streamerSettingsAccountWrap'),
+  streamerSettingsAccount: document.querySelector('#streamerSettingsAccount'),
   streamerAccountIdWrap: document.querySelector('#streamerAccountIdWrap'),
   streamerAccountId: document.querySelector('#streamerAccountId'),
   streamerAccountLabelWrap: document.querySelector('#streamerAccountLabelWrap'),
@@ -349,8 +351,23 @@ let overlayPositionSaveTimer = null;
 let activePage = localStorage.getItem('dsk.activePage') || 'protection';
 let editingNotablePlayerAccountId = '';
 let editingStreamerAccountId = '';
+const STREAMER_SETTINGS_ACCOUNT_LOCK_MS = 5 * 60 * 1000;
+let activeStreamerSettingsAccountId = localStorage.getItem('dsk.streamerSettingsAccount') || '';
+let activeStreamerSettingsAccountTouchedAt = Number(localStorage.getItem('dsk.streamerSettingsAccountTouchedAt') || 0);
 let activeOverlayPositionKey = localStorage.getItem('dsk.overlayPositionTarget') || 'streamerStatsGame';
 let latestUpdateStatus = null;
+
+const previewRankMedalThresholds = [
+  { medal: 0, name: 'Unranked', minMmr: 0, starStep: 0 },
+  { medal: 1, name: 'Herald', minMmr: 0, starStep: 154 },
+  { medal: 2, name: 'Guardian', minMmr: 770, starStep: 154 },
+  { medal: 3, name: 'Crusader', minMmr: 1540, starStep: 154 },
+  { medal: 4, name: 'Archon', minMmr: 2310, starStep: 154 },
+  { medal: 5, name: 'Legend', minMmr: 3080, starStep: 154 },
+  { medal: 6, name: 'Ancient', minMmr: 3850, starStep: 154 },
+  { medal: 7, name: 'Divine', minMmr: 4620, starStep: 200 },
+  { medal: 8, name: 'Immortal', minMmr: 5620, starStep: 0 }
+];
 
 const overlayPositionKeys = ['streamerStatsMenu', 'streamerStatsGame', 'roshanTimer', 'predictionOverlay'];
 const overlayPreviewBoxes = {
@@ -494,6 +511,9 @@ const translations = {
     streamerAccountsSectionSummary: 'Авто и ручная привязка',
     streamerAccountsHint: 'DotaStreamKit всегда смотрит, какой аккаунт сейчас прислал GSI. Автопривязка просто запоминает такие аккаунты в списке.',
     autoBindStreamerAccounts: 'Автоматически добавлять текущий аккаунт',
+    streamerSettingsAccount: 'Аккаунт для настроек',
+    streamerSettingsFallback: 'Без аккаунта / fallback',
+    streamerSettingsCurrentSuffix: 'сейчас',
     streamerAccountId: 'Dota ID',
     streamerAccountLabel: 'Название',
     streamerAccountMmr: 'MMR',
@@ -833,6 +853,9 @@ const translations = {
     streamerAccountsSectionSummary: 'Auto and manual binding',
     streamerAccountsHint: 'DotaStreamKit always tracks the account sent by GSI. Auto-binding only remembers those accounts in this list.',
     autoBindStreamerAccounts: 'Automatically add current account',
+    streamerSettingsAccount: 'Settings account',
+    streamerSettingsFallback: 'No account / fallback',
+    streamerSettingsCurrentSuffix: 'current',
     streamerAccountId: 'Dota ID',
     streamerAccountLabel: 'Label',
     streamerAccountMmr: 'MMR',
@@ -1301,6 +1324,7 @@ function applyLanguage(config) {
   els.streamerAccountsSectionSummary.textContent = t('streamerAccountsSectionSummary');
   els.streamerAccountsHint.textContent = t('streamerAccountsHint');
   setLabelText(els.autoBindStreamerAccounts.closest('label'), t('autoBindStreamerAccounts'));
+  setLabelText(els.streamerSettingsAccountWrap, t('streamerSettingsAccount'));
   setLabelText(els.streamerAccountIdWrap, t('streamerAccountId'));
   setLabelText(els.streamerAccountLabelWrap, t('streamerAccountLabel'));
   setLabelText(els.streamerAccountMmrWrap, t('streamerAccountMmr'));
@@ -1687,7 +1711,8 @@ function render(data) {
   els.showStreamerMmr.checked = matchIntel.showStreamerMmr !== false;
   els.showStreamerWinLoss.checked = matchIntel.showStreamerWinLoss !== false;
   els.streamerMedalSource.value = matchIntel.streamerMedalSource || 'auto';
-  setInputValue(els.streamerMmr, state.streamerStats?.currentMmr ?? matchIntel.streamerMmr ?? 0);
+  const settingsAccountId = syncStreamerSettingsAccount(matchIntel.streamerAccounts || [], state.streamerStats || {});
+  setInputValue(els.streamerMmr, streamerMmrForSettingsAccount(matchIntel, settingsAccountId));
   els.autoUpdateStreamerMmr.checked = matchIntel.autoUpdateStreamerMmr !== false;
   els.autoBindStreamerAccounts.checked = matchIntel.autoBindStreamerAccounts !== false;
   setInputValue(els.streamerMmrWinDelta, matchIntel.streamerMmrWinDelta ?? 25);
@@ -1695,8 +1720,8 @@ function render(data) {
   setOverlayPositionControls(matchIntel.overlayPositions || {});
   renderIntelSummary(matchIntel);
   renderStreamerStatsStatus(state.streamerStats || {}, matchIntel);
-  renderStreamerStatsPreview(state.streamerStats || {}, matchIntel);
-  renderStreamerAccounts(matchIntel.streamerAccounts || [], state.streamerStats || {});
+  renderStreamerStatsPreview(state.streamerStats || {}, matchIntel, settingsAccountId);
+  renderStreamerAccounts(matchIntel.streamerAccounts || [], state.streamerStats || {}, settingsAccountId);
   renderCustomNotablePlayers(matchIntel.customPlayers || []);
   updateMatchIntelFieldVisibility();
   renderSpectatorMatchIntelConfig(config.protection.spectatorMatchIntel || matchIntel);
@@ -2387,10 +2412,81 @@ function customNotablePlayersFromForm() {
     .filter((player) => Number.isFinite(player.accountId) && player.accountId > 0);
 }
 
-function renderStreamerStatsPreview(stats, settings) {
-  const medal = stats.medal || null;
-  const accountId = String(stats.streamerAccountId || '').trim();
-  const mmr = Number(stats.currentMmr || settings.streamerMmr || 0);
+function syncStreamerSettingsAccount(accounts, stats) {
+  const normalizedAccounts = Array.isArray(accounts) ? accounts : [];
+  const currentAccountId = String(stats.streamerAccountId || stats.lastStreamerAccountId || '').trim();
+  const knownIds = new Set(normalizedAccounts.map((account) => String(account.accountId || '')).filter(Boolean));
+  const now = Date.now();
+  const lockedByUser = activeStreamerSettingsAccountTouchedAt > 0
+    && now - activeStreamerSettingsAccountTouchedAt < STREAMER_SETTINGS_ACCOUNT_LOCK_MS;
+  let selected = String(activeStreamerSettingsAccountId || '').trim();
+  if (selected && !knownIds.has(selected) && selected !== currentAccountId) selected = '';
+  if (currentAccountId && (!selected || !lockedByUser || selected === currentAccountId)) {
+    selected = currentAccountId;
+  }
+  if (!selected) selected = normalizedAccounts[0]?.accountId || '';
+  selected = String(selected || '').trim();
+  activeStreamerSettingsAccountId = selected;
+  localStorage.setItem('dsk.streamerSettingsAccount', selected);
+  renderStreamerSettingsAccountOptions(normalizedAccounts, stats, selected);
+  return selected;
+}
+
+function markStreamerSettingsAccountInteraction(accountId = activeStreamerSettingsAccountId) {
+  activeStreamerSettingsAccountId = String(accountId || '').trim();
+  activeStreamerSettingsAccountTouchedAt = Date.now();
+  localStorage.setItem('dsk.streamerSettingsAccount', activeStreamerSettingsAccountId);
+  localStorage.setItem('dsk.streamerSettingsAccountTouchedAt', String(activeStreamerSettingsAccountTouchedAt));
+}
+
+function renderStreamerSettingsAccountOptions(accounts, stats, selectedAccountId) {
+  if (!els.streamerSettingsAccount) return;
+  const currentAccountId = String(stats.streamerAccountId || stats.lastStreamerAccountId || '').trim();
+  const previousValue = els.streamerSettingsAccount.value;
+  els.streamerSettingsAccount.innerHTML = '';
+  const seen = new Set();
+  for (const account of Array.isArray(accounts) ? accounts : []) {
+    const accountId = String(account.accountId || '').trim();
+    if (!accountId || seen.has(accountId)) continue;
+    seen.add(accountId);
+    const option = document.createElement('option');
+    option.value = accountId;
+    const label = String(account.label || '').trim();
+    option.textContent = `${label || accountId} (${accountId})${accountId === currentAccountId ? ` / ${t('streamerSettingsCurrentSuffix')}` : ''}`;
+    els.streamerSettingsAccount.append(option);
+  }
+  if (currentAccountId && !seen.has(currentAccountId)) {
+    const option = document.createElement('option');
+    option.value = currentAccountId;
+    option.textContent = `${currentAccountId} / ${t('streamerSettingsCurrentSuffix')}`;
+    els.streamerSettingsAccount.append(option);
+    seen.add(currentAccountId);
+  }
+  if (!els.streamerSettingsAccount.options.length) {
+    const option = document.createElement('option');
+    option.value = '';
+    option.textContent = t('streamerSettingsFallback');
+    els.streamerSettingsAccount.append(option);
+  }
+  els.streamerSettingsAccount.value = seen.has(selectedAccountId) ? selectedAccountId : '';
+  if (previousValue !== els.streamerSettingsAccount.value) {
+    activeStreamerSettingsAccountId = els.streamerSettingsAccount.value;
+  }
+}
+
+function streamerMmrForSettingsAccount(settings, accountId) {
+  const account = Array.isArray(settings.streamerAccounts) && accountId
+    ? settings.streamerAccounts.find((item) => String(item.accountId || '') === String(accountId))
+    : null;
+  const value = account ? account.mmr : settings.streamerMmr;
+  const number = Number(value || 0);
+  return Number.isFinite(number) && number > 0 ? Math.trunc(number) : 0;
+}
+
+function renderStreamerStatsPreview(stats, settings, selectedAccountId = '') {
+  const accountId = String(selectedAccountId || '').trim();
+  const mmr = streamerMmrForSettingsAccount(settings, accountId);
+  const medal = streamerPreviewMedal(stats, settings, accountId, mmr);
   const medalId = medal?.id ?? 0;
   const stars = Number(medal?.stars || 0);
   const accountSession = accountId ? stats.accountSessions?.[accountId] : null;
@@ -2421,7 +2517,38 @@ function renderStreamerStatsPreview(stats, settings) {
   });
 }
 
-function renderStreamerAccounts(accounts, stats) {
+function streamerPreviewMedal(stats, settings, accountId, mmr) {
+  const overlayAccountId = String(stats.streamerAccountId || stats.lastStreamerAccountId || '').trim();
+  if (
+    accountId
+    && accountId === overlayAccountId
+    && settings.streamerMedalSource !== 'mmr'
+    && stats.medal?.source === 'account'
+  ) {
+    return stats.medal;
+  }
+  if (settings.streamerMedalSource === 'account' && accountId === overlayAccountId && !mmr) {
+    return stats.medal || null;
+  }
+  const medal = rankMedalFromMmrPreview(mmr);
+  return medal ? { ...medal, id: medal.medal, source: 'mmr' } : null;
+}
+
+function rankMedalFromMmrPreview(mmr) {
+  const value = Number(mmr);
+  if (!Number.isFinite(value) || value < 0) return null;
+  if (value <= 0) return { medal: 'calibration', name: 'Calibration', minMmr: 0, stars: 0 };
+  let current = previewRankMedalThresholds[1];
+  for (const threshold of previewRankMedalThresholds.slice(1)) {
+    if (value >= threshold.minMmr) current = threshold;
+  }
+  const stars = !current.starStep || current.medal <= 0 || current.medal >= 8
+    ? 0
+    : Math.min(Math.max(Math.floor((value - current.minMmr) / current.starStep) + 1, 1), 5);
+  return { ...current, stars };
+}
+
+function renderStreamerAccounts(accounts, stats, selectedAccountId = '') {
   els.streamerAccountRows.innerHTML = '';
   const currentAccountId = String(stats.streamerAccountId || '').trim();
   const sessions = stats.accountSessions || {};
@@ -2436,6 +2563,7 @@ function renderStreamerAccounts(accounts, stats) {
     row.dataset.label = String(account.label || '').trim();
     row.dataset.mmr = Number.isFinite(Number(account.mmr)) ? String(Math.trunc(Number(account.mmr))) : '0';
     row.dataset.current = accountId === currentAccountId ? 'true' : 'false';
+    row.dataset.selected = accountId === String(selectedAccountId || '') ? 'true' : 'false';
 
     const current = document.createElement('span');
     current.className = 'streamer-account-current';
@@ -2477,13 +2605,13 @@ function renderStreamerAccounts(accounts, stats) {
 }
 
 function streamerAccountsFromForm() {
-  const currentAccountId = String(snapshot?.state?.streamerStats?.streamerAccountId || '').trim();
+  const selectedAccountId = String(activeStreamerSettingsAccountId || '').trim();
   const currentMmr = Math.max(0, Math.trunc(Number(els.streamerMmr.value) || 0));
   return [...els.streamerAccountRows.querySelectorAll('.streamer-account-row')]
     .map((row) => ({
       accountId: Number(row.dataset.accountId),
       label: row.dataset.label || '',
-      mmr: String(row.dataset.accountId) === currentAccountId ? currentMmr : Number(row.dataset.mmr || 0)
+      mmr: String(row.dataset.accountId) === selectedAccountId ? currentMmr : Number(row.dataset.mmr || 0)
     }))
     .filter((account) => Number.isFinite(account.accountId) && account.accountId > 0);
 }
@@ -2500,10 +2628,11 @@ function addStreamerAccount() {
   const accounts = streamerAccountsFromForm()
     .filter((account) => String(account.accountId) !== previousAccountId && String(account.accountId) !== accountId);
   accounts.push({ accountId: Number(accountId), label, mmr });
-  if (String(snapshot?.state?.streamerStats?.streamerAccountId || '') === accountId) {
-    els.streamerMmr.value = String(mmr);
-  }
-  renderStreamerAccounts(accounts, snapshot?.state?.streamerStats || {});
+  markStreamerSettingsAccountInteraction(accountId);
+  renderStreamerSettingsAccountOptions(accounts, snapshot?.state?.streamerStats || {}, activeStreamerSettingsAccountId);
+  els.streamerMmr.value = String(mmr);
+  renderStreamerAccounts(accounts, snapshot?.state?.streamerStats || {}, activeStreamerSettingsAccountId);
+  renderStreamerStatsPreview(snapshot?.state?.streamerStats || {}, { ...(snapshot?.config?.protection?.matchIntel || {}), streamerAccounts: accounts }, activeStreamerSettingsAccountId);
   resetStreamerAccountEditor();
   saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
 }
@@ -2511,9 +2640,16 @@ function addStreamerAccount() {
 function editStreamerAccount(row) {
   if (!row) return;
   editingStreamerAccountId = row.dataset.accountId || '';
+  markStreamerSettingsAccountInteraction(editingStreamerAccountId);
   els.streamerAccountId.value = editingStreamerAccountId;
   els.streamerAccountLabel.value = row.dataset.label || '';
   els.streamerAccountMmr.value = row.dataset.mmr || '0';
+  const matchIntel = snapshot?.config?.protection?.matchIntel || {};
+  const stats = snapshot?.state?.streamerStats || {};
+  renderStreamerSettingsAccountOptions(matchIntel.streamerAccounts || [], stats, activeStreamerSettingsAccountId);
+  setInputValue(els.streamerMmr, streamerMmrForSettingsAccount(matchIntel, activeStreamerSettingsAccountId));
+  renderStreamerStatsPreview(stats, matchIntel, activeStreamerSettingsAccountId);
+  renderStreamerAccounts(matchIntel.streamerAccounts || [], stats, activeStreamerSettingsAccountId);
   updateStreamerAccountEditorMode();
   els.streamerAccountId.focus();
 }
@@ -2815,12 +2951,35 @@ els.spectatorGameLabelTemplate?.addEventListener('change', () => saveProtection(
   els.autoUpdateStreamerMmr,
   els.autoBindStreamerAccounts
 ].forEach((input) => input.addEventListener('change', () => {
+  if (input === els.streamerMedalSource) markStreamerSettingsAccountInteraction();
   updateMatchIntelFieldVisibility();
   saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
 }));
-[els.streamerMmr, els.streamerMmrWinDelta, els.streamerMmrLossDelta].forEach((input) => {
+els.streamerSettingsAccount.addEventListener('change', () => {
+  markStreamerSettingsAccountInteraction(els.streamerSettingsAccount.value || '');
+  const matchIntel = snapshot?.config?.protection?.matchIntel || {};
+  const stats = snapshot?.state?.streamerStats || {};
+  setInputValue(els.streamerMmr, streamerMmrForSettingsAccount(matchIntel, activeStreamerSettingsAccountId));
+  renderStreamerStatsPreview(stats, matchIntel, activeStreamerSettingsAccountId);
+  renderStreamerAccounts(matchIntel.streamerAccounts || [], stats, activeStreamerSettingsAccountId);
+});
+els.streamerMmr.addEventListener('input', () => {
+  markStreamerSettingsAccountInteraction();
+});
+els.streamerMmr.addEventListener('change', () => {
+  markStreamerSettingsAccountInteraction();
+  saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+});
+[els.streamerMmrWinDelta, els.streamerMmrLossDelta].forEach((input) => {
   input.addEventListener('change', () => saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert));
 });
+[
+  els.streamerAccountId,
+  els.streamerAccountLabel,
+  els.streamerAccountMmr
+].forEach((input) => input.addEventListener('input', () => {
+  markStreamerSettingsAccountInteraction(editingStreamerAccountId || activeStreamerSettingsAccountId);
+}));
 els.pageTabs.forEach((tab) => {
   tab.addEventListener('click', () => setActivePage(tab.dataset.pageTarget));
 });
@@ -2908,6 +3067,12 @@ els.resetAllOverlayPositions.addEventListener('click', () => {
 });
 
 function protectionMatchIntelFromForm() {
+  const selectedAccountId = String(activeStreamerSettingsAccountId || '').trim();
+  const selectedAccountIsBound = selectedAccountId
+    && Boolean(els.streamerAccountRows.querySelector(`.streamer-account-row[data-account-id="${CSS.escape(selectedAccountId)}"]`));
+  const fallbackStreamerMmr = selectedAccountIsBound
+    ? Number(snapshot?.config?.protection?.matchIntel?.streamerMmr || 0)
+    : Number(els.streamerMmr.value);
   return {
     enabled: els.matchIntelEnabled.checked,
     showPlayerRanks: els.showPlayerRanks.checked,
@@ -2921,7 +3086,7 @@ function protectionMatchIntelFromForm() {
     showStreamerMmr: els.showStreamerMmr.checked,
     showStreamerWinLoss: els.showStreamerWinLoss.checked,
     streamerMedalSource: els.streamerMedalSource.value,
-    streamerMmr: Number(els.streamerMmr.value),
+    streamerMmr: fallbackStreamerMmr,
     autoUpdateStreamerMmr: els.autoUpdateStreamerMmr.checked,
     autoBindStreamerAccounts: els.autoBindStreamerAccounts.checked,
     streamerMmrWinDelta: Number(els.streamerMmrWinDelta.value),
