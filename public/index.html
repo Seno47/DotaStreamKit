@@ -76,6 +76,7 @@
       <nav class="page-nav" aria-label="Dashboard pages">
         <button type="button" class="page-tab active" data-page-target="protection">Protection</button>
         <button type="button" class="page-tab" data-page-target="intel">Match intel</button>
+        <button type="button" class="page-tab" data-page-target="streamerStats">Streamer stats</button>
         <button type="button" class="page-tab" data-page-target="predictions">Predictions</button>
         <button type="button" class="page-tab" data-page-target="spectatorPredictions">Spectator bets</button>
         <button type="button" class="page-tab" data-page-target="twitch">Twitch</button>
@@ -132,28 +133,6 @@
                 <label class="check"><input type="checkbox" id="showRoshanTimer"> Roshan timer</label>
                 <label id="rankDisplayModeWrap">Rank display<select id="rankDisplayMode"><option value="minutes">First N minutes</option><option value="full_game">Full game</option><option value="pre_game_only">Before the game starts only</option></select></label>
                 <label id="rankDisplayMinutesWrap">Rank display minutes<input id="rankDisplayMinutes" type="number" min="1" max="30" step="1"></label>
-              </div>
-            </details>
-            <details class="intel-section streamer-stats-settings" id="streamerStatsWrap" data-collapsible-section="streamerStats" open>
-              <summary><span id="streamerStatsTitle">Streamer stats</span><span id="streamerStatsSectionSummary">Medal, MMR, Win-Lose</span></summary>
-              <div class="intel-section-body">
-              <p class="muted" id="streamerStatsHint">Track stream W-L, manual MMR, and rank medal.</p>
-              <div class="streamer-stats-grid">
-                <label class="check"><input type="checkbox" id="showStreamerStats"> Streamer stats overlay</label>
-                <label class="check"><input type="checkbox" id="showStreamerRankMedal"> Rank medal</label>
-                <label class="check"><input type="checkbox" id="showStreamerMmr"> MMR</label>
-                <label class="check"><input type="checkbox" id="showStreamerWinLoss"> Win-Lose</label>
-                <label id="streamerMedalSourceWrap">Medal source<select id="streamerMedalSource"><option value="auto">Account, then MMR</option><option value="account">Dota account</option><option value="mmr">Manual MMR</option></select></label>
-                <label id="streamerMmrWrap">Current MMR<input id="streamerMmr" type="number" min="0" max="99999" step="1"></label>
-                <label class="check"><input type="checkbox" id="autoUpdateStreamerMmr"> Auto update MMR</label>
-                <label id="streamerMmrWinDeltaWrap">Win MMR<input id="streamerMmrWinDelta" type="number" min="0" max="200" step="1"></label>
-                <label id="streamerMmrLossDeltaWrap">Loss MMR<input id="streamerMmrLossDelta" type="number" min="0" max="200" step="1"></label>
-              </div>
-              <div class="streamer-stats-status" id="streamerStatsStatus">-</div>
-              <div class="button-row streamer-stats-actions">
-                <button id="resetStreamerStats" type="button">Reset W-L</button>
-                <button id="restoreStreamerStats" type="button">Restore previous W-L</button>
-              </div>
               </div>
             </details>
             <details class="intel-section overlay-position-settings" id="overlayPositionWrap" data-collapsible-section="overlayPositions">
@@ -264,6 +243,83 @@
                 <span id="notablePlayerListActions">Actions</span>
               </div>
               <div class="notable-player-rows" id="customNotablePlayersRows"></div>
+              </div>
+            </details>
+          </div>
+        </article>
+
+        <article class="panel wide" data-page="streamerStats">
+          <h2>Streamer stats</h2>
+          <div class="streamer-stats-page">
+            <section class="streamer-stat-hero">
+              <div class="streamer-medal-card" id="streamerMedalCard">
+                <div class="streamer-medal-art" id="streamerMedalArt">
+                  <img id="streamerMedalImage" src="/assets/rank-medal-0.png" alt="">
+                  <img id="streamerMedalPips" class="streamer-medal-pips" src="/assets/rank-pip-1.png" alt="">
+                </div>
+                <div class="streamer-medal-copy">
+                  <span id="streamerMedalEyebrow">Current medal</span>
+                  <strong id="streamerMedalName">-</strong>
+                  <small id="streamerMedalDetails">-</small>
+                </div>
+              </div>
+              <div class="streamer-stat-now">
+                <div class="streamer-stat-kpi">
+                  <span id="streamerStatWinsLabel">Wins</span>
+                  <strong id="streamerStatWins">0</strong>
+                </div>
+                <div class="streamer-stat-kpi">
+                  <span id="streamerStatLossesLabel">Losses</span>
+                  <strong id="streamerStatLosses">0</strong>
+                </div>
+                <div class="streamer-stat-kpi">
+                  <span id="streamerCurrentAccountLabel">Current Dota account</span>
+                  <strong id="streamerCurrentAccount">-</strong>
+                </div>
+              </div>
+            </section>
+
+            <details class="intel-section streamer-stats-settings" id="streamerStatsWrap" data-collapsible-section="streamerStats" open>
+              <summary><span id="streamerStatsTitle">Streamer stats</span><span id="streamerStatsSectionSummary">Medal, MMR, Win-Lose</span></summary>
+              <div class="intel-section-body">
+                <p class="muted" id="streamerStatsHint">Track stream W-L, manual MMR, and rank medal.</p>
+                <div class="streamer-stats-grid">
+                  <label class="check"><input type="checkbox" id="showStreamerStats"> Streamer stats overlay</label>
+                  <label class="check"><input type="checkbox" id="showStreamerRankMedal"> Rank medal</label>
+                  <label class="check"><input type="checkbox" id="showStreamerMmr"> MMR</label>
+                  <label class="check"><input type="checkbox" id="showStreamerWinLoss"> Win-Lose</label>
+                  <label id="streamerMedalSourceWrap">Medal source<select id="streamerMedalSource"><option value="auto">Account, then MMR</option><option value="account">Dota account</option><option value="mmr">Manual MMR</option></select></label>
+                  <label id="streamerMmrWrap">Current MMR<input id="streamerMmr" type="number" min="0" max="99999" step="1"></label>
+                  <label class="check"><input type="checkbox" id="autoUpdateStreamerMmr"> Auto update MMR</label>
+                  <label id="streamerMmrWinDeltaWrap">Win MMR<input id="streamerMmrWinDelta" type="number" min="0" max="200" step="1"></label>
+                  <label id="streamerMmrLossDeltaWrap">Loss MMR<input id="streamerMmrLossDelta" type="number" min="0" max="200" step="1"></label>
+                </div>
+                <div class="streamer-stats-status" id="streamerStatsStatus">-</div>
+                <div class="button-row streamer-stats-actions">
+                  <button id="resetStreamerStats" type="button">Reset W-L</button>
+                  <button id="restoreStreamerStats" type="button">Restore previous W-L</button>
+                </div>
+              </div>
+            </details>
+
+            <details class="intel-section streamer-account-settings" id="streamerAccountsWrap" data-collapsible-section="streamerAccounts" open>
+              <summary><span id="streamerAccountsTitle">Dota accounts</span><span id="streamerAccountsSectionSummary">Auto and manual binding</span></summary>
+              <div class="intel-section-body">
+                <p class="muted" id="streamerAccountsHint">DotaStreamKit always tracks the account sent by GSI and can remember accounts automatically.</p>
+                <label class="check"><input type="checkbox" id="autoBindStreamerAccounts"> Auto-bind current account</label>
+                <div class="streamer-account-form">
+                  <label id="streamerAccountIdWrap">Dota ID<input id="streamerAccountId" inputmode="numeric" maxlength="20"></label>
+                  <label id="streamerAccountLabelWrap">Label<input id="streamerAccountLabel" maxlength="40"></label>
+                  <button id="addStreamerAccount" type="button">Add</button>
+                  <button id="cancelStreamerAccountEdit" type="button" hidden>Cancel</button>
+                </div>
+                <div class="streamer-account-list-head">
+                  <span id="streamerAccountListCurrent">Current</span>
+                  <span id="streamerAccountListId">Dota ID</span>
+                  <span id="streamerAccountListLabel">Label</span>
+                  <span id="streamerAccountListActions">Actions</span>
+                </div>
+                <div class="streamer-account-rows" id="streamerAccountRows"></div>
               </div>
             </details>
           </div>

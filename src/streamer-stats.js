@@ -20,10 +20,12 @@ export function normalizeStreamerStatsConfig(config) {
   config.showStreamerMmr = config.showStreamerMmr !== false;
   config.showStreamerWinLoss = config.showStreamerWinLoss !== false;
   config.autoUpdateStreamerMmr = config.autoUpdateStreamerMmr !== false;
+  config.autoBindStreamerAccounts = config.autoBindStreamerAccounts !== false;
   if (!['auto', 'account', 'mmr'].includes(config.streamerMedalSource)) config.streamerMedalSource = 'auto';
   config.streamerMmr = clampInt(config.streamerMmr, 0, 99999, 0);
   config.streamerMmrWinDelta = clampInt(config.streamerMmrWinDelta, 0, 200, 25);
   config.streamerMmrLossDelta = clampInt(config.streamerMmrLossDelta, 0, 200, 25);
+  config.streamerAccounts = normalizeStreamerAccounts(config.streamerAccounts);
 }
 
 export function normalizeStreamerStatsState(value) {
@@ -213,6 +215,22 @@ function starsFromMmr(mmr, medal) {
 function normalizePositiveInt(value) {
   const number = Number(value);
   return Number.isFinite(number) && number > 0 ? Math.trunc(number) : null;
+}
+
+function normalizeStreamerAccounts(value) {
+  const rows = Array.isArray(value) ? value : [];
+  const byAccountId = new Map();
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue;
+    const accountId = normalizePositiveInt(row.accountId ?? row.dotaId ?? row.id);
+    if (!accountId) continue;
+    byAccountId.set(String(accountId), {
+      accountId,
+      label: String(row.label || row.name || '').trim().slice(0, 40),
+      boundAt: stringOrNull(row.boundAt)
+    });
+  }
+  return [...byAccountId.values()].slice(0, 20);
 }
 
 function stringOrNull(value) {

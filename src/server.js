@@ -320,6 +320,8 @@ const defaultConfig = {
       streamerMedalSource: 'auto',
       streamerMmr: 0,
       autoUpdateStreamerMmr: true,
+      autoBindStreamerAccounts: true,
+      streamerAccounts: [],
       streamerMmrWinDelta: 25,
       streamerMmrLossDelta: 25,
       overlayPositions: {
@@ -2182,13 +2184,13 @@ async function handleGsi(req, res) {
 
   runtime.state.gsi = gsi;
   runtime.state.matchIntel = buildMatchIntel(payload, gsi, matchPlayers);
-  updateStreamerStatsIdentity(payload, gsi);
+  const streamerIdentityUpdate = updateStreamerStatsIdentity(payload);
   runtime.state.protection = computeProtection(runtime.config, gsi);
   refreshNotablePlayerRanks(matchPlayers).catch((error) => logEvent('system', `Player rank lookup failed: ${error.message}`));
   refreshStreamerAccountRank().catch((error) => logEvent('system', `Streamer rank lookup failed: ${error.message}`));
   const streamerStatsChangedConfig = applyStreamerStatsMatchResult(previous, gsi);
   await maybeAutomatePrediction(previous, gsi);
-  if (streamerStatsChangedConfig) await persistConfig();
+  if (streamerStatsChangedConfig || streamerIdentityUpdate.configChanged) await persistConfig();
   await persistState();
   broadcast();
   sendJson(res, { ok: true });
@@ -2236,17 +2238,46 @@ function updateStreamerStatsIdentity(payload) {
     ?? payload?.player?.steamid
     ?? payload?.player?.steam_id
   );
-  if (!accountId) return false;
+  if (!accountId) return { stateChanged: false, configChanged: false };
   const previous = runtime.state.streamerStats || {};
-  if (String(previous.streamerAccountId || '') === String(accountId)) return false;
-  runtime.state.streamerStats = {
-    ...normalizeStreamerStatsState(previous),
-    streamerAccountId: accountId,
-    accountRankTier: null,
-    accountLeaderboardRank: null,
-    accountRankCheckedAt: null
-  };
-  return true;
+  const stateChanged = String(previous.streamerAccountId || '') !== String(accountId);
+  if (stateChanged) {
+    runtime.state.streamerStats = {
+      ...normalizeStreamerStatsState(previous),
+      streamerAccountId: accountId,
+      accountRankTier: null,
+      accountLeaderboardRank: null,
+      accountRankCheckedAt: null
+    };
+  }
+  const settings = runtime.config.protection.matchIntel || {};
+  let configChanged = false;
+  if (settings.autoBindStreamerAccounts !== false) {
+    const accounts = Array.isArray(settings.streamerAccounts) ? settings.streamerAccounts : [];
+    if (!accounts.some((item) => String(item?.accountId || '') === String(accountId))) {
+      settings.streamerAccounts = [
+        ...accounts,
+        {
+          accountId,
+          label: streamerAccountLabelFromPayload(payload),
+          boundAt: new Date().toISOString()
+        }
+      ];
+      normalizeMatchIntelConfig(settings);
+      configChanged = true;
+      logEvent('system', `Streamer Dota account bound: ${accountId}`);
+    }
+  }
+  return { stateChanged, configChanged };
+}
+
+function streamerAccountLabelFromPayload(payload) {
+  return String(
+    payload?.player?.name
+    || payload?.player?.player_name
+    || payload?.player?.personaname
+    || ''
+  ).trim().slice(0, 40);
 }
 
 function applyStreamerStatsMatchResult(previous, gsi) {

@@ -631,8 +631,112 @@ dd {
 
 .notable-players,
 .streamer-stats-settings,
+.streamer-account-settings,
 .overlay-position-settings {
   flex: 1 1 100%;
+}
+
+.streamer-stats-page {
+  display: grid;
+  gap: 12px;
+}
+
+.streamer-stat-hero {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.15fr) minmax(260px, 1fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.streamer-medal-card,
+.streamer-stat-kpi {
+  border: 1px solid #293240;
+  border-radius: 7px;
+  background: #11161d;
+}
+
+.streamer-medal-card {
+  display: grid;
+  grid-template-columns: 126px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  min-height: 160px;
+  padding: 18px;
+}
+
+.streamer-medal-art {
+  position: relative;
+  width: 126px;
+  height: 126px;
+}
+
+.streamer-medal-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.streamer-medal-pips {
+  position: absolute;
+  left: -22px;
+  bottom: -40px;
+  width: 170px !important;
+  height: 170px !important;
+  pointer-events: none;
+}
+
+.streamer-medal-copy {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.streamer-medal-copy span,
+.streamer-stat-kpi span {
+  color: #8b96a8;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.streamer-medal-copy strong {
+  color: #f2f4f8;
+  font-size: 28px;
+  line-height: 1.05;
+}
+
+.streamer-medal-copy small {
+  color: #b7c3d2;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.streamer-stat-now {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.streamer-stat-kpi {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-height: 74px;
+  padding: 14px;
+}
+
+.streamer-stat-kpi:last-child {
+  grid-column: 1 / -1;
+}
+
+.streamer-stat-kpi strong {
+  overflow: hidden;
+  color: #f2f4f8;
+  font-size: 23px;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .notable-players-head {
@@ -977,11 +1081,16 @@ dd {
   align-self: start;
 }
 
-.notable-player-form {
+.notable-player-form,
+.streamer-account-form {
   display: grid;
   grid-template-columns: minmax(110px, 1fr) minmax(140px, 1.4fr) minmax(92px, 0.8fr) auto auto;
   gap: 10px;
   align-items: end;
+}
+
+.streamer-account-form {
+  grid-template-columns: minmax(130px, 1fr) minmax(180px, 1.5fr) auto auto;
 }
 
 .streamer-stats-grid {
@@ -1005,7 +1114,9 @@ dd {
 }
 
 .notable-player-list-head,
-.notable-player-row {
+.notable-player-row,
+.streamer-account-list-head,
+.streamer-account-row {
   display: grid;
   grid-template-columns: minmax(110px, 1fr) minmax(140px, 1.4fr) minmax(92px, 0.8fr) minmax(150px, auto);
   gap: 10px;
@@ -1013,32 +1124,45 @@ dd {
 }
 
 .notable-player-form button,
-.notable-player-row button {
+.notable-player-row button,
+.streamer-account-form button,
+.streamer-account-row button {
   min-height: 42px;
 }
 
-.notable-player-rows {
+.notable-player-rows,
+.streamer-account-rows {
   display: grid;
   gap: 8px;
 }
 
-.notable-player-list-head {
+.notable-player-list-head,
+.streamer-account-list-head {
   color: #8b96a8;
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
 }
 
-.notable-player-row {
+.notable-player-row,
+.streamer-account-row {
   padding: 8px;
   border: 1px solid #26303d;
   border-radius: 6px;
   background: #0f141b;
 }
 
+.streamer-account-row[data-current="true"] {
+  border-color: #2d6141;
+  background: rgba(22, 70, 42, 0.25);
+}
+
 .notable-player-id,
 .notable-player-name,
-.notable-player-country {
+.notable-player-country,
+.streamer-account-current,
+.streamer-account-id,
+.streamer-account-label {
   min-width: 0;
   overflow: hidden;
   color: #dbe3ee;
@@ -1048,19 +1172,27 @@ dd {
 }
 
 .notable-player-id,
-.notable-player-country {
+.notable-player-country,
+.streamer-account-current,
+.streamer-account-id {
   color: #9aa5b5;
   font-size: 13px;
 }
 
-.notable-player-actions {
+.streamer-account-row[data-current="true"] .streamer-account-current {
+  color: #7df2a5;
+}
+
+.notable-player-actions,
+.streamer-account-actions {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
   flex-wrap: wrap;
 }
 
-.notable-player-empty {
+.notable-player-empty,
+.streamer-account-empty {
   padding: 10px 0;
 }
 
@@ -1294,10 +1426,15 @@ code {
   .prediction-types,
   .prediction-type-grid,
   .variable-grid,
+  .streamer-stat-hero,
+  .streamer-stat-now,
   .streamer-stats-grid,
   .notable-player-form,
+  .streamer-account-form,
   .notable-player-list-head,
   .notable-player-row,
+  .streamer-account-list-head,
+  .streamer-account-row,
   .facts {
     grid-template-columns: 1fr;
   }
@@ -1336,7 +1473,25 @@ code {
     display: grid;
   }
 
-  .notable-player-actions {
+  .streamer-medal-card {
+    grid-template-columns: 96px minmax(0, 1fr);
+    min-height: 130px;
+  }
+
+  .streamer-medal-art {
+    width: 96px;
+    height: 96px;
+  }
+
+  .streamer-medal-pips {
+    left: -17px;
+    bottom: -31px;
+    width: 130px !important;
+    height: 130px !important;
+  }
+
+  .notable-player-actions,
+  .streamer-account-actions {
     justify-content: flex-start;
   }
 }
