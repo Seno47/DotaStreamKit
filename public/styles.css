@@ -1094,10 +1094,11 @@ dd {
 }
 
 .streamer-account-form {
-  grid-template-columns: minmax(130px, 1fr) minmax(160px, 1.2fr) minmax(100px, 0.7fr) minmax(110px, 0.8fr) auto auto;
+  grid-template-columns: minmax(130px, 1fr) minmax(160px, 1.3fr) minmax(100px, 0.8fr) auto auto;
 }
 
 .streamer-stats-grid,
+.streamer-goal-grid,
 .streamer-mmr-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(150px, 1fr));
@@ -1134,7 +1135,7 @@ dd {
 
 .streamer-account-list-head,
 .streamer-account-row {
-  grid-template-columns: minmax(82px, 0.7fr) minmax(110px, 1fr) minmax(140px, 1.2fr) minmax(72px, 0.65fr) minmax(72px, 0.65fr) minmax(80px, 0.7fr) minmax(150px, auto);
+  grid-template-columns: minmax(82px, 0.8fr) minmax(110px, 1fr) minmax(140px, 1.2fr) minmax(72px, 0.7fr) minmax(80px, 0.7fr) minmax(150px, auto);
 }
 
 .notable-player-form button,
@@ -1251,7 +1252,6 @@ dd {
 .streamer-account-id,
 .streamer-account-label,
 .streamer-account-mmr,
-.streamer-account-goal,
 .streamer-account-session {
   min-width: 0;
   overflow: hidden;
@@ -1521,6 +1521,7 @@ code {
   .streamer-stat-hero,
   .streamer-stat-now,
   .streamer-stats-grid,
+  .streamer-goal-grid,
   .streamer-mmr-grid,
   .notable-player-form,
   .streamer-account-form,

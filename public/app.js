@@ -128,6 +128,10 @@ const els = {
   intelPositionStatus: document.querySelector('#intelPositionStatus'),
   streamerStatsTitle: document.querySelector('#streamerStatsTitle'),
   streamerStatsHint: document.querySelector('#streamerStatsHint'),
+  streamerGoalWrap: document.querySelector('#streamerGoalWrap'),
+  streamerGoalTitle: document.querySelector('#streamerGoalTitle'),
+  streamerGoalSectionSummary: document.querySelector('#streamerGoalSectionSummary'),
+  streamerGoalHint: document.querySelector('#streamerGoalHint'),
   streamerMedalCard: document.querySelector('#streamerMedalCard'),
   streamerMedalArt: document.querySelector('#streamerMedalArt'),
   streamerMedalImage: document.querySelector('#streamerMedalImage'),
@@ -169,7 +173,6 @@ const els = {
   streamerAccountsTitle: document.querySelector('#streamerAccountsTitle'),
   streamerAccountsSectionSummary: document.querySelector('#streamerAccountsSectionSummary'),
   streamerAccountsHint: document.querySelector('#streamerAccountsHint'),
-  autoBindStreamerAccounts: document.querySelector('#autoBindStreamerAccounts'),
   streamerSettingsAccountWrap: document.querySelector('#streamerSettingsAccountWrap'),
   streamerSettingsAccount: document.querySelector('#streamerSettingsAccount'),
   streamerAccountIdWrap: document.querySelector('#streamerAccountIdWrap'),
@@ -178,15 +181,12 @@ const els = {
   streamerAccountLabel: document.querySelector('#streamerAccountLabel'),
   streamerAccountMmrWrap: document.querySelector('#streamerAccountMmrWrap'),
   streamerAccountMmr: document.querySelector('#streamerAccountMmr'),
-  streamerAccountGoalMmrWrap: document.querySelector('#streamerAccountGoalMmrWrap'),
-  streamerAccountGoalMmr: document.querySelector('#streamerAccountGoalMmr'),
   addStreamerAccount: document.querySelector('#addStreamerAccount'),
   cancelStreamerAccountEdit: document.querySelector('#cancelStreamerAccountEdit'),
   streamerAccountListCurrent: document.querySelector('#streamerAccountListCurrent'),
   streamerAccountListId: document.querySelector('#streamerAccountListId'),
   streamerAccountListLabel: document.querySelector('#streamerAccountListLabel'),
   streamerAccountListMmr: document.querySelector('#streamerAccountListMmr'),
-  streamerAccountListGoal: document.querySelector('#streamerAccountListGoal'),
   streamerAccountListSession: document.querySelector('#streamerAccountListSession'),
   streamerAccountListActions: document.querySelector('#streamerAccountListActions'),
   streamerAccountRows: document.querySelector('#streamerAccountRows'),
@@ -342,7 +342,6 @@ const els = {
   dotaPath: document.querySelector('#dotaPath'),
   detectDota: document.querySelector('#detectDota'),
   installGsi: document.querySelector('#installGsi'),
-  autoCheckUpdates: document.querySelector('#autoCheckUpdates'),
   autoInstallUpdates: document.querySelector('#autoInstallUpdates'),
   checkUpdates: document.querySelector('#checkUpdates'),
   installUpdate: document.querySelector('#installUpdate'),
@@ -466,7 +465,7 @@ const translations = {
     updateAvailableInline: 'доступна {version}',
     subtitle: 'Локальная защита стрима и автоматизация Twitch Predictions.',
     pageProtection: 'Защита',
-    pageIntel: 'Match intel',
+    pageIntel: 'Оверлей',
     pageStreamerStats: 'Статистика',
     pagePredictions: 'Прогнозы',
     pageSpectatorPredictions: 'Настройки просмотра',
@@ -533,8 +532,7 @@ const translations = {
     streamerCurrentAccount: 'Текущий Dota аккаунт',
     streamerAccounts: 'Dota аккаунты стримера',
     streamerAccountsSectionSummary: 'Авто и ручная привязка',
-    streamerAccountsHint: 'DotaStreamKit всегда смотрит, какой аккаунт сейчас прислал GSI. Автопривязка просто запоминает такие аккаунты в списке.',
-    autoBindStreamerAccounts: 'Автоматически добавлять текущий аккаунт',
+    streamerAccountsHint: 'DotaStreamKit всегда смотрит, какой аккаунт сейчас прислал GSI, и автоматически добавляет новые аккаунты в список.',
     streamerSettingsAccount: 'Аккаунт для настроек',
     streamerSettingsFallback: 'Без аккаунта / fallback',
     streamerSettingsCurrentSuffix: 'сейчас',
@@ -555,6 +553,9 @@ const translations = {
     streamerMmrAutomation: 'Автоподсчёт MMR',
     streamerMmrAutomationSectionSummary: 'Изменения MMR по аккаунтам',
     streamerMmrAutomationHint: 'Если включено, после засчитанного матча обновляется MMR именно текущего Dota аккаунта.',
+    streamerGoal: 'Цель MMR',
+    streamerGoalSectionSummary: 'Прогресс выбранного аккаунта',
+    streamerGoalHint: 'Укажи цель для выбранного аккаунта настроек и выбери, что показывать в оверлее цели.',
     showStreamerStats: 'Статистика стримера в overlay',
     showStreamerRankMedal: 'Медаль ранга',
     showStreamerMmr: 'MMR',
@@ -688,7 +689,6 @@ const translations = {
     installGsi: 'Установить GSI',
     gsiHelp: 'GSI встроен в Dota 2. DotaStreamKit устанавливает только маленький cfg-файл, который отправляет состояние игры на локальный сервер.',
     updatesTitle: 'Обновления',
-    autoCheckUpdates: 'Проверять обновления при открытии панели',
     autoInstallUpdates: 'Автоматически устанавливать опубликованный релиз',
     checkUpdates: 'Проверить',
     installUpdate: 'Установить обновление',
@@ -816,7 +816,7 @@ const translations = {
     updateAvailableInline: 'available {version}',
     subtitle: 'Local stream protection and Twitch Predictions automation.',
     pageProtection: 'Protection',
-    pageIntel: 'Match intel',
+    pageIntel: 'Overlay',
     pageStreamerStats: 'Streamer stats',
     pagePredictions: 'Predictions',
     pageSpectatorPredictions: 'Spectator settings',
@@ -883,8 +883,7 @@ const translations = {
     streamerCurrentAccount: 'Current Dota account',
     streamerAccounts: 'Streamer Dota accounts',
     streamerAccountsSectionSummary: 'Auto and manual binding',
-    streamerAccountsHint: 'DotaStreamKit always tracks the account sent by GSI. Auto-binding only remembers those accounts in this list.',
-    autoBindStreamerAccounts: 'Automatically add current account',
+    streamerAccountsHint: 'DotaStreamKit always tracks the account sent by GSI and automatically adds new accounts to this list.',
     streamerSettingsAccount: 'Settings account',
     streamerSettingsFallback: 'No account / fallback',
     streamerSettingsCurrentSuffix: 'current',
@@ -905,6 +904,9 @@ const translations = {
     streamerMmrAutomation: 'MMR automation',
     streamerMmrAutomationSectionSummary: 'Per-account MMR changes',
     streamerMmrAutomationHint: 'When enabled, the current Dota account MMR is updated after each scored match.',
+    streamerGoal: 'MMR goal',
+    streamerGoalSectionSummary: 'Selected account progress',
+    streamerGoalHint: 'Set the target for the selected settings account and choose what the goal overlay shows.',
     showStreamerStats: 'Streamer stats overlay',
     showStreamerRankMedal: 'Rank medal',
     showStreamerMmr: 'MMR',
@@ -1038,7 +1040,6 @@ const translations = {
     installGsi: 'Install GSI',
     gsiHelp: 'GSI is built into Dota 2. DotaStreamKit installs only a small cfg file that sends game state to the local server.',
     updatesTitle: 'Updates',
-    autoCheckUpdates: 'Check for updates when dashboard opens',
     autoInstallUpdates: 'Automatically install published releases',
     checkUpdates: 'Check',
     installUpdate: 'Install update',
@@ -1342,6 +1343,9 @@ function applyLanguage(config) {
   setText(els.streamerStatsWrap.closest('article').querySelector('h2'), 'pageStreamerStats');
   els.streamerStatsTitle.textContent = t('streamerStats');
   els.streamerStatsHint.textContent = t('streamerStatsHint');
+  els.streamerGoalTitle.textContent = t('streamerGoal');
+  els.streamerGoalSectionSummary.textContent = t('streamerGoalSectionSummary');
+  els.streamerGoalHint.textContent = t('streamerGoalHint');
   els.streamerMedalEyebrow.textContent = t('streamerMedalEyebrow');
   els.streamerStatWinsLabel.textContent = t('streamerStatWins');
   els.streamerStatLossesLabel.textContent = t('streamerStatLosses');
@@ -1370,19 +1374,16 @@ function applyLanguage(config) {
   els.streamerAccountsTitle.textContent = t('streamerAccounts');
   els.streamerAccountsSectionSummary.textContent = t('streamerAccountsSectionSummary');
   els.streamerAccountsHint.textContent = t('streamerAccountsHint');
-  setLabelText(els.autoBindStreamerAccounts.closest('label'), t('autoBindStreamerAccounts'));
   setLabelText(els.streamerSettingsAccountWrap, t('streamerSettingsAccount'));
   setLabelText(els.streamerAccountIdWrap, t('streamerAccountId'));
   setLabelText(els.streamerAccountLabelWrap, t('streamerAccountLabel'));
   setLabelText(els.streamerAccountMmrWrap, t('streamerAccountMmr'));
-  setLabelText(els.streamerAccountGoalMmrWrap, t('streamerGoalMmr'));
   els.addStreamerAccount.textContent = editingStreamerAccountId ? t('saveStreamerAccount') : t('addStreamerAccount');
   els.cancelStreamerAccountEdit.textContent = t('cancelStreamerAccountEdit');
   els.streamerAccountListCurrent.textContent = t('streamerAccountListCurrent');
   els.streamerAccountListId.textContent = t('streamerAccountId');
   els.streamerAccountListLabel.textContent = t('streamerAccountLabel');
   els.streamerAccountListMmr.textContent = t('streamerAccountListMmr');
-  els.streamerAccountListGoal.textContent = t('streamerGoalMmr');
   els.streamerAccountListSession.textContent = t('streamerAccountListSession');
   els.streamerAccountListActions.textContent = t('streamerAccountListActions');
   els.streamerMmrAutomationTitle.textContent = t('streamerMmrAutomation');
@@ -1547,7 +1548,6 @@ function applyLanguage(config) {
   els.installGsi.closest('article').querySelector('.muted').textContent = t('gsiHelp');
 
   setText('#updatesTitle', 'updatesTitle');
-  setLabelText(els.autoCheckUpdates.closest('label'), t('autoCheckUpdates'));
   setLabelText(els.autoInstallUpdates.closest('label'), t('autoInstallUpdates'));
   els.checkUpdates.textContent = t('checkUpdates');
   els.installUpdate.textContent = t('installUpdate');
@@ -1772,7 +1772,6 @@ function render(data) {
   setInputValue(els.streamerMmr, streamerMmrForSettingsAccount(matchIntel, settingsAccountId));
   setInputValue(els.streamerGoalMmr, streamerGoalMmrForSettingsAccount(matchIntel, settingsAccountId));
   els.autoUpdateStreamerMmr.checked = matchIntel.autoUpdateStreamerMmr !== false;
-  els.autoBindStreamerAccounts.checked = matchIntel.autoBindStreamerAccounts !== false;
   setInputValue(els.streamerMmrWinDelta, matchIntel.streamerMmrWinDelta ?? 25);
   setInputValue(els.streamerMmrLossDelta, matchIntel.streamerMmrLossDelta ?? 25);
   setOverlayPositionControls(matchIntel.overlayPositions || {});
@@ -1813,14 +1812,13 @@ function render(data) {
   }
   renderPredictionEditorConfig('own', config.predictions);
   renderPredictionEditorConfig('spectator', config.spectatorPredictions || config.predictions);
-  els.autoCheckUpdates.checked = config.updates?.autoCheck !== false;
   els.autoInstallUpdates.checked = config.updates?.autoInstall === true;
   renderServerUpdateStatus(state.update);
 
   renderPrediction(state.activePrediction);
   renderEvents(state.events || []);
 
-  if (config.updates?.autoCheck !== false && !latestUpdateStatus && !sessionStorage.getItem('dsk.updateChecked')) {
+  if (!latestUpdateStatus && !sessionStorage.getItem('dsk.updateChecked')) {
     sessionStorage.setItem('dsk.updateChecked', '1');
     checkUpdates(false).catch((error) => {
       els.updateStatus.dataset.custom = 'true';
@@ -2647,9 +2645,6 @@ function renderStreamerAccounts(accounts, stats, selectedAccountId = '') {
     const mmr = document.createElement('span');
     mmr.className = 'streamer-account-mmr';
     mmr.textContent = Number(row.dataset.mmr) > 0 ? row.dataset.mmr : '-';
-    const goal = document.createElement('span');
-    goal.className = 'streamer-account-goal';
-    goal.textContent = Number(row.dataset.goalMmr) > 0 ? row.dataset.goalMmr : '-';
     const wl = document.createElement('span');
     wl.className = 'streamer-account-session';
     wl.textContent = `${session.wins || 0}-${session.losses || 0}`;
@@ -2665,7 +2660,7 @@ function renderStreamerAccounts(accounts, stats, selectedAccountId = '') {
     remove.textContent = t('removeStreamerAccount');
     actions.append(edit, remove);
 
-    row.append(current, id, label, mmr, goal, wl, actions);
+    row.append(current, id, label, mmr, wl, actions);
     els.streamerAccountRows.append(row);
     rowCount += 1;
   }
@@ -2707,7 +2702,6 @@ function addStreamerAccount() {
   const accountId = normalizeDotaAccountIdInput(els.streamerAccountId.value);
   const label = els.streamerAccountLabel.value.trim();
   const mmr = Math.max(0, Math.trunc(Number(els.streamerAccountMmr.value) || 0));
-  const goalMmr = Math.max(0, Math.trunc(Number(els.streamerAccountGoalMmr.value) || 0));
   if (!accountId) {
     alert(t('streamerAccountId'));
     return;
@@ -2718,6 +2712,9 @@ function addStreamerAccount() {
     : null;
   const previousGoalMmr = Number(previousRow?.dataset.goalMmr || 0);
   const previousGoalStartMmr = Number(previousRow?.dataset.goalStartMmr || 0);
+  const goalMmr = String(previousAccountId) === String(activeStreamerSettingsAccountId)
+    ? Math.max(0, Math.trunc(Number(els.streamerGoalMmr.value) || 0))
+    : previousGoalMmr;
   const goalStartMmr = goalMmr > 0
     ? goalMmr === previousGoalMmr && previousGoalStartMmr > 0
       ? previousGoalStartMmr
@@ -2743,11 +2740,11 @@ function editStreamerAccount(row) {
   els.streamerAccountId.value = editingStreamerAccountId;
   els.streamerAccountLabel.value = row.dataset.label || '';
   els.streamerAccountMmr.value = row.dataset.mmr || '0';
-  els.streamerAccountGoalMmr.value = row.dataset.goalMmr || '0';
   const matchIntel = snapshot?.config?.protection?.matchIntel || {};
   const stats = snapshot?.state?.streamerStats || {};
   renderStreamerSettingsAccountOptions(matchIntel.streamerAccounts || [], stats, activeStreamerSettingsAccountId);
   setInputValue(els.streamerMmr, streamerMmrForSettingsAccount(matchIntel, activeStreamerSettingsAccountId));
+  setInputValue(els.streamerGoalMmr, streamerGoalMmrForSettingsAccount(matchIntel, activeStreamerSettingsAccountId));
   renderStreamerStatsPreview(stats, matchIntel, activeStreamerSettingsAccountId);
   renderStreamerAccounts(matchIntel.streamerAccounts || [], stats, activeStreamerSettingsAccountId);
   updateStreamerAccountEditorMode();
@@ -2759,7 +2756,6 @@ function resetStreamerAccountEditor() {
   els.streamerAccountId.value = '';
   els.streamerAccountLabel.value = '';
   els.streamerAccountMmr.value = '';
-  els.streamerAccountGoalMmr.value = '';
   updateStreamerAccountEditorMode();
 }
 
@@ -3055,8 +3051,7 @@ els.spectatorGameLabelTemplate?.addEventListener('change', () => saveProtection(
   els.showStreamerMmrGoalEta,
   els.showStreamerMmrGoalDelta,
   els.streamerMedalSource,
-  els.autoUpdateStreamerMmr,
-  els.autoBindStreamerAccounts
+  els.autoUpdateStreamerMmr
 ].forEach((input) => input.addEventListener('change', () => {
   if (input === els.streamerMedalSource) markStreamerSettingsAccountInteraction();
   updateMatchIntelFieldVisibility();
@@ -3091,8 +3086,7 @@ els.streamerGoalMmr.addEventListener('change', () => {
 [
   els.streamerAccountId,
   els.streamerAccountLabel,
-  els.streamerAccountMmr,
-  els.streamerAccountGoalMmr
+  els.streamerAccountMmr
 ].forEach((input) => input.addEventListener('input', () => {
   markStreamerSettingsAccountInteraction(editingStreamerAccountId || activeStreamerSettingsAccountId);
 }));
@@ -3210,7 +3204,7 @@ function protectionMatchIntelFromForm() {
     streamerMedalSource: els.streamerMedalSource.value,
     streamerMmr: fallbackStreamerMmr,
     autoUpdateStreamerMmr: els.autoUpdateStreamerMmr.checked,
-    autoBindStreamerAccounts: els.autoBindStreamerAccounts.checked,
+    autoBindStreamerAccounts: true,
     streamerMmrWinDelta: Number(els.streamerMmrWinDelta.value),
     streamerMmrLossDelta: Number(els.streamerMmrLossDelta.value),
     overlayPositions: overlayPositionsFromForm(),
@@ -3242,6 +3236,7 @@ function updateMatchIntelFieldVisibility() {
   els.showStreamerMmrGoalDelta.closest('label').hidden = !streamerGoalEnabled;
   els.streamerMedalSourceWrap.hidden = !streamerStatsEnabled || !els.showStreamerRankMedal.checked;
   els.streamerMmrWrap.hidden = false;
+  els.streamerGoalWrap.hidden = false;
   els.autoUpdateStreamerMmr.closest('label').hidden = false;
   els.streamerMmrWinDeltaWrap.hidden = !els.autoUpdateStreamerMmr.checked;
   els.streamerMmrLossDeltaWrap.hidden = !els.autoUpdateStreamerMmr.checked;
@@ -3457,7 +3452,6 @@ els.installGsi.addEventListener('click', () => api('/api/install-gsi', {
   els.dotaPath.value = result.dotaPath || els.dotaPath.value;
   alert(`${t('gsiInstalled')}\n${result.cfgPath}\n\n${t('restartDota')}`);
 }).catch(alert));
-els.autoCheckUpdates.addEventListener('change', saveUpdateSettings);
 els.autoInstallUpdates.addEventListener('change', saveUpdateSettings);
 els.checkUpdates.addEventListener('click', () => checkUpdates(true).catch(alert));
 els.installUpdate.addEventListener('click', () => installUpdate().catch(alert));
@@ -3480,7 +3474,7 @@ async function detectDota() {
 async function saveUpdateSettings() {
   await api('/api/config', {
     updates: {
-      autoCheck: els.autoCheckUpdates.checked,
+      autoCheck: true,
       autoInstall: els.autoInstallUpdates.checked
     }
   });

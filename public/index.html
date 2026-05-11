@@ -75,7 +75,7 @@
 
       <nav class="page-nav" aria-label="Dashboard pages">
         <button type="button" class="page-tab active" data-page-target="protection">Protection</button>
-        <button type="button" class="page-tab" data-page-target="intel">Match intel</button>
+        <button type="button" class="page-tab" data-page-target="intel">Overlay</button>
         <button type="button" class="page-tab" data-page-target="streamerStats">Streamer stats</button>
         <button type="button" class="page-tab" data-page-target="predictions">Predictions</button>
         <button type="button" class="page-tab" data-page-target="spectatorPredictions">Spectator bets</button>
@@ -115,7 +115,7 @@
         </article>
 
         <article class="panel wide" data-page="intel">
-          <h2>Match intel</h2>
+          <h2>Overlay</h2>
           <div class="intel-status-row">
             <span id="intelMatchStatus">Match intel: -</span>
             <span id="intelNotableStatus">Notable: -</span>
@@ -274,13 +274,11 @@
               <summary><span id="streamerAccountsTitle">Dota accounts</span><span id="streamerAccountsSectionSummary">Auto and manual binding</span></summary>
               <div class="intel-section-body">
                 <p class="muted" id="streamerAccountsHint">DotaStreamKit always tracks the account sent by GSI and can remember accounts automatically.</p>
-                <label class="check"><input type="checkbox" id="autoBindStreamerAccounts"> Auto-bind current account</label>
                 <label id="streamerSettingsAccountWrap">Settings account<select id="streamerSettingsAccount"></select></label>
                 <div class="streamer-account-form">
                   <label id="streamerAccountIdWrap">Dota ID<input id="streamerAccountId" inputmode="numeric" maxlength="20"></label>
                   <label id="streamerAccountLabelWrap">Label<input id="streamerAccountLabel" maxlength="40"></label>
                   <label id="streamerAccountMmrWrap">MMR<input id="streamerAccountMmr" type="number" min="0" max="99999" step="1"></label>
-                  <label id="streamerAccountGoalMmrWrap">MMR goal<input id="streamerAccountGoalMmr" type="number" min="0" max="99999" step="1"></label>
                   <button id="addStreamerAccount" type="button">Add</button>
                   <button id="cancelStreamerAccountEdit" type="button" hidden>Cancel</button>
                 </div>
@@ -289,7 +287,6 @@
                   <span id="streamerAccountListId">Dota ID</span>
                   <span id="streamerAccountListLabel">Label</span>
                   <span id="streamerAccountListMmr">MMR</span>
-                  <span id="streamerAccountListGoal">Goal</span>
                   <span id="streamerAccountListSession">Stream W-L</span>
                   <span id="streamerAccountListActions">Actions</span>
                 </div>
@@ -308,7 +305,6 @@
                   <strong id="streamerMedalName">-</strong>
                   <small id="streamerMedalDetails">-</small>
                   <label id="streamerMmrWrap">Current MMR<input id="streamerMmr" type="number" min="0" max="99999" step="1"></label>
-                  <label id="streamerGoalMmrWrap">MMR goal<input id="streamerGoalMmr" type="number" min="0" max="99999" step="1"></label>
                 </div>
               </div>
               <div class="streamer-stat-now">
@@ -327,6 +323,22 @@
               </div>
             </section>
 
+            <details class="intel-section streamer-goal-settings" id="streamerGoalWrap" data-collapsible-section="streamerGoal" open>
+              <summary><span id="streamerGoalTitle">MMR goal</span><span id="streamerGoalSectionSummary">Progress bar for selected account</span></summary>
+              <div class="intel-section-body">
+                <p class="muted" id="streamerGoalHint">Set the MMR target for the selected settings account and choose what the goal overlay shows.</p>
+                <div class="streamer-goal-grid">
+                  <label id="streamerGoalMmrWrap">MMR goal<input id="streamerGoalMmr" type="number" min="0" max="99999" step="1"></label>
+                  <label class="check"><input type="checkbox" id="showStreamerMmrGoal"> MMR goal overlay</label>
+                  <label class="check"><input type="checkbox" id="showStreamerMmrGoalProgress"> Goal progress bar</label>
+                  <label class="check"><input type="checkbox" id="showStreamerMmrGoalRecord"> Goal W-L</label>
+                  <label class="check"><input type="checkbox" id="showStreamerMmrGoalWinRate"> Goal winrate</label>
+                  <label class="check"><input type="checkbox" id="showStreamerMmrGoalEta"> Wins left</label>
+                  <label class="check"><input type="checkbox" id="showStreamerMmrGoalDelta"> MMR left</label>
+                </div>
+              </div>
+            </details>
+
             <details class="intel-section streamer-stats-settings" id="streamerStatsWrap" data-collapsible-section="streamerStats" open>
               <summary><span id="streamerStatsTitle">Streamer stats</span><span id="streamerStatsSectionSummary">Medal, MMR, Win-Lose</span></summary>
               <div class="intel-section-body">
@@ -336,12 +348,6 @@
                   <label class="check"><input type="checkbox" id="showStreamerRankMedal"> Rank medal</label>
                   <label class="check"><input type="checkbox" id="showStreamerMmr"> MMR</label>
                   <label class="check"><input type="checkbox" id="showStreamerWinLoss"> Win-Lose</label>
-                  <label class="check"><input type="checkbox" id="showStreamerMmrGoal"> MMR goal overlay</label>
-                  <label class="check"><input type="checkbox" id="showStreamerMmrGoalProgress"> Goal progress bar</label>
-                  <label class="check"><input type="checkbox" id="showStreamerMmrGoalRecord"> Goal W-L</label>
-                  <label class="check"><input type="checkbox" id="showStreamerMmrGoalWinRate"> Goal winrate</label>
-                  <label class="check"><input type="checkbox" id="showStreamerMmrGoalEta"> Wins left</label>
-                  <label class="check"><input type="checkbox" id="showStreamerMmrGoalDelta"> MMR left</label>
                   <label id="streamerMedalSourceWrap">Medal source<select id="streamerMedalSource"><option value="auto">Account, then MMR</option><option value="account">Dota account</option><option value="mmr">Manual MMR</option></select></label>
                 </div>
                 <div class="streamer-stats-status" id="streamerStatsStatus">-</div>
@@ -481,7 +487,6 @@
         <article class="panel" data-page="setup">
           <h2 id="updatesTitle">Обновления</h2>
           <div class="stack">
-            <label class="check"><input type="checkbox" id="autoCheckUpdates"> Проверять обновления при открытии панели</label>
             <label class="check"><input type="checkbox" id="autoInstallUpdates"> Автоматически скачивать и устанавливать новый релиз</label>
           </div>
           <div class="button-row">

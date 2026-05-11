@@ -2319,22 +2319,20 @@ function updateStreamerStatsIdentity(payload) {
   }
   const settings = runtime.config.protection.matchIntel || {};
   let configChanged = false;
-  if (settings.autoBindStreamerAccounts !== false) {
-    const accounts = Array.isArray(settings.streamerAccounts) ? settings.streamerAccounts : [];
-    if (!accounts.some((item) => String(item?.accountId || '') === String(accountId))) {
-      settings.streamerAccounts = [
-        ...accounts,
-        {
-          accountId,
-          label: streamerAccountLabelFromPayload(payload),
-          mmr: Number(settings.streamerMmr || 0) > 0 ? Math.trunc(Number(settings.streamerMmr || 0)) : 0,
-          boundAt: new Date().toISOString()
-        }
-      ];
-      normalizeMatchIntelConfig(settings);
-      configChanged = true;
-      logEvent('system', `Streamer Dota account bound: ${accountId}`);
-    }
+  const accounts = Array.isArray(settings.streamerAccounts) ? settings.streamerAccounts : [];
+  if (!accounts.some((item) => String(item?.accountId || '') === String(accountId))) {
+    settings.streamerAccounts = [
+      ...accounts,
+      {
+        accountId,
+        label: streamerAccountLabelFromPayload(payload),
+        mmr: Number(settings.streamerMmr || 0) > 0 ? Math.trunc(Number(settings.streamerMmr || 0)) : 0,
+        boundAt: new Date().toISOString()
+      }
+    ];
+    normalizeMatchIntelConfig(settings);
+    configChanged = true;
+    logEvent('system', `Streamer Dota account bound: ${accountId}`);
   }
   return { stateChanged, configChanged };
 }
@@ -3676,7 +3674,7 @@ function normalizeUiConfig(config) {
 }
 
 function normalizeUpdateConfig(config) {
-  config.autoCheck = config.autoCheck !== false;
+  config.autoCheck = true;
   if (config.autoInstallDefaultVersion !== 2) {
     config.autoInstall = true;
     config.autoInstallDefaultVersion = 2;

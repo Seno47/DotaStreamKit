@@ -26,7 +26,7 @@ export function normalizeStreamerStatsConfig(config) {
   config.showStreamerMmrGoalEta = config.showStreamerMmrGoalEta !== false;
   config.showStreamerMmrGoalDelta = config.showStreamerMmrGoalDelta !== false;
   config.autoUpdateStreamerMmr = config.autoUpdateStreamerMmr !== false;
-  config.autoBindStreamerAccounts = config.autoBindStreamerAccounts !== false;
+  config.autoBindStreamerAccounts = true;
   if (!['auto', 'account', 'mmr'].includes(config.streamerMedalSource)) config.streamerMedalSource = 'auto';
   config.streamerMmr = clampInt(config.streamerMmr, 0, 99999, 0);
   config.streamerMmrWinDelta = clampInt(config.streamerMmrWinDelta, 0, 200, 25);
