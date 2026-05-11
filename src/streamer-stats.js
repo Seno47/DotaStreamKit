@@ -19,6 +19,12 @@ export function normalizeStreamerStatsConfig(config) {
   config.showStreamerRankMedal = config.showStreamerRankMedal !== false;
   config.showStreamerMmr = config.showStreamerMmr !== false;
   config.showStreamerWinLoss = config.showStreamerWinLoss !== false;
+  config.showStreamerMmrGoal = config.showStreamerMmrGoal !== false;
+  config.showStreamerMmrGoalProgress = config.showStreamerMmrGoalProgress !== false;
+  config.showStreamerMmrGoalRecord = config.showStreamerMmrGoalRecord !== false;
+  config.showStreamerMmrGoalWinRate = config.showStreamerMmrGoalWinRate !== false;
+  config.showStreamerMmrGoalEta = config.showStreamerMmrGoalEta !== false;
+  config.showStreamerMmrGoalDelta = config.showStreamerMmrGoalDelta !== false;
   config.autoUpdateStreamerMmr = config.autoUpdateStreamerMmr !== false;
   config.autoBindStreamerAccounts = config.autoBindStreamerAccounts !== false;
   if (!['auto', 'account', 'mmr'].includes(config.streamerMedalSource)) config.streamerMedalSource = 'auto';
@@ -261,6 +267,8 @@ function normalizeStreamerAccounts(value, fallbackMmr = 0) {
       mmr: row.mmr === undefined || row.mmr === null || row.mmr === ''
         ? clampInt(fallbackMmr, 0, 99999, 0)
         : clampInt(row.mmr, 0, 99999, 0),
+      goalMmr: clampInt(row.goalMmr ?? row.targetMmr, 0, 99999, 0),
+      goalStartMmr: clampInt(row.goalStartMmr ?? row.goalBaseMmr, 0, 99999, 0),
       boundAt: stringOrNull(row.boundAt)
     });
   }

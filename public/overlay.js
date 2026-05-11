@@ -5,6 +5,7 @@ const spectatorGameLabelEl = document.querySelector('#spectatorGameLabel');
 const topBarSlotsRoot = document.querySelector('#topBarSlots');
 const matchIntelRoot = document.querySelector('#matchIntel');
 const streamerStatsEl = document.querySelector('#streamerStats');
+const streamerMmrGoalEl = document.querySelector('#streamerMmrGoal');
 const predictionOverlayEl = document.querySelector('#predictionOverlay');
 let queuePartEls = [];
 let topBarSlotEls = [];
@@ -14,6 +15,7 @@ let minimapLayerEl = null;
 let minimapVisionImageEl = null;
 let roshanIntelEl = null;
 let streamerStatsNodes = null;
+let streamerMmrGoalNodes = null;
 let predictionOverlayNodes = null;
 let predictionOverlayAnimation = null;
 let predictionOverlayFinalSync = null;
@@ -52,6 +54,7 @@ function renderOverlay({ config, state }) {
     : (config.predictions || {});
   applyMatchIntel(matchIntelSlots, reference, matchIntelSettings, state);
   applyStreamerStats(reference, config.protection || {}, state);
+  applyStreamerMmrGoal(reference, config.protection || {}, state);
   applyPredictionOverlay(reference, predictionSettings, matchIntelSettings, state);
   applyMinimap(config.protection, reference, state);
   applySpectatorGameLabel(config.protection, reference, state);
@@ -944,6 +947,57 @@ function applyStreamerStats(reference, protection, state) {
   setVisible(streamerStatsEl, true);
 }
 
+function applyStreamerMmrGoal(reference, protection, state) {
+  if (!streamerMmrGoalEl) return;
+  const spectatorView = isSpectatingGameView(state);
+  const settings = spectatorView
+    ? (protection.spectatorMatchIntel || protection.matchIntel || {})
+    : (protection.matchIntel || {});
+  const goal = state.streamerStats?.mmrGoal || null;
+  const gameState = String(state.gsi?.gameState || '');
+  if (!settings.showStreamerStats || !settings.showStreamerMmrGoal || !goal || !shouldShowStreamerStatsInOverlay(state)) {
+    setVisible(streamerMmrGoalEl, false);
+    return;
+  }
+
+  const nodes = ensureStreamerMmrGoalNodes();
+  const progress = clampNumber(goal.progress, 0, 100, 0);
+  const currentMmr = formatStreamerMmr(goal.currentMmr);
+  const targetMmr = formatStreamerMmr(goal.targetMmr);
+  const remainingMmr = Math.max(0, Math.trunc(Number(goal.remainingMmr || 0)));
+  const wins = Math.max(0, Math.trunc(Number(goal.wins || 0)));
+  const losses = Math.max(0, Math.trunc(Number(goal.losses || 0)));
+  const total = wins + losses;
+
+  setTextContent(nodes.title, goal.label ? String(goal.label).slice(0, 28) : 'MMR GOAL');
+  setTextContent(nodes.percent, `${formatGoalPercent(progress)}%`);
+  nodes.progress.hidden = settings.showStreamerMmrGoalProgress === false;
+  nodes.percent.hidden = settings.showStreamerMmrGoalProgress === false;
+  nodes.fill.style.width = `${progress}%`;
+  setTextContent(nodes.current, currentMmr);
+  setTextContent(nodes.target, `/ ${targetMmr}`);
+  setTextContent(nodes.delta, remainingMmr > 0 ? `+${formatStreamerMmr(remainingMmr)}` : 'DONE');
+  nodes.delta.hidden = settings.showStreamerMmrGoalDelta === false;
+  setTextContent(nodes.record, `W ${wins} - L ${losses}`);
+  nodes.record.hidden = settings.showStreamerMmrGoalRecord === false;
+  setTextContent(nodes.winRate, total > 0 && goal.winRate !== null ? `${formatGoalPercent(goal.winRate)}% WR` : '- WR');
+  nodes.winRate.hidden = settings.showStreamerMmrGoalWinRate === false;
+  setTextContent(nodes.eta, remainingMmr > 0 ? `${Math.max(0, Number(goal.requiredWins || 0))}W left` : 'Goal hit');
+  nodes.eta.hidden = settings.showStreamerMmrGoalEta === false;
+  streamerMmrGoalEl.classList.toggle('complete', remainingMmr <= 0);
+
+  const minimapSide = protection.minimapSide === 'right' ? 'right' : 'left';
+  const inLiveGame = !spectatorView && /PRE_GAME|GAME_IN_PROGRESS/i.test(gameState);
+  const left = inLiveGame
+    ? minimapSide === 'right' ? 385 : 1110
+    : minimapSide === 'right' ? 1060 : 390;
+  const box = inLiveGame
+    ? { left, bottom: 176, width: 420, height: 92 }
+    : { left, top: 132, width: 420, height: 92 };
+  applyScaledBox(streamerMmrGoalEl, withOverlayOffset(box, settings.overlayPositions?.streamerMmrGoal), reference);
+  setVisible(streamerMmrGoalEl, true);
+}
+
 function withOverlayOffset(box, offset) {
   const x = Number(offset?.x || 0);
   const y = Number(offset?.y || 0);
@@ -1027,9 +1081,52 @@ function ensureStreamerStatsNodes() {
   return streamerStatsNodes;
 }
 
+function ensureStreamerMmrGoalNodes() {
+  if (streamerMmrGoalNodes) return streamerMmrGoalNodes;
+  const top = document.createElement('div');
+  const title = document.createElement('span');
+  const percent = document.createElement('b');
+  const progress = document.createElement('div');
+  const fill = document.createElement('span');
+  const meta = document.createElement('div');
+  const current = document.createElement('b');
+  const target = document.createElement('span');
+  const delta = document.createElement('em');
+  const kpis = document.createElement('div');
+  const record = document.createElement('span');
+  const winRate = document.createElement('span');
+  const eta = document.createElement('span');
+  top.className = 'streamerMmrGoalTop';
+  title.className = 'streamerMmrGoalTitle';
+  percent.className = 'streamerMmrGoalPercent';
+  progress.className = 'streamerMmrGoalProgress';
+  fill.className = 'streamerMmrGoalFill';
+  meta.className = 'streamerMmrGoalMeta';
+  current.className = 'streamerMmrGoalCurrent';
+  target.className = 'streamerMmrGoalTarget';
+  delta.className = 'streamerMmrGoalDelta';
+  kpis.className = 'streamerMmrGoalKpis';
+  record.className = 'streamerMmrGoalRecord';
+  winRate.className = 'streamerMmrGoalWinRate';
+  eta.className = 'streamerMmrGoalEta';
+  top.append(title, percent);
+  progress.append(fill);
+  meta.append(current, target, delta);
+  kpis.append(record, winRate, eta);
+  streamerMmrGoalEl.replaceChildren(top, progress, meta, kpis);
+  streamerMmrGoalNodes = { top, title, percent, progress, fill, meta, current, target, delta, kpis, record, winRate, eta };
+  return streamerMmrGoalNodes;
+}
+
 function setTextContent(el, value) {
   const text = String(value ?? '');
   if (el.textContent !== text) el.textContent = text;
+}
+
+function formatGoalPercent(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return '0';
+  return number % 1 === 0 ? String(Math.trunc(number)) : number.toFixed(1);
 }
 
 function formatStreamerMmr(value) {

@@ -15,6 +15,7 @@ body {
 .matchIntelSlot,
 .roshanIntel,
 #streamerStats,
+#streamerMmrGoal,
 #predictionOverlay {
   display: none;
   position: fixed;
@@ -32,6 +33,7 @@ body {
 .matchIntelSlot.visible,
 .roshanIntel.visible,
 #streamerStats.visible,
+#streamerMmrGoal.visible,
 #predictionOverlay.visible {
   display: block;
 }
@@ -270,6 +272,121 @@ body {
   transform: none;
   transform-origin: top left;
   --streamer-medal-gap-offset: 0px;
+}
+
+#streamerMmrGoal {
+  z-index: 2147483646;
+  pointer-events: none;
+  box-sizing: border-box;
+  width: 420px;
+  height: 92px;
+  padding: 10px 12px 9px;
+  overflow: hidden;
+  border: 1px solid rgba(246, 205, 108, 0.34);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(19, 23, 30, 0.92), rgba(9, 12, 18, 0.82)),
+    radial-gradient(circle at 20% 0%, rgba(246, 205, 108, 0.20), transparent 45%);
+  box-shadow: 0 7px 22px rgba(0, 0, 0, 0.46), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  color: #f8f1df;
+  font-family: "Arial Narrow", "Roboto Condensed", "Segoe UI Condensed", "Segoe UI", Arial, Helvetica, sans-serif;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+  text-shadow: 0 2px 3px #000, 0 0 5px #000;
+}
+
+#streamerMmrGoal.visible {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.streamerMmrGoalTop,
+.streamerMmrGoalMeta,
+.streamerMmrGoalKpis {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.streamerMmrGoalTop,
+.streamerMmrGoalMeta {
+  justify-content: space-between;
+}
+
+.streamerMmrGoalTitle {
+  min-width: 0;
+  overflow: hidden;
+  color: #ffdf91;
+  font-size: 17px;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.streamerMmrGoalPercent {
+  color: #ffffff;
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+
+.streamerMmrGoalProgress {
+  position: relative;
+  height: 13px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.42);
+}
+
+.streamerMmrGoalFill {
+  display: block;
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #63c9ff, #8df0a1 58%, #ffe08a);
+  box-shadow: 0 0 12px rgba(141, 240, 161, 0.34);
+  transition: width 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.streamerMmrGoalCurrent {
+  color: #ffffff;
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+}
+
+.streamerMmrGoalTarget {
+  margin-left: 5px;
+  margin-right: auto;
+  color: #bfc8d6;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+.streamerMmrGoalDelta {
+  color: #8df0a1;
+  font-size: 16px;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+}
+
+#streamerMmrGoal.complete .streamerMmrGoalDelta {
+  color: #ffdf91;
+}
+
+.streamerMmrGoalKpis {
+  justify-content: space-between;
+  gap: 8px;
+  color: #dbe5f4;
+  font-size: 14px;
+}
+
+.streamerMmrGoalKpis span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 #streamerStats.visible {

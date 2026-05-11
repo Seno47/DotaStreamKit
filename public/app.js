@@ -145,10 +145,18 @@ const els = {
   showStreamerRankMedal: document.querySelector('#showStreamerRankMedal'),
   showStreamerMmr: document.querySelector('#showStreamerMmr'),
   showStreamerWinLoss: document.querySelector('#showStreamerWinLoss'),
+  showStreamerMmrGoal: document.querySelector('#showStreamerMmrGoal'),
+  showStreamerMmrGoalProgress: document.querySelector('#showStreamerMmrGoalProgress'),
+  showStreamerMmrGoalRecord: document.querySelector('#showStreamerMmrGoalRecord'),
+  showStreamerMmrGoalWinRate: document.querySelector('#showStreamerMmrGoalWinRate'),
+  showStreamerMmrGoalEta: document.querySelector('#showStreamerMmrGoalEta'),
+  showStreamerMmrGoalDelta: document.querySelector('#showStreamerMmrGoalDelta'),
   streamerMedalSourceWrap: document.querySelector('#streamerMedalSourceWrap'),
   streamerMedalSource: document.querySelector('#streamerMedalSource'),
   streamerMmrWrap: document.querySelector('#streamerMmrWrap'),
   streamerMmr: document.querySelector('#streamerMmr'),
+  streamerGoalMmrWrap: document.querySelector('#streamerGoalMmrWrap'),
+  streamerGoalMmr: document.querySelector('#streamerGoalMmr'),
   autoUpdateStreamerMmr: document.querySelector('#autoUpdateStreamerMmr'),
   streamerMmrWinDeltaWrap: document.querySelector('#streamerMmrWinDeltaWrap'),
   streamerMmrWinDelta: document.querySelector('#streamerMmrWinDelta'),
@@ -170,12 +178,15 @@ const els = {
   streamerAccountLabel: document.querySelector('#streamerAccountLabel'),
   streamerAccountMmrWrap: document.querySelector('#streamerAccountMmrWrap'),
   streamerAccountMmr: document.querySelector('#streamerAccountMmr'),
+  streamerAccountGoalMmrWrap: document.querySelector('#streamerAccountGoalMmrWrap'),
+  streamerAccountGoalMmr: document.querySelector('#streamerAccountGoalMmr'),
   addStreamerAccount: document.querySelector('#addStreamerAccount'),
   cancelStreamerAccountEdit: document.querySelector('#cancelStreamerAccountEdit'),
   streamerAccountListCurrent: document.querySelector('#streamerAccountListCurrent'),
   streamerAccountListId: document.querySelector('#streamerAccountListId'),
   streamerAccountListLabel: document.querySelector('#streamerAccountListLabel'),
   streamerAccountListMmr: document.querySelector('#streamerAccountListMmr'),
+  streamerAccountListGoal: document.querySelector('#streamerAccountListGoal'),
   streamerAccountListSession: document.querySelector('#streamerAccountListSession'),
   streamerAccountListActions: document.querySelector('#streamerAccountListActions'),
   streamerAccountRows: document.querySelector('#streamerAccountRows'),
@@ -200,6 +211,11 @@ const els = {
   streamerStatsGameY: document.querySelector('#streamerStatsGameY'),
   streamerStatsGameXValue: document.querySelector('#streamerStatsGameXValue'),
   streamerStatsGameYValue: document.querySelector('#streamerStatsGameYValue'),
+  streamerMmrGoalPositionTitle: document.querySelector('#streamerMmrGoalPositionTitle'),
+  streamerMmrGoalX: document.querySelector('#streamerMmrGoalX'),
+  streamerMmrGoalY: document.querySelector('#streamerMmrGoalY'),
+  streamerMmrGoalXValue: document.querySelector('#streamerMmrGoalXValue'),
+  streamerMmrGoalYValue: document.querySelector('#streamerMmrGoalYValue'),
   roshanTimerPositionTitle: document.querySelector('#roshanTimerPositionTitle'),
   roshanTimerX: document.querySelector('#roshanTimerX'),
   roshanTimerY: document.querySelector('#roshanTimerY'),
@@ -369,7 +385,7 @@ const previewRankMedalThresholds = [
   { medal: 8, name: 'Immortal', minMmr: 5620, starStep: 0 }
 ];
 
-const overlayPositionKeys = ['streamerStatsMenu', 'streamerStatsGame', 'roshanTimer', 'predictionOverlay'];
+const overlayPositionKeys = ['streamerStatsMenu', 'streamerStatsGame', 'streamerMmrGoal', 'roshanTimer', 'predictionOverlay'];
 const overlayPreviewBoxes = {
   streamerStatsMenu: {
     left: 1276,
@@ -386,6 +402,14 @@ const overlayPreviewBoxes = {
     height: 150,
     anchor: { x: 52, y: 0 },
     visible: { width: 150, height: 112 }
+  },
+  streamerMmrGoal: {
+    left: 1110,
+    top: 812,
+    width: 420,
+    height: 92,
+    anchor: { x: 0, y: 0 },
+    visible: { width: 420, height: 92 }
   },
   roshanTimer: {
     left: 318,
@@ -535,11 +559,18 @@ const translations = {
     showStreamerRankMedal: 'Медаль ранга',
     showStreamerMmr: 'MMR',
     showStreamerWinLoss: 'Win-Lose',
+    showStreamerMmrGoal: 'Цель MMR в overlay',
+    showStreamerMmrGoalProgress: 'Полоска прогресса цели',
+    showStreamerMmrGoalRecord: 'W-L в цели',
+    showStreamerMmrGoalWinRate: 'Winrate в цели',
+    showStreamerMmrGoalEta: 'Сколько побед осталось',
+    showStreamerMmrGoalDelta: 'Сколько MMR осталось',
     streamerMedalSource: 'Источник медали',
     streamerMedalAuto: 'Аккаунт, затем MMR',
     streamerMedalAccount: 'Dota аккаунт',
     streamerMedalMmr: 'Указанный MMR',
     streamerMmr: 'Текущий MMR',
+    streamerGoalMmr: 'Цель MMR',
     autoUpdateStreamerMmr: 'Авто считать MMR после матча',
     streamerMmrWinDelta: 'MMR за победу',
     streamerMmrLossDelta: 'MMR за поражение',
@@ -561,6 +592,7 @@ const translations = {
     overlayPreviewWhite: 'Белый',
     streamerStatsMenuPosition: 'Медаль в меню',
     streamerStatsGamePosition: 'Медаль в игре',
+    streamerMmrGoalPosition: 'Цель MMR',
     roshanTimerPosition: 'Таймер Roshan',
     predictionOverlayPosition: 'Прогноз Twitch',
     overlayPositionX: 'Горизонталь',
@@ -877,11 +909,18 @@ const translations = {
     showStreamerRankMedal: 'Rank medal',
     showStreamerMmr: 'MMR',
     showStreamerWinLoss: 'Win-Lose',
+    showStreamerMmrGoal: 'MMR goal overlay',
+    showStreamerMmrGoalProgress: 'Goal progress bar',
+    showStreamerMmrGoalRecord: 'Goal W-L',
+    showStreamerMmrGoalWinRate: 'Goal winrate',
+    showStreamerMmrGoalEta: 'Wins left',
+    showStreamerMmrGoalDelta: 'MMR left',
     streamerMedalSource: 'Medal source',
     streamerMedalAuto: 'Account, then MMR',
     streamerMedalAccount: 'Dota account',
     streamerMedalMmr: 'Manual MMR',
     streamerMmr: 'Current MMR',
+    streamerGoalMmr: 'MMR goal',
     autoUpdateStreamerMmr: 'Auto update MMR after match',
     streamerMmrWinDelta: 'MMR for win',
     streamerMmrLossDelta: 'MMR for loss',
@@ -903,6 +942,7 @@ const translations = {
     overlayPreviewWhite: 'White',
     streamerStatsMenuPosition: 'Menu medal',
     streamerStatsGamePosition: 'In-game medal',
+    streamerMmrGoalPosition: 'MMR goal',
     roshanTimerPosition: 'Roshan timer',
     predictionOverlayPosition: 'Twitch prediction',
     overlayPositionX: 'Horizontal',
@@ -1310,11 +1350,18 @@ function applyLanguage(config) {
   setLabelText(els.showStreamerRankMedal.closest('label'), t('showStreamerRankMedal'));
   setLabelText(els.showStreamerMmr.closest('label'), t('showStreamerMmr'));
   setLabelText(els.showStreamerWinLoss.closest('label'), t('showStreamerWinLoss'));
+  setLabelText(els.showStreamerMmrGoal.closest('label'), t('showStreamerMmrGoal'));
+  setLabelText(els.showStreamerMmrGoalProgress.closest('label'), t('showStreamerMmrGoalProgress'));
+  setLabelText(els.showStreamerMmrGoalRecord.closest('label'), t('showStreamerMmrGoalRecord'));
+  setLabelText(els.showStreamerMmrGoalWinRate.closest('label'), t('showStreamerMmrGoalWinRate'));
+  setLabelText(els.showStreamerMmrGoalEta.closest('label'), t('showStreamerMmrGoalEta'));
+  setLabelText(els.showStreamerMmrGoalDelta.closest('label'), t('showStreamerMmrGoalDelta'));
   setLabelText(els.streamerMedalSourceWrap, t('streamerMedalSource'));
   setOptionText(els.streamerMedalSource, 'auto', t('streamerMedalAuto'));
   setOptionText(els.streamerMedalSource, 'account', t('streamerMedalAccount'));
   setOptionText(els.streamerMedalSource, 'mmr', t('streamerMedalMmr'));
   setLabelText(els.streamerMmrWrap, t('streamerMmr'));
+  setLabelText(els.streamerGoalMmrWrap, t('streamerGoalMmr'));
   setLabelText(els.autoUpdateStreamerMmr.closest('label'), t('autoUpdateStreamerMmr'));
   setLabelText(els.streamerMmrWinDeltaWrap, t('streamerMmrWinDelta'));
   setLabelText(els.streamerMmrLossDeltaWrap, t('streamerMmrLossDelta'));
@@ -1328,12 +1375,14 @@ function applyLanguage(config) {
   setLabelText(els.streamerAccountIdWrap, t('streamerAccountId'));
   setLabelText(els.streamerAccountLabelWrap, t('streamerAccountLabel'));
   setLabelText(els.streamerAccountMmrWrap, t('streamerAccountMmr'));
+  setLabelText(els.streamerAccountGoalMmrWrap, t('streamerGoalMmr'));
   els.addStreamerAccount.textContent = editingStreamerAccountId ? t('saveStreamerAccount') : t('addStreamerAccount');
   els.cancelStreamerAccountEdit.textContent = t('cancelStreamerAccountEdit');
   els.streamerAccountListCurrent.textContent = t('streamerAccountListCurrent');
   els.streamerAccountListId.textContent = t('streamerAccountId');
   els.streamerAccountListLabel.textContent = t('streamerAccountLabel');
   els.streamerAccountListMmr.textContent = t('streamerAccountListMmr');
+  els.streamerAccountListGoal.textContent = t('streamerGoalMmr');
   els.streamerAccountListSession.textContent = t('streamerAccountListSession');
   els.streamerAccountListActions.textContent = t('streamerAccountListActions');
   els.streamerMmrAutomationTitle.textContent = t('streamerMmrAutomation');
@@ -1344,6 +1393,7 @@ function applyLanguage(config) {
   setLabelText(els.overlayPositionTargetWrap, t('overlayPositionTarget'));
   setOptionText(els.overlayPositionTarget, 'streamerStatsMenu', t('streamerStatsMenuPosition'));
   setOptionText(els.overlayPositionTarget, 'streamerStatsGame', t('streamerStatsGamePosition'));
+  setOptionText(els.overlayPositionTarget, 'streamerMmrGoal', t('streamerMmrGoalPosition'));
   setOptionText(els.overlayPositionTarget, 'roshanTimer', t('roshanTimerPosition'));
   setOptionText(els.overlayPositionTarget, 'predictionOverlay', t('predictionOverlayPosition'));
   setLabelText(els.overlayPreviewBackgroundWrap, t('overlayPreviewBackground'));
@@ -1352,6 +1402,7 @@ function applyLanguage(config) {
   setOptionText(els.overlayPreviewBackground, 'white', t('overlayPreviewWhite'));
   els.streamerStatsMenuPositionTitle.textContent = t('streamerStatsMenuPosition');
   els.streamerStatsGamePositionTitle.textContent = t('streamerStatsGamePosition');
+  els.streamerMmrGoalPositionTitle.textContent = t('streamerMmrGoalPosition');
   els.roshanTimerPositionTitle.textContent = t('roshanTimerPosition');
   els.predictionOverlayPositionTitle.textContent = t('predictionOverlayPosition');
   for (const key of overlayPositionKeys) {
@@ -1710,9 +1761,16 @@ function render(data) {
   els.showStreamerRankMedal.checked = matchIntel.showStreamerRankMedal !== false;
   els.showStreamerMmr.checked = matchIntel.showStreamerMmr !== false;
   els.showStreamerWinLoss.checked = matchIntel.showStreamerWinLoss !== false;
+  els.showStreamerMmrGoal.checked = matchIntel.showStreamerMmrGoal !== false;
+  els.showStreamerMmrGoalProgress.checked = matchIntel.showStreamerMmrGoalProgress !== false;
+  els.showStreamerMmrGoalRecord.checked = matchIntel.showStreamerMmrGoalRecord !== false;
+  els.showStreamerMmrGoalWinRate.checked = matchIntel.showStreamerMmrGoalWinRate !== false;
+  els.showStreamerMmrGoalEta.checked = matchIntel.showStreamerMmrGoalEta !== false;
+  els.showStreamerMmrGoalDelta.checked = matchIntel.showStreamerMmrGoalDelta !== false;
   els.streamerMedalSource.value = matchIntel.streamerMedalSource || 'auto';
   const settingsAccountId = syncStreamerSettingsAccount(matchIntel.streamerAccounts || [], state.streamerStats || {});
   setInputValue(els.streamerMmr, streamerMmrForSettingsAccount(matchIntel, settingsAccountId));
+  setInputValue(els.streamerGoalMmr, streamerGoalMmrForSettingsAccount(matchIntel, settingsAccountId));
   els.autoUpdateStreamerMmr.checked = matchIntel.autoUpdateStreamerMmr !== false;
   els.autoBindStreamerAccounts.checked = matchIntel.autoBindStreamerAccounts !== false;
   setInputValue(els.streamerMmrWinDelta, matchIntel.streamerMmrWinDelta ?? 25);
@@ -2483,15 +2541,24 @@ function streamerMmrForSettingsAccount(settings, accountId) {
   return Number.isFinite(number) && number > 0 ? Math.trunc(number) : 0;
 }
 
+function streamerGoalMmrForSettingsAccount(settings, accountId) {
+  const account = Array.isArray(settings.streamerAccounts) && accountId
+    ? settings.streamerAccounts.find((item) => String(item.accountId || '') === String(accountId))
+    : null;
+  const number = Number(account?.goalMmr || 0);
+  return Number.isFinite(number) && number > 0 ? Math.trunc(number) : 0;
+}
+
 function renderStreamerStatsPreview(stats, settings, selectedAccountId = '') {
   const accountId = String(selectedAccountId || '').trim();
   const mmr = streamerMmrForSettingsAccount(settings, accountId);
+  const goalMmr = streamerGoalMmrForSettingsAccount(settings, accountId);
   const medal = streamerPreviewMedal(stats, settings, accountId, mmr);
   const medalId = medal?.id ?? 0;
   const stars = Number(medal?.stars || 0);
   const accountSession = accountId ? stats.accountSessions?.[accountId] : null;
-  els.streamerStatWins.textContent = String(accountSession?.wins ?? stats.wins ?? 0);
-  els.streamerStatLosses.textContent = String(accountSession?.losses ?? stats.losses ?? 0);
+  els.streamerStatWins.textContent = String(accountId ? accountSession?.wins || 0 : stats.wins ?? 0);
+  els.streamerStatLosses.textContent = String(accountId ? accountSession?.losses || 0 : stats.losses ?? 0);
   els.streamerCurrentAccount.textContent = accountId || '-';
   els.streamerMedalName.textContent = medal?.name || t('streamerMedalNoData');
   const details = [];
@@ -2499,6 +2566,7 @@ function renderStreamerStatsPreview(stats, settings, selectedAccountId = '') {
   if (medal?.source === 'mmr') details.push(t('streamerMedalByMmr'));
   if (stars > 0) details.push(t('streamerMedalStars').replace('{stars}', String(stars)));
   if (mmr > 0) details.push(`${Math.trunc(mmr)} MMR`);
+  if (goalMmr > 0) details.push(`${t('streamerGoalMmr')} ${Math.trunc(goalMmr)}`);
   if (accountId) details.push(`ID ${accountId}`);
   els.streamerMedalDetails.textContent = details.join(' / ') || '-';
   const imageName = medalId === 'calibration' ? 'rank-medal-calibration.png' : `rank-medal-${Number(medalId) || 0}.png`;
@@ -2562,6 +2630,8 @@ function renderStreamerAccounts(accounts, stats, selectedAccountId = '') {
     row.dataset.accountId = accountId;
     row.dataset.label = String(account.label || '').trim();
     row.dataset.mmr = Number.isFinite(Number(account.mmr)) ? String(Math.trunc(Number(account.mmr))) : '0';
+    row.dataset.goalMmr = Number.isFinite(Number(account.goalMmr)) ? String(Math.trunc(Number(account.goalMmr))) : '0';
+    row.dataset.goalStartMmr = Number.isFinite(Number(account.goalStartMmr)) ? String(Math.trunc(Number(account.goalStartMmr))) : '0';
     row.dataset.current = accountId === currentAccountId ? 'true' : 'false';
     row.dataset.selected = accountId === String(selectedAccountId || '') ? 'true' : 'false';
 
@@ -2577,6 +2647,9 @@ function renderStreamerAccounts(accounts, stats, selectedAccountId = '') {
     const mmr = document.createElement('span');
     mmr.className = 'streamer-account-mmr';
     mmr.textContent = Number(row.dataset.mmr) > 0 ? row.dataset.mmr : '-';
+    const goal = document.createElement('span');
+    goal.className = 'streamer-account-goal';
+    goal.textContent = Number(row.dataset.goalMmr) > 0 ? row.dataset.goalMmr : '-';
     const wl = document.createElement('span');
     wl.className = 'streamer-account-session';
     wl.textContent = `${session.wins || 0}-${session.losses || 0}`;
@@ -2592,7 +2665,7 @@ function renderStreamerAccounts(accounts, stats, selectedAccountId = '') {
     remove.textContent = t('removeStreamerAccount');
     actions.append(edit, remove);
 
-    row.append(current, id, label, mmr, wl, actions);
+    row.append(current, id, label, mmr, goal, wl, actions);
     els.streamerAccountRows.append(row);
     rowCount += 1;
   }
@@ -2607,12 +2680,26 @@ function renderStreamerAccounts(accounts, stats, selectedAccountId = '') {
 function streamerAccountsFromForm() {
   const selectedAccountId = String(activeStreamerSettingsAccountId || '').trim();
   const currentMmr = Math.max(0, Math.trunc(Number(els.streamerMmr.value) || 0));
+  const currentGoalMmr = Math.max(0, Math.trunc(Number(els.streamerGoalMmr.value) || 0));
   return [...els.streamerAccountRows.querySelectorAll('.streamer-account-row')]
-    .map((row) => ({
-      accountId: Number(row.dataset.accountId),
-      label: row.dataset.label || '',
-      mmr: String(row.dataset.accountId) === selectedAccountId ? currentMmr : Number(row.dataset.mmr || 0)
-    }))
+    .map((row) => {
+      const rowAccountId = String(row.dataset.accountId);
+      const rowMmr = rowAccountId === selectedAccountId ? currentMmr : Number(row.dataset.mmr || 0);
+      const rowGoalMmr = rowAccountId === selectedAccountId ? currentGoalMmr : Number(row.dataset.goalMmr || 0);
+      const previousGoalMmr = Number(row.dataset.goalMmr || 0);
+      const previousGoalStartMmr = Number(row.dataset.goalStartMmr || 0);
+      return {
+        accountId: Number(row.dataset.accountId),
+        label: row.dataset.label || '',
+        mmr: rowMmr,
+        goalMmr: rowGoalMmr,
+        goalStartMmr: rowGoalMmr > 0
+          ? rowGoalMmr !== previousGoalMmr || !previousGoalStartMmr
+            ? rowMmr
+            : previousGoalStartMmr
+          : 0
+      };
+    })
     .filter((account) => Number.isFinite(account.accountId) && account.accountId > 0);
 }
 
@@ -2620,17 +2707,29 @@ function addStreamerAccount() {
   const accountId = normalizeDotaAccountIdInput(els.streamerAccountId.value);
   const label = els.streamerAccountLabel.value.trim();
   const mmr = Math.max(0, Math.trunc(Number(els.streamerAccountMmr.value) || 0));
+  const goalMmr = Math.max(0, Math.trunc(Number(els.streamerAccountGoalMmr.value) || 0));
   if (!accountId) {
     alert(t('streamerAccountId'));
     return;
   }
   const previousAccountId = editingStreamerAccountId || accountId;
+  const previousRow = previousAccountId
+    ? els.streamerAccountRows.querySelector(`.streamer-account-row[data-account-id="${CSS.escape(previousAccountId)}"]`)
+    : null;
+  const previousGoalMmr = Number(previousRow?.dataset.goalMmr || 0);
+  const previousGoalStartMmr = Number(previousRow?.dataset.goalStartMmr || 0);
+  const goalStartMmr = goalMmr > 0
+    ? goalMmr === previousGoalMmr && previousGoalStartMmr > 0
+      ? previousGoalStartMmr
+      : mmr
+    : 0;
   const accounts = streamerAccountsFromForm()
     .filter((account) => String(account.accountId) !== previousAccountId && String(account.accountId) !== accountId);
-  accounts.push({ accountId: Number(accountId), label, mmr });
+  accounts.push({ accountId: Number(accountId), label, mmr, goalMmr, goalStartMmr });
   markStreamerSettingsAccountInteraction(accountId);
   renderStreamerSettingsAccountOptions(accounts, snapshot?.state?.streamerStats || {}, activeStreamerSettingsAccountId);
   els.streamerMmr.value = String(mmr);
+  els.streamerGoalMmr.value = String(goalMmr);
   renderStreamerAccounts(accounts, snapshot?.state?.streamerStats || {}, activeStreamerSettingsAccountId);
   renderStreamerStatsPreview(snapshot?.state?.streamerStats || {}, { ...(snapshot?.config?.protection?.matchIntel || {}), streamerAccounts: accounts }, activeStreamerSettingsAccountId);
   resetStreamerAccountEditor();
@@ -2644,6 +2743,7 @@ function editStreamerAccount(row) {
   els.streamerAccountId.value = editingStreamerAccountId;
   els.streamerAccountLabel.value = row.dataset.label || '';
   els.streamerAccountMmr.value = row.dataset.mmr || '0';
+  els.streamerAccountGoalMmr.value = row.dataset.goalMmr || '0';
   const matchIntel = snapshot?.config?.protection?.matchIntel || {};
   const stats = snapshot?.state?.streamerStats || {};
   renderStreamerSettingsAccountOptions(matchIntel.streamerAccounts || [], stats, activeStreamerSettingsAccountId);
@@ -2659,6 +2759,7 @@ function resetStreamerAccountEditor() {
   els.streamerAccountId.value = '';
   els.streamerAccountLabel.value = '';
   els.streamerAccountMmr.value = '';
+  els.streamerAccountGoalMmr.value = '';
   updateStreamerAccountEditorMode();
 }
 
@@ -2947,6 +3048,12 @@ els.spectatorGameLabelTemplate?.addEventListener('change', () => saveProtection(
   els.showStreamerRankMedal,
   els.showStreamerMmr,
   els.showStreamerWinLoss,
+  els.showStreamerMmrGoal,
+  els.showStreamerMmrGoalProgress,
+  els.showStreamerMmrGoalRecord,
+  els.showStreamerMmrGoalWinRate,
+  els.showStreamerMmrGoalEta,
+  els.showStreamerMmrGoalDelta,
   els.streamerMedalSource,
   els.autoUpdateStreamerMmr,
   els.autoBindStreamerAccounts
@@ -2960,6 +3067,7 @@ els.streamerSettingsAccount.addEventListener('change', () => {
   const matchIntel = snapshot?.config?.protection?.matchIntel || {};
   const stats = snapshot?.state?.streamerStats || {};
   setInputValue(els.streamerMmr, streamerMmrForSettingsAccount(matchIntel, activeStreamerSettingsAccountId));
+  setInputValue(els.streamerGoalMmr, streamerGoalMmrForSettingsAccount(matchIntel, activeStreamerSettingsAccountId));
   renderStreamerStatsPreview(stats, matchIntel, activeStreamerSettingsAccountId);
   renderStreamerAccounts(matchIntel.streamerAccounts || [], stats, activeStreamerSettingsAccountId);
 });
@@ -2970,13 +3078,21 @@ els.streamerMmr.addEventListener('change', () => {
   markStreamerSettingsAccountInteraction();
   saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
 });
+els.streamerGoalMmr.addEventListener('input', () => {
+  markStreamerSettingsAccountInteraction();
+});
+els.streamerGoalMmr.addEventListener('change', () => {
+  markStreamerSettingsAccountInteraction();
+  saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+});
 [els.streamerMmrWinDelta, els.streamerMmrLossDelta].forEach((input) => {
   input.addEventListener('change', () => saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert));
 });
 [
   els.streamerAccountId,
   els.streamerAccountLabel,
-  els.streamerAccountMmr
+  els.streamerAccountMmr,
+  els.streamerAccountGoalMmr
 ].forEach((input) => input.addEventListener('input', () => {
   markStreamerSettingsAccountInteraction(editingStreamerAccountId || activeStreamerSettingsAccountId);
 }));
@@ -3085,6 +3201,12 @@ function protectionMatchIntelFromForm() {
     showStreamerRankMedal: els.showStreamerRankMedal.checked,
     showStreamerMmr: els.showStreamerMmr.checked,
     showStreamerWinLoss: els.showStreamerWinLoss.checked,
+    showStreamerMmrGoal: els.showStreamerMmrGoal.checked,
+    showStreamerMmrGoalProgress: els.showStreamerMmrGoalProgress.checked,
+    showStreamerMmrGoalRecord: els.showStreamerMmrGoalRecord.checked,
+    showStreamerMmrGoalWinRate: els.showStreamerMmrGoalWinRate.checked,
+    showStreamerMmrGoalEta: els.showStreamerMmrGoalEta.checked,
+    showStreamerMmrGoalDelta: els.showStreamerMmrGoalDelta.checked,
     streamerMedalSource: els.streamerMedalSource.value,
     streamerMmr: fallbackStreamerMmr,
     autoUpdateStreamerMmr: els.autoUpdateStreamerMmr.checked,
@@ -3101,6 +3223,7 @@ function updateMatchIntelFieldVisibility() {
   const matchIntelEnabled = els.matchIntelEnabled.checked;
   const notablePlayersEnabled = matchIntelEnabled && (els.showPlayerRanks.checked || els.showPlayerFlags.checked);
   const streamerStatsEnabled = els.showStreamerStats.checked;
+  const streamerGoalEnabled = streamerStatsEnabled && els.showStreamerMmrGoal.checked;
   els.showPlayerRanks.closest('label').hidden = !matchIntelEnabled;
   els.showPlayerFlags.closest('label').hidden = !matchIntelEnabled;
   els.showAegisTimer.closest('label').hidden = !matchIntelEnabled;
@@ -3111,6 +3234,12 @@ function updateMatchIntelFieldVisibility() {
   els.showStreamerRankMedal.closest('label').hidden = !streamerStatsEnabled;
   els.showStreamerMmr.closest('label').hidden = !streamerStatsEnabled;
   els.showStreamerWinLoss.closest('label').hidden = !streamerStatsEnabled;
+  els.showStreamerMmrGoal.closest('label').hidden = !streamerStatsEnabled;
+  els.showStreamerMmrGoalProgress.closest('label').hidden = !streamerGoalEnabled;
+  els.showStreamerMmrGoalRecord.closest('label').hidden = !streamerGoalEnabled;
+  els.showStreamerMmrGoalWinRate.closest('label').hidden = !streamerGoalEnabled;
+  els.showStreamerMmrGoalEta.closest('label').hidden = !streamerGoalEnabled;
+  els.showStreamerMmrGoalDelta.closest('label').hidden = !streamerGoalEnabled;
   els.streamerMedalSourceWrap.hidden = !streamerStatsEnabled || !els.showStreamerRankMedal.checked;
   els.streamerMmrWrap.hidden = false;
   els.autoUpdateStreamerMmr.closest('label').hidden = false;

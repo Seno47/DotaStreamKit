@@ -1094,7 +1094,7 @@ dd {
 }
 
 .streamer-account-form {
-  grid-template-columns: minmax(130px, 1fr) minmax(160px, 1.3fr) minmax(100px, 0.8fr) auto auto;
+  grid-template-columns: minmax(130px, 1fr) minmax(160px, 1.2fr) minmax(100px, 0.7fr) minmax(110px, 0.8fr) auto auto;
 }
 
 .streamer-stats-grid,
@@ -1123,9 +1123,18 @@ dd {
 .streamer-account-list-head,
 .streamer-account-row {
   display: grid;
-  grid-template-columns: minmax(82px, 0.8fr) minmax(110px, 1fr) minmax(140px, 1.2fr) minmax(72px, 0.7fr) minmax(80px, 0.7fr) minmax(150px, auto);
   gap: 10px;
   align-items: center;
+}
+
+.notable-player-list-head,
+.notable-player-row {
+  grid-template-columns: minmax(82px, 0.8fr) minmax(110px, 1fr) minmax(140px, 1.2fr) minmax(150px, auto);
+}
+
+.streamer-account-list-head,
+.streamer-account-row {
+  grid-template-columns: minmax(82px, 0.7fr) minmax(110px, 1fr) minmax(140px, 1.2fr) minmax(72px, 0.65fr) minmax(72px, 0.65fr) minmax(80px, 0.7fr) minmax(150px, auto);
 }
 
 .notable-player-form button,
@@ -1166,12 +1175,84 @@ dd {
   box-shadow: inset 0 0 0 1px rgba(125, 201, 255, 0.28);
 }
 
+.streamer-goal-preview {
+  box-sizing: border-box;
+  padding: calc(10px * var(--preview-scale, 0.5)) calc(12px * var(--preview-scale, 0.5));
+  border: 1px solid rgba(246, 205, 108, 0.34);
+  border-radius: calc(8px * var(--preview-scale, 0.5));
+  background:
+    linear-gradient(135deg, rgba(19, 23, 30, 0.92), rgba(9, 12, 18, 0.82)),
+    radial-gradient(circle at 20% 0%, rgba(246, 205, 108, 0.2), transparent 45%);
+  box-shadow: 0 7px 22px rgba(0, 0, 0, 0.46), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  color: #f8f1df;
+  font-weight: 800;
+  text-shadow: 0 2px 3px #000, 0 0 5px #000;
+}
+
+.streamer-goal-preview-top,
+.streamer-goal-preview-meta,
+.streamer-goal-preview-kpis {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(8px * var(--preview-scale, 0.5));
+}
+
+.streamer-goal-preview-top {
+  color: #ffdf91;
+  font-size: calc(17px * var(--preview-scale, 0.5));
+}
+
+.streamer-goal-preview-top b {
+  color: #fff;
+  font-size: calc(22px * var(--preview-scale, 0.5));
+}
+
+.streamer-goal-preview-bar {
+  height: calc(13px * var(--preview-scale, 0.5));
+  margin: calc(7px * var(--preview-scale, 0.5)) 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.42);
+}
+
+.streamer-goal-preview-bar span {
+  display: block;
+  width: 72%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #63c9ff, #8df0a1 58%, #ffe08a);
+}
+
+.streamer-goal-preview-meta {
+  font-size: calc(16px * var(--preview-scale, 0.5));
+}
+
+.streamer-goal-preview-meta b {
+  color: #fff;
+  font-size: calc(24px * var(--preview-scale, 0.5));
+}
+
+.streamer-goal-preview-meta em {
+  color: #8df0a1;
+  font-style: normal;
+}
+
+.streamer-goal-preview-kpis {
+  margin-top: calc(7px * var(--preview-scale, 0.5));
+  color: #dbe5f4;
+  font-size: calc(14px * var(--preview-scale, 0.5));
+}
+
 .notable-player-id,
 .notable-player-name,
 .notable-player-country,
 .streamer-account-current,
 .streamer-account-id,
-.streamer-account-label {
+.streamer-account-label,
+.streamer-account-mmr,
+.streamer-account-goal,
+.streamer-account-session {
   min-width: 0;
   overflow: hidden;
   color: #dbe3ee;

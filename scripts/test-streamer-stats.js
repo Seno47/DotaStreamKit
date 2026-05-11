@@ -30,19 +30,20 @@ const normalizedConfig = { streamerMmr: 120000 };
 normalizeStreamerStatsConfig(normalizedConfig);
 assert.equal(normalizedConfig.streamerMmr, 99999);
 assert.equal(normalizedConfig.autoBindStreamerAccounts, true);
+assert.equal(normalizedConfig.showStreamerMmrGoal, true);
 
 const normalizedAccountsConfig = {
   streamerAccounts: [
     { accountId: '123', label: 'Main' },
-    { id: '123', label: 'Duplicate' },
+    { id: '123', label: 'Duplicate', goalMmr: 6500, goalStartMmr: 5200 },
     { dotaId: '456', name: 'Smurf' },
     { accountId: 'bad', label: 'Invalid' }
   ]
 };
 normalizeStreamerStatsConfig(normalizedAccountsConfig);
 assert.deepEqual(normalizedAccountsConfig.streamerAccounts, [
-  { accountId: 123, label: 'Duplicate', mmr: 0, boundAt: null },
-  { accountId: 456, label: 'Smurf', mmr: 0, boundAt: null }
+  { accountId: 123, label: 'Duplicate', mmr: 0, goalMmr: 6500, goalStartMmr: 5200, boundAt: null },
+  { accountId: 456, label: 'Smurf', mmr: 0, goalMmr: 0, goalStartMmr: 0, boundAt: null }
 ]);
 
 const config = {

@@ -317,6 +317,12 @@ const defaultConfig = {
       showStreamerRankMedal: true,
       showStreamerMmr: true,
       showStreamerWinLoss: true,
+      showStreamerMmrGoal: true,
+      showStreamerMmrGoalProgress: true,
+      showStreamerMmrGoalRecord: true,
+      showStreamerMmrGoalWinRate: true,
+      showStreamerMmrGoalEta: true,
+      showStreamerMmrGoalDelta: true,
       streamerMedalSource: 'auto',
       streamerMmr: 0,
       autoUpdateStreamerMmr: true,
@@ -327,6 +333,7 @@ const defaultConfig = {
       overlayPositions: {
         streamerStatsMenu: { x: 0, y: 0 },
         streamerStatsGame: { x: 0, y: 0 },
+        streamerMmrGoal: { x: 0, y: 0 },
         roshanTimer: { x: 0, y: 0 },
         predictionOverlay: { x: 0, y: 0 }
       },
@@ -1488,6 +1495,10 @@ function publicStreamerStats() {
   const settings = runtime.config.protection.matchIntel || {};
   const overlayAccountId = stats.streamerAccountId || stats.lastStreamerAccountId;
   const configuredMmr = streamerMmrForAccount(settings, overlayAccountId);
+  const account = streamerAccountForAccount(settings, overlayAccountId);
+  const accountSession = overlayAccountId ? stats.accountSessions?.[String(overlayAccountId)] : null;
+  const accountWins = overlayAccountId ? accountSession?.wins || 0 : stats.wins;
+  const accountLosses = overlayAccountId ? accountSession?.losses || 0 : stats.losses;
   const medalMmr = settings.streamerMedalSource === 'account' && stats.accountRankTier
     ? null
     : Math.max(0, configuredMmr);
@@ -1499,7 +1510,17 @@ function publicStreamerStats() {
   return {
     ...stats,
     streamerAccountId: overlayAccountId,
+    wins: accountWins,
+    losses: accountLosses,
     currentMmr: configuredMmr,
+    mmrGoal: streamerMmrGoalState({
+      account,
+      accountId: overlayAccountId,
+      currentMmr: configuredMmr,
+      wins: accountWins,
+      losses: accountLosses,
+      winDelta: settings.streamerMmrWinDelta
+    }),
     medal: medal ? {
       id: medal.medal,
       name: medal.name,
@@ -1515,13 +1536,47 @@ function publicStreamerStats() {
   };
 }
 
-function streamerMmrForAccount(settings, accountId) {
-  const account = Array.isArray(settings.streamerAccounts) && accountId
+function streamerAccountForAccount(settings, accountId) {
+  return Array.isArray(settings.streamerAccounts) && accountId
     ? settings.streamerAccounts.find((item) => String(item?.accountId || '') === String(accountId))
     : null;
+}
+
+function streamerMmrForAccount(settings, accountId) {
+  const account = streamerAccountForAccount(settings, accountId);
   const value = account ? account.mmr : settings.streamerMmr;
   const number = Number(value || 0);
   return Number.isFinite(number) && number > 0 ? Math.trunc(number) : 0;
+}
+
+function streamerMmrGoalState({ account, accountId, currentMmr, wins, losses, winDelta }) {
+  const targetMmr = Math.max(0, Math.trunc(Number(account?.goalMmr || 0)));
+  if (!targetMmr || !currentMmr) return null;
+  const rawStartMmr = Math.max(0, Math.trunc(Number(account?.goalStartMmr || 0)));
+  const startMmr = rawStartMmr > 0 ? rawStartMmr : Math.min(currentMmr, targetMmr);
+  const total = Math.max(0, Number(wins || 0) + Number(losses || 0));
+  const winRate = total > 0 ? Math.round((Number(wins || 0) / total) * 1000) / 10 : null;
+  const distance = targetMmr - startMmr;
+  const gained = currentMmr - startMmr;
+  const progress = distance > 0
+    ? Math.max(0, Math.min(100, Math.round((gained / distance) * 1000) / 10))
+    : currentMmr >= targetMmr ? 100 : 0;
+  const remainingMmr = Math.max(0, targetMmr - currentMmr);
+  const delta = Math.max(1, Math.trunc(Number(winDelta || 25)));
+  return {
+    accountId: accountId || null,
+    label: String(account?.label || '').trim(),
+    startMmr,
+    currentMmr,
+    targetMmr,
+    remainingMmr,
+    progress,
+    wins: Math.max(0, Math.trunc(Number(wins || 0))),
+    losses: Math.max(0, Math.trunc(Number(losses || 0))),
+    totalMatches: Math.trunc(total),
+    winRate,
+    requiredWins: remainingMmr > 0 ? Math.ceil(remainingMmr / delta) : 0
+  };
 }
 
 function sanitizeConfig(config) {
@@ -3656,6 +3711,7 @@ function normalizeOverlayPositions(value) {
   return {
     streamerStatsMenu: normalizeOverlayOffset(source.streamerStatsMenu),
     streamerStatsGame: normalizeOverlayOffset(source.streamerStatsGame),
+    streamerMmrGoal: normalizeOverlayOffset(source.streamerMmrGoal),
     roshanTimer: normalizeOverlayOffset(source.roshanTimer),
     predictionOverlay: normalizeOverlayOffset(source.predictionOverlay)
   };
