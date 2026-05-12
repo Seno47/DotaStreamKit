@@ -323,14 +323,8 @@ body {
   justify-content: space-between;
 }
 
-.streamerMmrGoalTitle {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--goal-accent);
-  font-size: 17px;
-  text-transform: uppercase;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.streamerMmrGoalTop {
+  justify-content: flex-end;
 }
 
 .streamerMmrGoalPercent {

@@ -1575,7 +1575,6 @@ function streamerMmrGoalState({ account, accountId, currentMmr, wins, losses, wi
   const delta = Math.max(1, Math.trunc(Number(winDelta || 25)));
   return {
     accountId: accountId || null,
-    label: String(account?.label || '').trim(),
     startMmr,
     currentMmr,
     targetMmr,

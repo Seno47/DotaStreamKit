@@ -133,7 +133,6 @@ const els = {
   streamerGoalSectionSummary: document.querySelector('#streamerGoalSectionSummary'),
   streamerGoalHint: document.querySelector('#streamerGoalHint'),
   streamerGoalPreview: document.querySelector('#streamerGoalPreview'),
-  streamerGoalPreviewTitle: document.querySelector('#streamerGoalPreviewTitle'),
   streamerGoalPreviewPercent: document.querySelector('#streamerGoalPreviewPercent'),
   streamerGoalPreviewBar: document.querySelector('#streamerGoalPreviewBar'),
   streamerGoalPreviewFill: document.querySelector('#streamerGoalPreviewFill'),
@@ -601,8 +600,6 @@ const translations = {
     streamerGoal: 'Цель MMR',
     streamerGoalSectionSummary: 'Прогресс выбранного аккаунта',
     streamerGoalHint: 'Укажи цель для выбранного аккаунта настроек и выбери, что показывать в оверлее цели.',
-    streamerGoalPreviewTitle: 'MMR GOAL',
-    streamerGoalPreviewNoGoal: 'Цель не задана',
     showStreamerStats: 'Статистика стримера в overlay',
     showStreamerRankMedal: 'Медаль ранга',
     showStreamerMmr: 'MMR',
@@ -965,8 +962,6 @@ const translations = {
     streamerGoal: 'MMR goal',
     streamerGoalSectionSummary: 'Selected account progress',
     streamerGoalHint: 'Set the target for the selected settings account and choose what the goal overlay shows.',
-    streamerGoalPreviewTitle: 'MMR GOAL',
-    streamerGoalPreviewNoGoal: 'No goal set',
     showStreamerStats: 'Streamer stats overlay',
     showStreamerRankMedal: 'Rank medal',
     showStreamerMmr: 'MMR',
@@ -2718,7 +2713,6 @@ function streamerGoalPreviewState(stats, settings, selectedAccountId = '', optio
   const remainingMmr = targetMmr > 0 ? Math.max(0, targetMmr - currentMmr) : 0;
   const winDelta = Math.max(1, Math.trunc(Number(settings.streamerMmrWinDelta || 25)));
   return {
-    title: account?.label || t('streamerGoalPreviewTitle'),
     currentMmr,
     targetMmr,
     remainingMmr,
@@ -2736,7 +2730,6 @@ function applyStreamerGoalPreview(root, goal, settings) {
     ? root
     : root.querySelector('.streamer-goal-preview') || root;
   applyStreamerGoalPreviewStyle(previewRoot, settings);
-  const title = previewRoot.querySelector('#streamerGoalPreviewTitle, [data-goal-preview=\"title\"]') || previewRoot.querySelector('.streamer-goal-preview-top span');
   const percent = previewRoot.querySelector('#streamerGoalPreviewPercent, [data-goal-preview=\"percent\"]') || previewRoot.querySelector('.streamer-goal-preview-top b');
   const bar = previewRoot.querySelector('#streamerGoalPreviewBar, [data-goal-preview=\"bar\"]') || previewRoot.querySelector('.streamer-goal-preview-bar');
   const fill = previewRoot.querySelector('#streamerGoalPreviewFill, [data-goal-preview=\"fill\"]') || previewRoot.querySelector('.streamer-goal-preview-bar span');
@@ -2749,7 +2742,6 @@ function applyStreamerGoalPreview(root, goal, settings) {
   const hasGoal = Number(goal?.targetMmr || 0) > 0;
   previewRoot.dataset.empty = hasGoal ? 'false' : 'true';
   previewRoot.classList.toggle('complete', hasGoal && Number(goal?.remainingMmr || 0) <= 0);
-  setTextContent(title, hasGoal ? goal.title || t('streamerGoalPreviewTitle') : t('streamerGoalPreviewNoGoal'));
   setTextContent(percent, `${formatGoalPercent(goal?.progress || 0)}%`);
   setTextContent(current, formatStreamerMmr(goal?.currentMmr || 0));
   setTextContent(target, `/ ${formatStreamerMmr(goal?.targetMmr || 0)}`);
@@ -2804,7 +2796,6 @@ function streamerOverlayGoalPreviewState(stats, settings) {
   const liveGoal = stats?.mmrGoal;
   if (liveGoal && Number(liveGoal.targetMmr || 0) > 0) {
     return {
-      title: liveGoal.label || t('streamerGoalPreviewTitle'),
       currentMmr: Math.max(0, Math.trunc(Number(liveGoal.currentMmr || 0))),
       targetMmr: Math.max(0, Math.trunc(Number(liveGoal.targetMmr || 0))),
       remainingMmr: Math.max(0, Math.trunc(Number(liveGoal.remainingMmr || 0))),

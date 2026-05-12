@@ -1225,6 +1225,7 @@ dd {
 }
 
 .streamer-goal-preview-top {
+  justify-content: flex-end;
   min-width: 0;
   color: var(--goal-accent);
   font-size: calc(17px * var(--preview-scale, 1));

@@ -984,7 +984,6 @@ function applyStreamerMmrGoal(reference, protection, state) {
   const losses = Math.max(0, Math.trunc(Number(goal.losses || 0)));
   const total = wins + losses;
 
-  setTextContent(nodes.title, goal.label ? String(goal.label).slice(0, 28) : 'MMR GOAL');
   setTextContent(nodes.percent, `${formatGoalPercent(progress)}%`);
   nodes.progress.hidden = settings.showStreamerMmrGoalProgress === false;
   nodes.percent.hidden = settings.showStreamerMmrGoalProgress === false;
@@ -1099,7 +1098,6 @@ function ensureStreamerStatsNodes() {
 function ensureStreamerMmrGoalNodes() {
   if (streamerMmrGoalNodes) return streamerMmrGoalNodes;
   const top = document.createElement('div');
-  const title = document.createElement('span');
   const percent = document.createElement('b');
   const progress = document.createElement('div');
   const fill = document.createElement('span');
@@ -1112,7 +1110,6 @@ function ensureStreamerMmrGoalNodes() {
   const winRate = document.createElement('span');
   const eta = document.createElement('span');
   top.className = 'streamerMmrGoalTop';
-  title.className = 'streamerMmrGoalTitle';
   percent.className = 'streamerMmrGoalPercent';
   progress.className = 'streamerMmrGoalProgress';
   fill.className = 'streamerMmrGoalFill';
@@ -1124,12 +1121,12 @@ function ensureStreamerMmrGoalNodes() {
   record.className = 'streamerMmrGoalRecord';
   winRate.className = 'streamerMmrGoalWinRate';
   eta.className = 'streamerMmrGoalEta';
-  top.append(title, percent);
+  top.append(percent);
   progress.append(fill);
   meta.append(current, target, delta);
   kpis.append(record, winRate, eta);
   streamerMmrGoalEl.replaceChildren(top, progress, meta, kpis);
-  streamerMmrGoalNodes = { top, title, percent, progress, fill, meta, current, target, delta, kpis, record, winRate, eta };
+  streamerMmrGoalNodes = { top, percent, progress, fill, meta, current, target, delta, kpis, record, winRate, eta };
   return streamerMmrGoalNodes;
 }
 
