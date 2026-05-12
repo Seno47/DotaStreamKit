@@ -366,7 +366,7 @@ body {
 
 .streamerMmrGoalCurrent,
 .streamerMmrGoalTarget {
-  color: #bfc8d6;
+  color: var(--goal-text);
   font-size: 17px;
   font-variant-numeric: tabular-nums;
 }

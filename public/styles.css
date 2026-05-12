@@ -1366,7 +1366,7 @@ dd {
 :where(.streamer-goal-preview-meta) :where(b, span) {
   min-width: 0;
   overflow: hidden;
-  color: #bfc8d6;
+  color: var(--goal-text);
   font-size: calc(17px * var(--preview-scale, 1));
   font-variant-numeric: tabular-nums;
   text-overflow: ellipsis;
