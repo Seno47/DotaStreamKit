@@ -318,7 +318,7 @@ body {
 }
 
 .streamerMmrGoalMeta {
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .streamerMmrGoalPercent {
@@ -372,7 +372,7 @@ body {
 }
 
 .streamerMmrGoalTarget {
-  margin-left: 5px;
+  margin-left: 3px;
   margin-right: auto;
 }
 
@@ -383,7 +383,7 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-#streamerMmrGoal.complete .streamerMmrGoalDelta {
+:where(#streamerMmrGoal.complete) :where(.streamerMmrGoalDelta) {
   color: var(--goal-accent);
 }
 
