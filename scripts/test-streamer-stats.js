@@ -34,6 +34,9 @@ assert.equal(normalizedConfig.showStreamerMmrGoal, true);
 assert.equal(normalizedConfig.showStreamerMmrGoalRecord, true);
 assert.equal(normalizedConfig.streamerMmrGoalTemplate, 'classic');
 assert.equal(normalizedConfig.streamerMmrGoalFillStart, '#63c9ff');
+assert.equal(normalizedConfig.streamerMmrGoalTargetPrefix, '/ ');
+assert.equal(normalizedConfig.streamerMmrGoalDeltaPrefix, '+');
+assert.equal(normalizedConfig.streamerMmrGoalCustomCss, '');
 
 const normalizedGoalStyle = {
   streamerMmrGoalTemplate: 'bubbles',
@@ -43,6 +46,13 @@ const normalizedGoalStyle = {
   streamerMmrGoalBarRadius: -10,
   streamerMmrGoalGlow: 18,
   streamerMmrGoalAnimated: false,
+  streamerMmrGoalCurrentPrefix: 'Current ',
+  streamerMmrGoalCurrentSuffix: ' MMR',
+  streamerMmrGoalTargetPrefix: 'Goal ',
+  streamerMmrGoalTargetSuffix: ' pts',
+  streamerMmrGoalDeltaPrefix: 'Left ',
+  streamerMmrGoalDeltaSuffix: ' mmr',
+  streamerMmrGoalCustomCss: '[data-goal-part="fill"] { animation: pulse 1s infinite; }',
   showStreamerMmrGoalRecord: false,
   showStreamerMmrGoalWinRate: false,
   showStreamerMmrGoalEta: false
@@ -55,6 +65,13 @@ assert.equal(normalizedGoalStyle.streamerMmrGoalBarHeight, 24);
 assert.equal(normalizedGoalStyle.streamerMmrGoalBarRadius, 0);
 assert.equal(normalizedGoalStyle.streamerMmrGoalGlow, 18);
 assert.equal(normalizedGoalStyle.streamerMmrGoalAnimated, false);
+assert.equal(normalizedGoalStyle.streamerMmrGoalCurrentPrefix, 'Current ');
+assert.equal(normalizedGoalStyle.streamerMmrGoalCurrentSuffix, ' MMR');
+assert.equal(normalizedGoalStyle.streamerMmrGoalTargetPrefix, 'Goal ');
+assert.equal(normalizedGoalStyle.streamerMmrGoalTargetSuffix, ' pts');
+assert.equal(normalizedGoalStyle.streamerMmrGoalDeltaPrefix, 'Left ');
+assert.equal(normalizedGoalStyle.streamerMmrGoalDeltaSuffix, ' mmr');
+assert.equal(normalizedGoalStyle.streamerMmrGoalCustomCss, '[data-goal-part="fill"] { animation: pulse 1s infinite; }');
 assert.equal(normalizedGoalStyle.showStreamerMmrGoalRecord, true);
 assert.equal(normalizedGoalStyle.showStreamerMmrGoalWinRate, true);
 assert.equal(normalizedGoalStyle.showStreamerMmrGoalEta, true);

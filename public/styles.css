@@ -17,7 +17,8 @@ body {
 button,
 .button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -52,7 +53,8 @@ button.auto-active {
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
   background: #0f141b;
   color: #f2f4f8;
@@ -1113,6 +1115,17 @@ dd {
   background: #0f141b;
   color: #cfd8e6;
   font-weight: 600;
+}
+
+.streamer-goal-css-wrap {
+  grid-column: 1 / -1;
+}
+
+.streamer-goal-css-wrap textarea {
+  min-height: 132px;
+  resize: vertical;
+  font-family: "Cascadia Code", "Consolas", monospace;
+  line-height: 1.45;
 }
 
 .streamer-stats-actions {

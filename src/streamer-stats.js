@@ -35,6 +35,13 @@ export function normalizeStreamerStatsConfig(config) {
   config.streamerMmrGoalBarRadius = clampInt(config.streamerMmrGoalBarRadius, 0, 18, 7);
   config.streamerMmrGoalGlow = clampInt(config.streamerMmrGoalGlow, 0, 30, 12);
   config.streamerMmrGoalAnimated = config.streamerMmrGoalAnimated !== false;
+  config.streamerMmrGoalCurrentPrefix = normalizeGoalTextPart(config.streamerMmrGoalCurrentPrefix, '');
+  config.streamerMmrGoalCurrentSuffix = normalizeGoalTextPart(config.streamerMmrGoalCurrentSuffix, '');
+  config.streamerMmrGoalTargetPrefix = normalizeGoalTextPart(config.streamerMmrGoalTargetPrefix, '/ ');
+  config.streamerMmrGoalTargetSuffix = normalizeGoalTextPart(config.streamerMmrGoalTargetSuffix, '');
+  config.streamerMmrGoalDeltaPrefix = normalizeGoalTextPart(config.streamerMmrGoalDeltaPrefix, '+');
+  config.streamerMmrGoalDeltaSuffix = normalizeGoalTextPart(config.streamerMmrGoalDeltaSuffix, '');
+  config.streamerMmrGoalCustomCss = normalizeGoalCustomCss(config.streamerMmrGoalCustomCss);
   config.autoUpdateStreamerMmr = config.autoUpdateStreamerMmr !== false;
   config.autoBindStreamerAccounts = true;
   if (!['auto', 'account', 'mmr'].includes(config.streamerMedalSource)) config.streamerMedalSource = 'auto';
@@ -339,6 +346,14 @@ function normalizeGoalTemplate(value) {
 function normalizeGoalColor(value, fallback) {
   const text = String(value || '').trim();
   return /^#[0-9a-f]{6}$/i.test(text) ? text.toLowerCase() : fallback;
+}
+
+function normalizeGoalTextPart(value, fallback = '') {
+  return String(value ?? fallback ?? '').slice(0, 24);
+}
+
+function normalizeGoalCustomCss(value) {
+  return String(value || '').slice(0, 8000);
 }
 
 function clampInt(value, min, max, fallback) {

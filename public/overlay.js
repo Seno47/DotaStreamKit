@@ -33,7 +33,14 @@ const streamerMmrGoalStyleDefaults = {
   barHeight: 13,
   barRadius: 7,
   glow: 12,
-  animated: true
+  animated: true,
+  currentPrefix: '',
+  currentSuffix: '',
+  targetPrefix: '/ ',
+  targetSuffix: '',
+  deltaPrefix: '+',
+  deltaSuffix: '',
+  customCss: ''
 };
 
 const stream = new EventSource('/api/events');
@@ -975,7 +982,8 @@ function applyStreamerMmrGoal(reference, protection, state) {
   }
 
   const nodes = ensureStreamerMmrGoalNodes();
-  applyStreamerMmrGoalStyle(streamerMmrGoalEl, settings);
+  const goalStyle = applyStreamerMmrGoalStyle(streamerMmrGoalEl, settings);
+  applyStreamerMmrGoalCustomCss(goalStyle.customCss);
   const progress = clampNumber(goal.progress, 0, 100, 0);
   const currentMmr = formatStreamerMmr(goal.currentMmr);
   const targetMmr = formatStreamerMmr(goal.targetMmr);
@@ -988,9 +996,9 @@ function applyStreamerMmrGoal(reference, protection, state) {
   nodes.progress.hidden = settings.showStreamerMmrGoalProgress === false;
   nodes.percent.hidden = settings.showStreamerMmrGoalProgress === false;
   nodes.fill.style.width = `${progress}%`;
-  setTextContent(nodes.current, currentMmr);
-  setTextContent(nodes.target, `/ ${targetMmr}`);
-  setTextContent(nodes.delta, remainingMmr > 0 ? `+${formatStreamerMmr(remainingMmr)}` : 'DONE');
+  setTextContent(nodes.current, formatGoalText(goalStyle.currentPrefix, currentMmr, goalStyle.currentSuffix));
+  setTextContent(nodes.target, formatGoalText(goalStyle.targetPrefix, targetMmr, goalStyle.targetSuffix));
+  setTextContent(nodes.delta, remainingMmr > 0 ? formatGoalText(goalStyle.deltaPrefix, formatStreamerMmr(remainingMmr), goalStyle.deltaSuffix) : 'DONE');
   nodes.delta.hidden = settings.showStreamerMmrGoalDelta === false;
   setTextContent(nodes.record, `W ${wins} - L ${losses}`);
   nodes.record.hidden = false;
@@ -1119,6 +1127,18 @@ function ensureStreamerMmrGoalNodes() {
   record.className = 'streamerMmrGoalRecord';
   winRate.className = 'streamerMmrGoalWinRate';
   eta.className = 'streamerMmrGoalEta';
+  streamerMmrGoalEl.dataset.goalPart = 'root';
+  progress.dataset.goalPart = 'bar';
+  fill.dataset.goalPart = 'fill';
+  percent.dataset.goalPart = 'percent';
+  meta.dataset.goalPart = 'meta';
+  current.dataset.goalPart = 'current';
+  target.dataset.goalPart = 'target';
+  delta.dataset.goalPart = 'delta';
+  kpis.dataset.goalPart = 'kpis';
+  record.dataset.goalPart = 'record';
+  winRate.dataset.goalPart = 'winrate';
+  eta.dataset.goalPart = 'eta';
   progress.append(fill, percent);
   meta.append(current, target, delta);
   kpis.append(record, winRate, eta);
@@ -1141,6 +1161,8 @@ function applyStreamerMmrGoalStyle(root, settings) {
   root.style.setProperty('--goal-bar-height', `${style.barHeight}px`);
   root.style.setProperty('--goal-bar-radius', `${style.barRadius}px`);
   root.style.setProperty('--goal-glow', `${style.glow}px`);
+  root.dataset.goalPart = root.dataset.goalPart || 'root';
+  return style;
 }
 
 function streamerMmrGoalStyleFromSettings(settings = {}) {
@@ -1157,8 +1179,42 @@ function streamerMmrGoalStyleFromSettings(settings = {}) {
     barHeight: clampNumber(settings.streamerMmrGoalBarHeight, 8, 24, streamerMmrGoalStyleDefaults.barHeight),
     barRadius: clampNumber(settings.streamerMmrGoalBarRadius, 0, 18, streamerMmrGoalStyleDefaults.barRadius),
     glow: clampNumber(settings.streamerMmrGoalGlow, 0, 30, streamerMmrGoalStyleDefaults.glow),
-    animated: settings.streamerMmrGoalAnimated !== false
+    animated: settings.streamerMmrGoalAnimated !== false,
+    currentPrefix: normalizeGoalTextPart(settings.streamerMmrGoalCurrentPrefix, streamerMmrGoalStyleDefaults.currentPrefix),
+    currentSuffix: normalizeGoalTextPart(settings.streamerMmrGoalCurrentSuffix, streamerMmrGoalStyleDefaults.currentSuffix),
+    targetPrefix: normalizeGoalTextPart(settings.streamerMmrGoalTargetPrefix, streamerMmrGoalStyleDefaults.targetPrefix),
+    targetSuffix: normalizeGoalTextPart(settings.streamerMmrGoalTargetSuffix, streamerMmrGoalStyleDefaults.targetSuffix),
+    deltaPrefix: normalizeGoalTextPart(settings.streamerMmrGoalDeltaPrefix, streamerMmrGoalStyleDefaults.deltaPrefix),
+    deltaSuffix: normalizeGoalTextPart(settings.streamerMmrGoalDeltaSuffix, streamerMmrGoalStyleDefaults.deltaSuffix),
+    customCss: normalizeGoalCustomCss(settings.streamerMmrGoalCustomCss)
   };
+}
+
+function applyStreamerMmrGoalCustomCss(css) {
+  const id = 'streamerMmrGoalCustomCssStyle';
+  let style = document.querySelector(`#${id}`);
+  if (!css) {
+    style?.remove();
+    return;
+  }
+  if (!style) {
+    style = document.createElement('style');
+    style.id = id;
+    document.head.append(style);
+  }
+  if (style.textContent !== css) style.textContent = css;
+}
+
+function formatGoalText(prefix, value, suffix) {
+  return `${prefix || ''}${value}${suffix || ''}`;
+}
+
+function normalizeGoalTextPart(value, fallback = '') {
+  return String(value ?? fallback ?? '').slice(0, 24);
+}
+
+function normalizeGoalCustomCss(value) {
+  return String(value || '').slice(0, 8000);
 }
 
 function normalizeGoalColor(value, fallback) {
