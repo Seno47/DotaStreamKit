@@ -198,6 +198,11 @@ const els = {
   streamerMmrGoalDeltaSuffix: document.querySelector('#streamerMmrGoalDeltaSuffix'),
   streamerMmrGoalCustomCssWrap: document.querySelector('#streamerMmrGoalCustomCssWrap'),
   streamerMmrGoalCustomCss: document.querySelector('#streamerMmrGoalCustomCss'),
+  streamerGoalCssTools: document.querySelector('#streamerGoalCssTools'),
+  streamerGoalCssHint: document.querySelector('#streamerGoalCssHint'),
+  streamerGoalCssLabelButtons: document.querySelectorAll('[data-goal-css-label]'),
+  streamerGoalCssInsertButtons: document.querySelectorAll('[data-goal-css-insert]'),
+  streamerGoalCssSnippetButtons: document.querySelectorAll('[data-goal-css-snippet]'),
   streamerMedalSourceWrap: document.querySelector('#streamerMedalSourceWrap'),
   streamerMedalSource: document.querySelector('#streamerMedalSource'),
   streamerMmrWrap: document.querySelector('#streamerMmrWrap'),
@@ -450,6 +455,71 @@ const streamerMmrGoalStyleDefaults = {
   deltaSuffix: '',
   customCss: ''
 };
+const streamerGoalCssSnippets = {
+  shine: `[data-goal-part="fill"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 0%, rgba(255,255,255,.45) 45%, transparent 72%);
+  transform: translateX(-120%);
+  animation: goalCustomShine 1.8s ease-in-out infinite;
+}
+
+@keyframes goalCustomShine {
+  to { transform: translateX(120%); }
+}`,
+  bubbles: `[data-goal-part="fill"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 55%, rgba(255,255,255,.5) 0 2px, transparent 3px),
+    radial-gradient(circle at 46% 35%, rgba(255,255,255,.32) 0 3px, transparent 4px),
+    radial-gradient(circle at 74% 62%, rgba(255,255,255,.38) 0 2px, transparent 3px);
+  background-size: 84px 22px;
+  animation: goalCustomBubbles 2.4s linear infinite;
+}
+
+@keyframes goalCustomBubbles {
+  to { background-position: 84px -22px; }
+}`,
+  marker: `[data-goal-part="bar"]::before {
+  content: "";
+  position: absolute;
+  left: 75%;
+  top: -5px;
+  width: 3px;
+  height: calc(100% + 10px);
+  border-radius: 99px;
+  background: var(--goal-accent);
+  box-shadow: 0 0 12px var(--goal-accent);
+}`,
+  frame: `[data-goal-part="root"] {
+  border: 1px solid rgba(255, 223, 145, .45);
+  box-shadow: 0 14px 36px rgba(0,0,0,.38), 0 0 24px rgba(255, 223, 145, .28);
+}
+
+[data-goal-part="bar"] {
+  outline: 1px solid rgba(255,255,255,.14);
+  outline-offset: 3px;
+}`,
+  pulse: `[data-goal-part="root"] {
+  animation: goalCustomPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes goalCustomPulse {
+  50% { filter: brightness(1.12) saturate(1.12); }
+}`,
+  separator: `[data-goal-part="meta"]::before {
+  content: "";
+  display: block;
+  width: 42px;
+  height: 2px;
+  border-radius: 99px;
+  background: var(--goal-accent);
+  box-shadow: 0 0 12px var(--goal-accent);
+}`
+};
 const overlayPreviewBoxes = {
   streamerStatsMenu: {
     left: 1276,
@@ -649,6 +719,24 @@ const translations = {
     streamerMmrGoalDeltaPrefix: 'Перед остатком',
     streamerMmrGoalDeltaSuffix: 'После остатка',
     streamerMmrGoalCustomCss: 'Свой CSS / анимации',
+    streamerGoalCssHint: 'Клик по части вставит селектор, клик по эффекту добавит готовый CSS. Эти же части работают в превью и OBS overlay.',
+    streamerGoalCssParts: 'Куда рисовать',
+    streamerGoalCssSnippets: 'Готовые эффекты',
+    streamerGoalCssPartRoot: 'Весь блок',
+    streamerGoalCssPartBar: 'Полоска',
+    streamerGoalCssPartFill: 'Заполнение',
+    streamerGoalCssPartPercent: 'Проценты',
+    streamerGoalCssPartMeta: 'MMR числа',
+    streamerGoalCssPartCurrent: 'Текущий',
+    streamerGoalCssPartTarget: 'Цель',
+    streamerGoalCssPartDelta: 'Осталось',
+    streamerGoalCssPartKpis: 'W-L / WR',
+    streamerGoalCssSnippetShine: 'Блик',
+    streamerGoalCssSnippetBubbles: 'Пузырьки',
+    streamerGoalCssSnippetMarker: 'Метка',
+    streamerGoalCssSnippetFrame: 'Рамка',
+    streamerGoalCssSnippetPulse: 'Пульс',
+    streamerGoalCssSnippetSeparator: 'Разделитель',
     streamerMedalSource: 'Источник медали',
     streamerMedalAuto: 'Аккаунт, затем MMR',
     streamerMedalAccount: 'Dota аккаунт',
@@ -1018,6 +1106,24 @@ const translations = {
     streamerMmrGoalDeltaPrefix: 'Before left',
     streamerMmrGoalDeltaSuffix: 'After left',
     streamerMmrGoalCustomCss: 'Custom CSS / animations',
+    streamerGoalCssHint: 'Click a part to insert its selector, or click an effect to add ready CSS. The same parts work in preview and OBS overlay.',
+    streamerGoalCssParts: 'Where to draw',
+    streamerGoalCssSnippets: 'Ready effects',
+    streamerGoalCssPartRoot: 'Whole block',
+    streamerGoalCssPartBar: 'Bar',
+    streamerGoalCssPartFill: 'Fill',
+    streamerGoalCssPartPercent: 'Percent',
+    streamerGoalCssPartMeta: 'MMR numbers',
+    streamerGoalCssPartCurrent: 'Current',
+    streamerGoalCssPartTarget: 'Goal',
+    streamerGoalCssPartDelta: 'Left',
+    streamerGoalCssPartKpis: 'W-L / WR',
+    streamerGoalCssSnippetShine: 'Shine',
+    streamerGoalCssSnippetBubbles: 'Bubbles',
+    streamerGoalCssSnippetMarker: 'Marker',
+    streamerGoalCssSnippetFrame: 'Frame',
+    streamerGoalCssSnippetPulse: 'Pulse',
+    streamerGoalCssSnippetSeparator: 'Separator',
     streamerMedalSource: 'Medal source',
     streamerMedalAuto: 'Account, then MMR',
     streamerMedalAccount: 'Dota account',
@@ -1479,6 +1585,11 @@ function applyLanguage(config) {
   setLabelText(els.streamerMmrGoalDeltaPrefixWrap, t('streamerMmrGoalDeltaPrefix'));
   setLabelText(els.streamerMmrGoalDeltaSuffixWrap, t('streamerMmrGoalDeltaSuffix'));
   setLabelText(els.streamerMmrGoalCustomCssWrap, t('streamerMmrGoalCustomCss'));
+  if (els.streamerGoalCssHint) els.streamerGoalCssHint.textContent = t('streamerGoalCssHint');
+  els.streamerGoalCssLabelButtons?.forEach((item) => {
+    const key = item.dataset.goalCssLabel;
+    if (key) item.textContent = t(key);
+  });
   setLabelText(els.streamerMedalSourceWrap, t('streamerMedalSource'));
   setOptionText(els.streamerMedalSource, 'auto', t('streamerMedalAuto'));
   setOptionText(els.streamerMedalSource, 'account', t('streamerMedalAccount'));
@@ -3349,6 +3460,21 @@ function scheduleStreamerGoalStyleSave() {
   }, 250);
 }
 
+function insertStreamerGoalCss(text) {
+  const textarea = els.streamerMmrGoalCustomCss;
+  if (!textarea || !text) return;
+  const currentValue = textarea.value || '';
+  const start = Number.isFinite(textarea.selectionStart) ? textarea.selectionStart : currentValue.length;
+  const end = Number.isFinite(textarea.selectionEnd) ? textarea.selectionEnd : start;
+  const needsSpacing = currentValue.length > 0 && start > 0 && !currentValue.slice(0, start).endsWith('\n\n');
+  const insertText = `${needsSpacing ? '\n\n' : ''}${text}`;
+  textarea.value = `${currentValue.slice(0, start)}${insertText}${currentValue.slice(end)}`;
+  const cursor = start + insertText.length;
+  textarea.focus();
+  textarea.setSelectionRange(cursor, cursor);
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
 function updateStreamerGoalStyleOutputs() {
   if (els.streamerMmrGoalBarHeightValue) els.streamerMmrGoalBarHeightValue.textContent = String(els.streamerMmrGoalBarHeight?.value || streamerMmrGoalStyleDefaults.barHeight);
   if (els.streamerMmrGoalBarRadiusValue) els.streamerMmrGoalBarRadiusValue.textContent = String(els.streamerMmrGoalBarRadius?.value || streamerMmrGoalStyleDefaults.barRadius);
@@ -3452,6 +3578,19 @@ els.spectatorGameLabelTemplate?.addEventListener('change', () => saveProtection(
     updateStreamerGoalStyleOutputs();
     renderStreamerGoalPreview(snapshot?.state?.streamerStats || {}, protectionMatchIntelFromForm(), activeStreamerSettingsAccountId);
     saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+  });
+});
+els.streamerGoalCssInsertButtons?.forEach((button) => {
+  button.addEventListener('click', () => {
+    const selector = button.dataset.goalCssInsert;
+    if (!selector) return;
+    insertStreamerGoalCss(`${selector} {\n  \n}`);
+  });
+});
+els.streamerGoalCssSnippetButtons?.forEach((button) => {
+  button.addEventListener('click', () => {
+    const snippet = streamerGoalCssSnippets[button.dataset.goalCssSnippet];
+    if (snippet) insertStreamerGoalCss(snippet);
   });
 });
 els.streamerSettingsAccount.addEventListener('change', () => {
@@ -3665,7 +3804,8 @@ function updateMatchIntelFieldVisibility() {
     els.streamerMmrGoalTargetSuffixWrap,
     els.streamerMmrGoalDeltaPrefixWrap,
     els.streamerMmrGoalDeltaSuffixWrap,
-    els.streamerMmrGoalCustomCssWrap
+    els.streamerMmrGoalCustomCssWrap,
+    els.streamerGoalCssTools
   ].forEach((element) => {
     if (element) element.hidden = !streamerGoalEnabled;
   });

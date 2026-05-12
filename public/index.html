@@ -355,6 +355,34 @@
                   <label id="streamerMmrGoalDeltaPrefixWrap">Left prefix<input id="streamerMmrGoalDeltaPrefix" type="text" maxlength="24" placeholder="+"></label>
                   <label id="streamerMmrGoalDeltaSuffixWrap">Left suffix<input id="streamerMmrGoalDeltaSuffix" type="text" maxlength="24" placeholder=""></label>
                   <label class="streamer-goal-css-wrap" id="streamerMmrGoalCustomCssWrap">Custom CSS<textarea id="streamerMmrGoalCustomCss" rows="8" spellcheck="false" placeholder='[data-goal-part="bar"] { height: 18px; }&#10;[data-goal-part="fill"] { animation: pulse 1s infinite; }&#10;@keyframes pulse { 50% { filter: brightness(1.4); } }'></textarea></label>
+                  <div class="streamer-goal-css-tools" id="streamerGoalCssTools">
+                    <p class="muted streamer-goal-css-hint" id="streamerGoalCssHint">Click a part to insert a selector, or add a ready effect.</p>
+                    <div class="streamer-goal-css-toolset">
+                      <span class="streamer-goal-css-toolset-title" data-goal-css-label="streamerGoalCssParts">Parts</span>
+                      <div class="streamer-goal-css-button-row">
+                        <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssPartRoot" data-goal-css-insert='[data-goal-part="root"]'>Root</button>
+                        <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssPartBar" data-goal-css-insert='[data-goal-part="bar"]'>Bar</button>
+                        <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssPartFill" data-goal-css-insert='[data-goal-part="fill"]'>Fill</button>
+                        <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssPartPercent" data-goal-css-insert='[data-goal-part="percent"]'>Percent</button>
+                        <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssPartMeta" data-goal-css-insert='[data-goal-part="meta"]'>Numbers</button>
+                        <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssPartCurrent" data-goal-css-insert='[data-goal-part="current"]'>Current</button>
+                        <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssPartTarget" data-goal-css-insert='[data-goal-part="target"]'>Goal</button>
+                        <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssPartDelta" data-goal-css-insert='[data-goal-part="delta"]'>Left</button>
+                        <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssPartKpis" data-goal-css-insert='[data-goal-part="kpis"]'>Stats</button>
+                      </div>
+                    </div>
+                    <div class="streamer-goal-css-toolset">
+                      <span class="streamer-goal-css-toolset-title" data-goal-css-label="streamerGoalCssSnippets">Effects</span>
+                      <div class="streamer-goal-css-button-row">
+                        <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssSnippetShine" data-goal-css-snippet="shine">Shine</button>
+                        <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssSnippetBubbles" data-goal-css-snippet="bubbles">Bubbles</button>
+                        <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssSnippetMarker" data-goal-css-snippet="marker">Goal mark</button>
+                        <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssSnippetFrame" data-goal-css-snippet="frame">Frame</button>
+                        <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssSnippetPulse" data-goal-css-snippet="pulse">Pulse</button>
+                        <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssSnippetSeparator" data-goal-css-snippet="separator">Separator</button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </details>

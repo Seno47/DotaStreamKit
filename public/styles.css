@@ -1128,6 +1128,60 @@ dd {
   line-height: 1.45;
 }
 
+.streamer-goal-css-tools {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #273342;
+  border-radius: 7px;
+  background: #0e141d;
+}
+
+.streamer-goal-css-hint {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.streamer-goal-css-toolset {
+  display: grid;
+  gap: 7px;
+}
+
+.streamer-goal-css-toolset-title {
+  color: #c9d6e7;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.streamer-goal-css-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.streamer-goal-css-button {
+  min-height: 30px;
+  padding: 6px 9px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  background: #172131;
+  color: #e9f2ff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.streamer-goal-css-button:hover,
+.streamer-goal-css-button:focus-visible {
+  border-color: #62c7ff;
+  background: #1d2b3d;
+  color: #ffffff;
+}
+
 .streamer-stats-actions {
   margin-bottom: 0;
 }
