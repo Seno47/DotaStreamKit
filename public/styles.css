@@ -1272,9 +1272,15 @@ dd {
   font-size: calc(16px * var(--preview-scale, 1));
 }
 
-.streamer-goal-preview-meta b {
-  color: #fff;
-  font-size: calc(24px * var(--preview-scale, 1));
+.streamer-goal-preview-meta b,
+.streamer-goal-preview-meta span {
+  min-width: 0;
+  overflow: hidden;
+  color: #bfc8d6;
+  font-size: calc(17px * var(--preview-scale, 1));
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .streamer-goal-preview-meta em {
@@ -1293,8 +1299,7 @@ dd {
   font-size: calc(14px * var(--preview-scale, 1));
 }
 
-.streamer-goal-preview-kpis span,
-.streamer-goal-preview-meta span {
+.streamer-goal-preview-kpis span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

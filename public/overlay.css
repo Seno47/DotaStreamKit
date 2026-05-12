@@ -364,18 +364,16 @@ body {
   opacity: 0;
 }
 
-.streamerMmrGoalCurrent {
-  color: #ffffff;
-  font-size: 24px;
+.streamerMmrGoalCurrent,
+.streamerMmrGoalTarget {
+  color: #bfc8d6;
+  font-size: 17px;
   font-variant-numeric: tabular-nums;
 }
 
 .streamerMmrGoalTarget {
   margin-left: 5px;
   margin-right: auto;
-  color: #bfc8d6;
-  font-size: 17px;
-  font-variant-numeric: tabular-nums;
 }
 
 .streamerMmrGoalDelta {
