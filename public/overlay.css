@@ -275,20 +275,28 @@ body {
 }
 
 #streamerMmrGoal {
+  --goal-fill-start: #63c9ff;
+  --goal-fill-end: #8df0a1;
+  --goal-track: #101720;
+  --goal-accent: #ffdf91;
+  --goal-text: #f8f1df;
+  --goal-bar-height: 13px;
+  --goal-bar-radius: 7px;
+  --goal-glow: 12px;
   z-index: 2147483646;
   pointer-events: none;
   box-sizing: border-box;
   width: 420px;
-  height: 92px;
+  height: 128px;
   padding: 10px 12px 9px;
   overflow: hidden;
-  border: 1px solid rgba(246, 205, 108, 0.34);
+  border: 1px solid var(--goal-accent);
   border-radius: 8px;
   background:
     linear-gradient(135deg, rgba(19, 23, 30, 0.92), rgba(9, 12, 18, 0.82)),
-    radial-gradient(circle at 20% 0%, rgba(246, 205, 108, 0.20), transparent 45%);
-  box-shadow: 0 7px 22px rgba(0, 0, 0, 0.46), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  color: #f8f1df;
+    radial-gradient(circle at 20% 0%, rgba(255, 255, 255, 0.08), transparent 45%);
+  box-shadow: 0 7px 22px rgba(0, 0, 0, 0.46), inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 var(--goal-glow) var(--goal-accent);
+  color: var(--goal-text);
   font-family: "Arial Narrow", "Roboto Condensed", "Segoe UI Condensed", "Segoe UI", Arial, Helvetica, sans-serif;
   font-weight: 800;
   letter-spacing: 0;
@@ -318,7 +326,7 @@ body {
 .streamerMmrGoalTitle {
   min-width: 0;
   overflow: hidden;
-  color: #ffdf91;
+  color: var(--goal-accent);
   font-size: 17px;
   text-transform: uppercase;
   text-overflow: ellipsis;
@@ -333,21 +341,32 @@ body {
 
 .streamerMmrGoalProgress {
   position: relative;
-  height: 13px;
+  height: var(--goal-bar-height);
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 7px;
-  background: rgba(0, 0, 0, 0.42);
+  border-radius: var(--goal-bar-radius);
+  background: var(--goal-track);
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.46);
 }
 
 .streamerMmrGoalFill {
+  position: relative;
   display: block;
   width: 0%;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #63c9ff, #8df0a1 58%, #ffe08a);
-  box-shadow: 0 0 12px rgba(141, 240, 161, 0.34);
+  overflow: hidden;
+  background: linear-gradient(90deg, var(--goal-fill-start), var(--goal-fill-end));
+  box-shadow: 0 0 var(--goal-glow) var(--goal-fill-end);
   transition: width 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.streamerMmrGoalFill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
 }
 
 .streamerMmrGoalCurrent {
@@ -365,20 +384,20 @@ body {
 }
 
 .streamerMmrGoalDelta {
-  color: #8df0a1;
+  color: var(--goal-fill-end);
   font-size: 16px;
   font-style: normal;
   font-variant-numeric: tabular-nums;
 }
 
 #streamerMmrGoal.complete .streamerMmrGoalDelta {
-  color: #ffdf91;
+  color: var(--goal-accent);
 }
 
 .streamerMmrGoalKpis {
   justify-content: space-between;
   gap: 8px;
-  color: #dbe5f4;
+  color: var(--goal-text);
   font-size: 14px;
 }
 
@@ -387,6 +406,66 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+#streamerMmrGoal.streamer-goal-template-bubbles .streamerMmrGoalProgress {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent),
+    var(--goal-track);
+}
+
+#streamerMmrGoal.streamer-goal-template-bubbles .streamerMmrGoalFill::after {
+  opacity: 0.62;
+  background-image:
+    radial-gradient(circle at 8px 50%, rgba(255, 255, 255, 0.72) 0 2px, transparent 3px),
+    radial-gradient(circle at 28px 38%, rgba(255, 255, 255, 0.42) 0 1px, transparent 2px),
+    radial-gradient(circle at 46px 68%, rgba(255, 255, 255, 0.34) 0 2px, transparent 3px);
+  background-size: 58px 100%;
+  animation: streamerGoalBubbles 1.7s linear infinite;
+}
+
+#streamerMmrGoal.streamer-goal-template-neon {
+  border-color: var(--goal-fill-end);
+  background:
+    linear-gradient(135deg, rgba(8, 10, 16, 0.94), rgba(13, 17, 25, 0.86)),
+    radial-gradient(circle at 88% 20%, rgba(255, 255, 255, 0.08), transparent 38%);
+  box-shadow: 0 0 calc(var(--goal-glow) + 14px) var(--goal-fill-end), inset 0 0 16px rgba(255, 255, 255, 0.05);
+}
+
+#streamerMmrGoal.streamer-goal-template-neon .streamerMmrGoalProgress {
+  border-color: var(--goal-fill-start);
+}
+
+#streamerMmrGoal.streamer-goal-template-neon .streamerMmrGoalFill::after {
+  opacity: 0.45;
+  background: linear-gradient(110deg, transparent 0 32%, rgba(255, 255, 255, 0.72) 46%, transparent 60% 100%);
+  animation: streamerGoalShine 2.1s ease-in-out infinite;
+}
+
+#streamerMmrGoal.streamer-goal-template-minimal {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(10, 14, 20, 0.88);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.34);
+  text-shadow: none;
+}
+
+#streamerMmrGoal.streamer-goal-template-minimal .streamerMmrGoalProgress,
+#streamerMmrGoal.streamer-goal-template-minimal .streamerMmrGoalFill {
+  box-shadow: none;
+}
+
+#streamerMmrGoal[data-animated="false"] .streamerMmrGoalFill::after {
+  animation: none;
+}
+
+@keyframes streamerGoalBubbles {
+  from { background-position: 0 0; }
+  to { background-position: 58px 0; }
+}
+
+@keyframes streamerGoalShine {
+  0% { transform: translateX(-120%); }
+  55%, 100% { transform: translateX(120%); }
 }
 
 #streamerStats.visible {

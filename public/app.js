@@ -162,10 +162,29 @@ const els = {
   showStreamerWinLoss: document.querySelector('#showStreamerWinLoss'),
   showStreamerMmrGoal: document.querySelector('#showStreamerMmrGoal'),
   showStreamerMmrGoalProgress: document.querySelector('#showStreamerMmrGoalProgress'),
-  showStreamerMmrGoalRecord: document.querySelector('#showStreamerMmrGoalRecord'),
-  showStreamerMmrGoalWinRate: document.querySelector('#showStreamerMmrGoalWinRate'),
-  showStreamerMmrGoalEta: document.querySelector('#showStreamerMmrGoalEta'),
   showStreamerMmrGoalDelta: document.querySelector('#showStreamerMmrGoalDelta'),
+  streamerMmrGoalTemplateWrap: document.querySelector('#streamerMmrGoalTemplateWrap'),
+  streamerMmrGoalTemplate: document.querySelector('#streamerMmrGoalTemplate'),
+  streamerMmrGoalFillStartWrap: document.querySelector('#streamerMmrGoalFillStartWrap'),
+  streamerMmrGoalFillStart: document.querySelector('#streamerMmrGoalFillStart'),
+  streamerMmrGoalFillEndWrap: document.querySelector('#streamerMmrGoalFillEndWrap'),
+  streamerMmrGoalFillEnd: document.querySelector('#streamerMmrGoalFillEnd'),
+  streamerMmrGoalTrackWrap: document.querySelector('#streamerMmrGoalTrackWrap'),
+  streamerMmrGoalTrack: document.querySelector('#streamerMmrGoalTrack'),
+  streamerMmrGoalAccentWrap: document.querySelector('#streamerMmrGoalAccentWrap'),
+  streamerMmrGoalAccent: document.querySelector('#streamerMmrGoalAccent'),
+  streamerMmrGoalTextWrap: document.querySelector('#streamerMmrGoalTextWrap'),
+  streamerMmrGoalText: document.querySelector('#streamerMmrGoalText'),
+  streamerMmrGoalBarHeightWrap: document.querySelector('#streamerMmrGoalBarHeightWrap'),
+  streamerMmrGoalBarHeight: document.querySelector('#streamerMmrGoalBarHeight'),
+  streamerMmrGoalBarHeightValue: document.querySelector('#streamerMmrGoalBarHeightValue'),
+  streamerMmrGoalBarRadiusWrap: document.querySelector('#streamerMmrGoalBarRadiusWrap'),
+  streamerMmrGoalBarRadius: document.querySelector('#streamerMmrGoalBarRadius'),
+  streamerMmrGoalBarRadiusValue: document.querySelector('#streamerMmrGoalBarRadiusValue'),
+  streamerMmrGoalGlowWrap: document.querySelector('#streamerMmrGoalGlowWrap'),
+  streamerMmrGoalGlow: document.querySelector('#streamerMmrGoalGlow'),
+  streamerMmrGoalGlowValue: document.querySelector('#streamerMmrGoalGlowValue'),
+  streamerMmrGoalAnimated: document.querySelector('#streamerMmrGoalAnimated'),
   streamerMedalSourceWrap: document.querySelector('#streamerMedalSourceWrap'),
   streamerMedalSource: document.querySelector('#streamerMedalSource'),
   streamerMmrWrap: document.querySelector('#streamerMmrWrap'),
@@ -374,6 +393,7 @@ let lastTemplateInput = null;
 let predictionConfigSaveTimer = null;
 const predictionConfigSaveTimers = { own: null, spectator: null };
 let overlayPositionSaveTimer = null;
+let streamerGoalStyleSaveTimer = null;
 let activePage = localStorage.getItem('dsk.activePage') || 'protection';
 let editingNotablePlayerAccountId = '';
 let editingStreamerAccountId = '';
@@ -396,6 +416,20 @@ const previewRankMedalThresholds = [
 ];
 
 const overlayPositionKeys = ['streamerStatsMenu', 'streamerStatsGame', 'streamerMmrGoal', 'roshanTimer', 'predictionOverlay'];
+const streamerMmrGoalTemplates = ['classic', 'bubbles', 'neon', 'minimal'];
+const streamerMmrGoalTemplateClasses = streamerMmrGoalTemplates.map((template) => `streamer-goal-template-${template}`);
+const streamerMmrGoalStyleDefaults = {
+  template: 'classic',
+  fillStart: '#63c9ff',
+  fillEnd: '#8df0a1',
+  track: '#101720',
+  accent: '#ffdf91',
+  text: '#f8f1df',
+  barHeight: 13,
+  barRadius: 7,
+  glow: 12,
+  animated: true
+};
 const overlayPreviewBoxes = {
   streamerStatsMenu: {
     left: 1276,
@@ -417,9 +451,9 @@ const overlayPreviewBoxes = {
     left: 1110,
     top: 812,
     width: 420,
-    height: 92,
+    height: 128,
     anchor: { x: 0, y: 0 },
-    visible: { width: 420, height: 92 }
+    visible: { width: 420, height: 128 }
   },
   roshanTimer: {
     left: 318,
@@ -575,10 +609,21 @@ const translations = {
     showStreamerWinLoss: 'Win-Lose',
     showStreamerMmrGoal: 'Цель MMR в overlay',
     showStreamerMmrGoalProgress: 'Полоска прогресса цели',
-    showStreamerMmrGoalRecord: 'W-L в цели',
-    showStreamerMmrGoalWinRate: 'Winrate в цели',
-    showStreamerMmrGoalEta: 'Сколько побед осталось',
     showStreamerMmrGoalDelta: 'Сколько MMR осталось',
+    streamerMmrGoalTemplate: 'Стиль полоски',
+    streamerMmrGoalTemplateClassic: 'Классика',
+    streamerMmrGoalTemplateBubbles: 'Анимированные пузырьки',
+    streamerMmrGoalTemplateNeon: 'Неон',
+    streamerMmrGoalTemplateMinimal: 'Минимал',
+    streamerMmrGoalFillStart: 'Цвет старта',
+    streamerMmrGoalFillEnd: 'Цвет финиша',
+    streamerMmrGoalTrack: 'Цвет фона',
+    streamerMmrGoalAccent: 'Акцент',
+    streamerMmrGoalText: 'Текст',
+    streamerMmrGoalBarHeight: 'Толщина',
+    streamerMmrGoalBarRadius: 'Скругление',
+    streamerMmrGoalGlow: 'Свечение',
+    streamerMmrGoalAnimated: 'Анимация полоски',
     streamerMedalSource: 'Источник медали',
     streamerMedalAuto: 'Аккаунт, затем MMR',
     streamerMedalAccount: 'Dota аккаунт',
@@ -928,10 +973,21 @@ const translations = {
     showStreamerWinLoss: 'Win-Lose',
     showStreamerMmrGoal: 'MMR goal overlay',
     showStreamerMmrGoalProgress: 'Goal progress bar',
-    showStreamerMmrGoalRecord: 'Goal W-L',
-    showStreamerMmrGoalWinRate: 'Goal winrate',
-    showStreamerMmrGoalEta: 'Wins left',
     showStreamerMmrGoalDelta: 'MMR left',
+    streamerMmrGoalTemplate: 'Progress style',
+    streamerMmrGoalTemplateClassic: 'Classic',
+    streamerMmrGoalTemplateBubbles: 'Animated bubbles',
+    streamerMmrGoalTemplateNeon: 'Neon',
+    streamerMmrGoalTemplateMinimal: 'Minimal',
+    streamerMmrGoalFillStart: 'Fill start',
+    streamerMmrGoalFillEnd: 'Fill end',
+    streamerMmrGoalTrack: 'Track',
+    streamerMmrGoalAccent: 'Accent',
+    streamerMmrGoalText: 'Text',
+    streamerMmrGoalBarHeight: 'Bar height',
+    streamerMmrGoalBarRadius: 'Roundness',
+    streamerMmrGoalGlow: 'Glow',
+    streamerMmrGoalAnimated: 'Animated bar',
     streamerMedalSource: 'Medal source',
     streamerMedalAuto: 'Account, then MMR',
     streamerMedalAccount: 'Dota account',
@@ -1371,10 +1427,21 @@ function applyLanguage(config) {
   setLabelText(els.showStreamerWinLoss.closest('label'), t('showStreamerWinLoss'));
   setLabelText(els.showStreamerMmrGoal.closest('label'), t('showStreamerMmrGoal'));
   setLabelText(els.showStreamerMmrGoalProgress.closest('label'), t('showStreamerMmrGoalProgress'));
-  setLabelText(els.showStreamerMmrGoalRecord.closest('label'), t('showStreamerMmrGoalRecord'));
-  setLabelText(els.showStreamerMmrGoalWinRate.closest('label'), t('showStreamerMmrGoalWinRate'));
-  setLabelText(els.showStreamerMmrGoalEta.closest('label'), t('showStreamerMmrGoalEta'));
   setLabelText(els.showStreamerMmrGoalDelta.closest('label'), t('showStreamerMmrGoalDelta'));
+  setLabelText(els.streamerMmrGoalTemplateWrap, t('streamerMmrGoalTemplate'));
+  setOptionText(els.streamerMmrGoalTemplate, 'classic', t('streamerMmrGoalTemplateClassic'));
+  setOptionText(els.streamerMmrGoalTemplate, 'bubbles', t('streamerMmrGoalTemplateBubbles'));
+  setOptionText(els.streamerMmrGoalTemplate, 'neon', t('streamerMmrGoalTemplateNeon'));
+  setOptionText(els.streamerMmrGoalTemplate, 'minimal', t('streamerMmrGoalTemplateMinimal'));
+  setLabelText(els.streamerMmrGoalFillStartWrap, t('streamerMmrGoalFillStart'));
+  setLabelText(els.streamerMmrGoalFillEndWrap, t('streamerMmrGoalFillEnd'));
+  setLabelText(els.streamerMmrGoalTrackWrap, t('streamerMmrGoalTrack'));
+  setLabelText(els.streamerMmrGoalAccentWrap, t('streamerMmrGoalAccent'));
+  setLabelText(els.streamerMmrGoalTextWrap, t('streamerMmrGoalText'));
+  setLabelText(els.streamerMmrGoalBarHeightWrap, t('streamerMmrGoalBarHeight'));
+  setLabelText(els.streamerMmrGoalBarRadiusWrap, t('streamerMmrGoalBarRadius'));
+  setLabelText(els.streamerMmrGoalGlowWrap, t('streamerMmrGoalGlow'));
+  setLabelText(els.streamerMmrGoalAnimated.closest('label'), t('streamerMmrGoalAnimated'));
   setLabelText(els.streamerMedalSourceWrap, t('streamerMedalSource'));
   setOptionText(els.streamerMedalSource, 'auto', t('streamerMedalAuto'));
   setOptionText(els.streamerMedalSource, 'account', t('streamerMedalAccount'));
@@ -1778,10 +1845,19 @@ function render(data) {
   els.showStreamerWinLoss.checked = matchIntel.showStreamerWinLoss !== false;
   els.showStreamerMmrGoal.checked = matchIntel.showStreamerMmrGoal !== false;
   els.showStreamerMmrGoalProgress.checked = matchIntel.showStreamerMmrGoalProgress !== false;
-  els.showStreamerMmrGoalRecord.checked = matchIntel.showStreamerMmrGoalRecord !== false;
-  els.showStreamerMmrGoalWinRate.checked = matchIntel.showStreamerMmrGoalWinRate !== false;
-  els.showStreamerMmrGoalEta.checked = matchIntel.showStreamerMmrGoalEta !== false;
   els.showStreamerMmrGoalDelta.checked = matchIntel.showStreamerMmrGoalDelta !== false;
+  const goalStyle = streamerMmrGoalStyleFromSettings(matchIntel);
+  els.streamerMmrGoalTemplate.value = goalStyle.template;
+  els.streamerMmrGoalFillStart.value = goalStyle.fillStart;
+  els.streamerMmrGoalFillEnd.value = goalStyle.fillEnd;
+  els.streamerMmrGoalTrack.value = goalStyle.track;
+  els.streamerMmrGoalAccent.value = goalStyle.accent;
+  els.streamerMmrGoalText.value = goalStyle.text;
+  setInputValue(els.streamerMmrGoalBarHeight, goalStyle.barHeight);
+  setInputValue(els.streamerMmrGoalBarRadius, goalStyle.barRadius);
+  setInputValue(els.streamerMmrGoalGlow, goalStyle.glow);
+  els.streamerMmrGoalAnimated.checked = goalStyle.animated;
+  updateStreamerGoalStyleOutputs();
   els.streamerMedalSource.value = matchIntel.streamerMedalSource || 'auto';
   const settingsAccountId = syncStreamerSettingsAccount(matchIntel.streamerAccounts || [], state.streamerStats || {});
   setInputValue(els.streamerMmr, streamerMmrForSettingsAccount(matchIntel, settingsAccountId));
@@ -2608,16 +2684,23 @@ function renderStreamerStatsPreview(stats, settings, selectedAccountId = '') {
 function renderStreamerGoalPreview(stats, settings, selectedAccountId = '') {
   const goal = streamerGoalPreviewState(stats, settings, selectedAccountId);
   applyStreamerGoalPreview(els.streamerGoalPreview, goal, settings);
+  const overlayGoal = streamerOverlayGoalPreviewState(stats, settings);
   document.querySelectorAll('.overlay-position-item.streamer-goal-preview').forEach((preview) => {
-    applyStreamerGoalPreview(preview, goal, settings);
+    applyStreamerGoalPreview(preview, overlayGoal, settings);
   });
 }
 
-function streamerGoalPreviewState(stats, settings, selectedAccountId = '') {
+function streamerGoalPreviewState(stats, settings, selectedAccountId = '', options = {}) {
+  const useFormValues = options.useFormValues !== false;
   const accountId = String(selectedAccountId || '').trim();
   const account = streamerAccountForSettingsAccount(settings, accountId);
-  const currentMmr = streamerMmrForSettingsAccount(settings, accountId);
-  const targetMmr = Math.max(0, Math.trunc(Number(els.streamerGoalMmr?.value || account?.goalMmr || 0)));
+  const useSelectedAccountForm = useFormValues && String(accountId || '') === String(activeStreamerSettingsAccountId || '');
+  const formCurrentMmr = useSelectedAccountForm ? Number(els.streamerMmr?.value || 0) : 0;
+  const currentMmr = formCurrentMmr > 0
+    ? Math.max(0, Math.trunc(formCurrentMmr))
+    : streamerMmrForSettingsAccount(settings, accountId);
+  const formGoalMmr = useSelectedAccountForm ? Number(els.streamerGoalMmr?.value || 0) : 0;
+  const targetMmr = Math.max(0, Math.trunc(Number(formGoalMmr || account?.goalMmr || 0)));
   const startMmrRaw = Math.max(0, Math.trunc(Number(account?.goalStartMmr || 0)));
   const startMmr = startMmrRaw > 0 ? startMmrRaw : Math.min(currentMmr, targetMmr || currentMmr);
   const session = accountId ? stats.accountSessions?.[accountId] : null;
@@ -2649,19 +2732,23 @@ function streamerGoalPreviewState(stats, settings, selectedAccountId = '') {
 
 function applyStreamerGoalPreview(root, goal, settings) {
   if (!root) return;
-  const title = root.querySelector('#streamerGoalPreviewTitle, [data-goal-preview=\"title\"]') || root.querySelector('.streamer-goal-preview-top span');
-  const percent = root.querySelector('#streamerGoalPreviewPercent, [data-goal-preview=\"percent\"]') || root.querySelector('.streamer-goal-preview-top b');
-  const bar = root.querySelector('#streamerGoalPreviewBar, [data-goal-preview=\"bar\"]') || root.querySelector('.streamer-goal-preview-bar');
-  const fill = root.querySelector('#streamerGoalPreviewFill, [data-goal-preview=\"fill\"]') || root.querySelector('.streamer-goal-preview-bar span');
-  const current = root.querySelector('#streamerGoalPreviewCurrent, [data-goal-preview=\"current\"]') || root.querySelector('.streamer-goal-preview-meta b');
-  const target = root.querySelector('#streamerGoalPreviewTarget, [data-goal-preview=\"target\"]') || root.querySelector('.streamer-goal-preview-meta span');
-  const delta = root.querySelector('#streamerGoalPreviewDelta, [data-goal-preview=\"delta\"]') || root.querySelector('.streamer-goal-preview-meta em');
-  const record = root.querySelector('#streamerGoalPreviewRecord, [data-goal-preview=\"record\"]') || root.querySelector('.streamer-goal-preview-kpis span:nth-child(1)');
-  const winRate = root.querySelector('#streamerGoalPreviewWinRate, [data-goal-preview=\"winrate\"]') || root.querySelector('.streamer-goal-preview-kpis span:nth-child(2)');
-  const eta = root.querySelector('#streamerGoalPreviewEta, [data-goal-preview=\"eta\"]') || root.querySelector('.streamer-goal-preview-kpis span:nth-child(3)');
+  const previewRoot = root.classList?.contains('streamer-goal-preview')
+    ? root
+    : root.querySelector('.streamer-goal-preview') || root;
+  applyStreamerGoalPreviewStyle(previewRoot, settings);
+  const title = previewRoot.querySelector('#streamerGoalPreviewTitle, [data-goal-preview=\"title\"]') || previewRoot.querySelector('.streamer-goal-preview-top span');
+  const percent = previewRoot.querySelector('#streamerGoalPreviewPercent, [data-goal-preview=\"percent\"]') || previewRoot.querySelector('.streamer-goal-preview-top b');
+  const bar = previewRoot.querySelector('#streamerGoalPreviewBar, [data-goal-preview=\"bar\"]') || previewRoot.querySelector('.streamer-goal-preview-bar');
+  const fill = previewRoot.querySelector('#streamerGoalPreviewFill, [data-goal-preview=\"fill\"]') || previewRoot.querySelector('.streamer-goal-preview-bar span');
+  const current = previewRoot.querySelector('#streamerGoalPreviewCurrent, [data-goal-preview=\"current\"]') || previewRoot.querySelector('.streamer-goal-preview-meta b');
+  const target = previewRoot.querySelector('#streamerGoalPreviewTarget, [data-goal-preview=\"target\"]') || previewRoot.querySelector('.streamer-goal-preview-meta span');
+  const delta = previewRoot.querySelector('#streamerGoalPreviewDelta, [data-goal-preview=\"delta\"]') || previewRoot.querySelector('.streamer-goal-preview-meta em');
+  const record = previewRoot.querySelector('#streamerGoalPreviewRecord, [data-goal-preview=\"record\"]') || previewRoot.querySelector('.streamer-goal-preview-kpis span:nth-child(1)');
+  const winRate = previewRoot.querySelector('#streamerGoalPreviewWinRate, [data-goal-preview=\"winrate\"]') || previewRoot.querySelector('.streamer-goal-preview-kpis span:nth-child(2)');
+  const eta = previewRoot.querySelector('#streamerGoalPreviewEta, [data-goal-preview=\"eta\"]') || previewRoot.querySelector('.streamer-goal-preview-kpis span:nth-child(3)');
   const hasGoal = Number(goal?.targetMmr || 0) > 0;
-  root.dataset.empty = hasGoal ? 'false' : 'true';
-  root.classList.toggle('complete', hasGoal && Number(goal.remainingMmr || 0) <= 0);
+  previewRoot.dataset.empty = hasGoal ? 'false' : 'true';
+  previewRoot.classList.toggle('complete', hasGoal && Number(goal?.remainingMmr || 0) <= 0);
   setTextContent(title, hasGoal ? goal.title || t('streamerGoalPreviewTitle') : t('streamerGoalPreviewNoGoal'));
   setTextContent(percent, `${formatGoalPercent(goal?.progress || 0)}%`);
   setTextContent(current, formatStreamerMmr(goal?.currentMmr || 0));
@@ -2673,10 +2760,75 @@ function applyStreamerGoalPreview(root, goal, settings) {
   if (fill) fill.style.width = `${Math.max(0, Math.min(100, Number(goal?.progress || 0)))}%`;
   toggleHidden(bar, settings.showStreamerMmrGoalProgress === false);
   toggleHidden(percent, settings.showStreamerMmrGoalProgress === false);
-  toggleHidden(record, settings.showStreamerMmrGoalRecord === false);
-  toggleHidden(winRate, settings.showStreamerMmrGoalWinRate === false);
-  toggleHidden(eta, settings.showStreamerMmrGoalEta === false);
+  toggleHidden(record, false);
+  toggleHidden(winRate, false);
+  toggleHidden(eta, false);
   toggleHidden(delta, settings.showStreamerMmrGoalDelta === false);
+}
+
+function applyStreamerGoalPreviewStyle(root, settings) {
+  if (!root) return;
+  const style = streamerMmrGoalStyleFromSettings(settings);
+  root.classList.remove(...streamerMmrGoalTemplateClasses);
+  root.classList.add(`streamer-goal-template-${style.template}`);
+  root.dataset.animated = style.animated ? 'true' : 'false';
+  root.style.setProperty('--goal-fill-start', style.fillStart);
+  root.style.setProperty('--goal-fill-end', style.fillEnd);
+  root.style.setProperty('--goal-track', style.track);
+  root.style.setProperty('--goal-accent', style.accent);
+  root.style.setProperty('--goal-text', style.text);
+  root.style.setProperty('--goal-bar-height', `${style.barHeight}px`);
+  root.style.setProperty('--goal-bar-radius', `${style.barRadius}px`);
+  root.style.setProperty('--goal-glow', `${style.glow}px`);
+}
+
+function streamerMmrGoalStyleFromSettings(settings = {}) {
+  const template = streamerMmrGoalTemplates.includes(settings.streamerMmrGoalTemplate)
+    ? settings.streamerMmrGoalTemplate
+    : streamerMmrGoalStyleDefaults.template;
+  return {
+    template,
+    fillStart: normalizeGoalColor(settings.streamerMmrGoalFillStart, streamerMmrGoalStyleDefaults.fillStart),
+    fillEnd: normalizeGoalColor(settings.streamerMmrGoalFillEnd, streamerMmrGoalStyleDefaults.fillEnd),
+    track: normalizeGoalColor(settings.streamerMmrGoalTrack, streamerMmrGoalStyleDefaults.track),
+    accent: normalizeGoalColor(settings.streamerMmrGoalAccent, streamerMmrGoalStyleDefaults.accent),
+    text: normalizeGoalColor(settings.streamerMmrGoalText, streamerMmrGoalStyleDefaults.text),
+    barHeight: clampGoalInt(settings.streamerMmrGoalBarHeight, 8, 24, streamerMmrGoalStyleDefaults.barHeight),
+    barRadius: clampGoalInt(settings.streamerMmrGoalBarRadius, 0, 18, streamerMmrGoalStyleDefaults.barRadius),
+    glow: clampGoalInt(settings.streamerMmrGoalGlow, 0, 30, streamerMmrGoalStyleDefaults.glow),
+    animated: settings.streamerMmrGoalAnimated !== false
+  };
+}
+
+function streamerOverlayGoalPreviewState(stats, settings) {
+  const liveGoal = stats?.mmrGoal;
+  if (liveGoal && Number(liveGoal.targetMmr || 0) > 0) {
+    return {
+      title: liveGoal.label || t('streamerGoalPreviewTitle'),
+      currentMmr: Math.max(0, Math.trunc(Number(liveGoal.currentMmr || 0))),
+      targetMmr: Math.max(0, Math.trunc(Number(liveGoal.targetMmr || 0))),
+      remainingMmr: Math.max(0, Math.trunc(Number(liveGoal.remainingMmr || 0))),
+      progress: Math.max(0, Math.min(100, Number(liveGoal.progress || 0))),
+      wins: Math.max(0, Math.trunc(Number(liveGoal.wins || 0))),
+      losses: Math.max(0, Math.trunc(Number(liveGoal.losses || 0))),
+      winRate: liveGoal.winRate === null || liveGoal.winRate === undefined ? null : Number(liveGoal.winRate),
+      requiredWins: Math.max(0, Math.trunc(Number(liveGoal.requiredWins || 0)))
+    };
+  }
+  const fallbackAccount = Array.isArray(settings?.streamerAccounts) ? settings.streamerAccounts[0]?.accountId : '';
+  const accountId = stats?.streamerAccountId || stats?.lastStreamerAccountId || fallbackAccount;
+  return streamerGoalPreviewState(stats || {}, settings || {}, accountId ? String(accountId) : '', { useFormValues: false });
+}
+
+function normalizeGoalColor(value, fallback) {
+  const text = String(value || '').trim();
+  return /^#[0-9a-f]{6}$/i.test(text) ? text.toLowerCase() : fallback;
+}
+
+function clampGoalInt(value, min, max, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(min, Math.min(max, Math.trunc(number)));
 }
 
 function toggleHidden(element, hidden) {
@@ -3108,6 +3260,19 @@ function scheduleOverlayPositionSave() {
   }, 250);
 }
 
+function scheduleStreamerGoalStyleSave() {
+  clearTimeout(streamerGoalStyleSaveTimer);
+  streamerGoalStyleSaveTimer = setTimeout(() => {
+    saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch((error) => console.error('Streamer goal style save failed', error));
+  }, 250);
+}
+
+function updateStreamerGoalStyleOutputs() {
+  if (els.streamerMmrGoalBarHeightValue) els.streamerMmrGoalBarHeightValue.textContent = String(els.streamerMmrGoalBarHeight?.value || streamerMmrGoalStyleDefaults.barHeight);
+  if (els.streamerMmrGoalBarRadiusValue) els.streamerMmrGoalBarRadiusValue.textContent = String(els.streamerMmrGoalBarRadius?.value || streamerMmrGoalStyleDefaults.barRadius);
+  if (els.streamerMmrGoalGlowValue) els.streamerMmrGoalGlowValue.textContent = String(els.streamerMmrGoalGlow?.value || streamerMmrGoalStyleDefaults.glow);
+}
+
 function countryFlagEmoji(code) {
   const normalized = normalizeCountryCode(code);
   if (!normalized) return '';
@@ -3167,18 +3332,39 @@ els.spectatorGameLabelTemplate?.addEventListener('change', () => saveProtection(
   els.showStreamerWinLoss,
   els.showStreamerMmrGoal,
   els.showStreamerMmrGoalProgress,
-  els.showStreamerMmrGoalRecord,
-  els.showStreamerMmrGoalWinRate,
-  els.showStreamerMmrGoalEta,
   els.showStreamerMmrGoalDelta,
   els.streamerMedalSource,
   els.autoUpdateStreamerMmr
-].forEach((input) => input.addEventListener('change', () => {
+].forEach((input) => input?.addEventListener('change', () => {
   if (input === els.streamerMedalSource) markStreamerSettingsAccountInteraction();
   updateMatchIntelFieldVisibility();
   renderStreamerGoalPreview(snapshot?.state?.streamerStats || {}, protectionMatchIntelFromForm(), activeStreamerSettingsAccountId);
   saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
 }));
+
+[
+  els.streamerMmrGoalTemplate,
+  els.streamerMmrGoalFillStart,
+  els.streamerMmrGoalFillEnd,
+  els.streamerMmrGoalTrack,
+  els.streamerMmrGoalAccent,
+  els.streamerMmrGoalText,
+  els.streamerMmrGoalBarHeight,
+  els.streamerMmrGoalBarRadius,
+  els.streamerMmrGoalGlow,
+  els.streamerMmrGoalAnimated
+].forEach((input) => {
+  input?.addEventListener('input', () => {
+    updateStreamerGoalStyleOutputs();
+    renderStreamerGoalPreview(snapshot?.state?.streamerStats || {}, protectionMatchIntelFromForm(), activeStreamerSettingsAccountId);
+    scheduleStreamerGoalStyleSave();
+  });
+  input?.addEventListener('change', () => {
+    updateStreamerGoalStyleOutputs();
+    renderStreamerGoalPreview(snapshot?.state?.streamerStats || {}, protectionMatchIntelFromForm(), activeStreamerSettingsAccountId);
+    saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+  });
+});
 els.streamerSettingsAccount.addEventListener('change', () => {
   markStreamerSettingsAccountInteraction(els.streamerSettingsAccount.value || '');
   const matchIntel = snapshot?.config?.protection?.matchIntel || {};
@@ -3322,10 +3508,20 @@ function protectionMatchIntelFromForm() {
     showStreamerWinLoss: els.showStreamerWinLoss.checked,
     showStreamerMmrGoal: els.showStreamerMmrGoal.checked,
     showStreamerMmrGoalProgress: els.showStreamerMmrGoalProgress.checked,
-    showStreamerMmrGoalRecord: els.showStreamerMmrGoalRecord.checked,
-    showStreamerMmrGoalWinRate: els.showStreamerMmrGoalWinRate.checked,
-    showStreamerMmrGoalEta: els.showStreamerMmrGoalEta.checked,
+    showStreamerMmrGoalRecord: true,
+    showStreamerMmrGoalWinRate: true,
+    showStreamerMmrGoalEta: true,
     showStreamerMmrGoalDelta: els.showStreamerMmrGoalDelta.checked,
+    streamerMmrGoalTemplate: els.streamerMmrGoalTemplate.value,
+    streamerMmrGoalFillStart: els.streamerMmrGoalFillStart.value,
+    streamerMmrGoalFillEnd: els.streamerMmrGoalFillEnd.value,
+    streamerMmrGoalTrack: els.streamerMmrGoalTrack.value,
+    streamerMmrGoalAccent: els.streamerMmrGoalAccent.value,
+    streamerMmrGoalText: els.streamerMmrGoalText.value,
+    streamerMmrGoalBarHeight: Number(els.streamerMmrGoalBarHeight.value),
+    streamerMmrGoalBarRadius: Number(els.streamerMmrGoalBarRadius.value),
+    streamerMmrGoalGlow: Number(els.streamerMmrGoalGlow.value),
+    streamerMmrGoalAnimated: els.streamerMmrGoalAnimated.checked,
     streamerMedalSource: els.streamerMedalSource.value,
     streamerMmr: fallbackStreamerMmr,
     autoUpdateStreamerMmr: els.autoUpdateStreamerMmr.checked,
@@ -3355,10 +3551,21 @@ function updateMatchIntelFieldVisibility() {
   els.showStreamerWinLoss.closest('label').hidden = !streamerStatsEnabled;
   els.showStreamerMmrGoal.closest('label').hidden = !streamerStatsEnabled;
   els.showStreamerMmrGoalProgress.closest('label').hidden = !streamerGoalEnabled;
-  els.showStreamerMmrGoalRecord.closest('label').hidden = !streamerGoalEnabled;
-  els.showStreamerMmrGoalWinRate.closest('label').hidden = !streamerGoalEnabled;
-  els.showStreamerMmrGoalEta.closest('label').hidden = !streamerGoalEnabled;
   els.showStreamerMmrGoalDelta.closest('label').hidden = !streamerGoalEnabled;
+  [
+    els.streamerMmrGoalTemplateWrap,
+    els.streamerMmrGoalFillStartWrap,
+    els.streamerMmrGoalFillEndWrap,
+    els.streamerMmrGoalTrackWrap,
+    els.streamerMmrGoalAccentWrap,
+    els.streamerMmrGoalTextWrap,
+    els.streamerMmrGoalBarHeightWrap,
+    els.streamerMmrGoalBarRadiusWrap,
+    els.streamerMmrGoalGlowWrap,
+    els.streamerMmrGoalAnimated?.closest('label')
+  ].forEach((element) => {
+    if (element) element.hidden = !streamerGoalEnabled;
+  });
   els.streamerMedalSourceWrap.hidden = !streamerStatsEnabled || !els.showStreamerRankMedal.checked;
   els.streamerMmrWrap.hidden = false;
   els.streamerGoalWrap.hidden = false;

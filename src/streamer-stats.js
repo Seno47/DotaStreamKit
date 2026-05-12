@@ -21,10 +21,20 @@ export function normalizeStreamerStatsConfig(config) {
   config.showStreamerWinLoss = config.showStreamerWinLoss !== false;
   config.showStreamerMmrGoal = config.showStreamerMmrGoal !== false;
   config.showStreamerMmrGoalProgress = config.showStreamerMmrGoalProgress !== false;
-  config.showStreamerMmrGoalRecord = config.showStreamerMmrGoalRecord !== false;
-  config.showStreamerMmrGoalWinRate = config.showStreamerMmrGoalWinRate !== false;
-  config.showStreamerMmrGoalEta = config.showStreamerMmrGoalEta !== false;
+  config.showStreamerMmrGoalRecord = true;
+  config.showStreamerMmrGoalWinRate = true;
+  config.showStreamerMmrGoalEta = true;
   config.showStreamerMmrGoalDelta = config.showStreamerMmrGoalDelta !== false;
+  config.streamerMmrGoalTemplate = normalizeGoalTemplate(config.streamerMmrGoalTemplate);
+  config.streamerMmrGoalFillStart = normalizeGoalColor(config.streamerMmrGoalFillStart, '#63c9ff');
+  config.streamerMmrGoalFillEnd = normalizeGoalColor(config.streamerMmrGoalFillEnd, '#8df0a1');
+  config.streamerMmrGoalTrack = normalizeGoalColor(config.streamerMmrGoalTrack, '#101720');
+  config.streamerMmrGoalAccent = normalizeGoalColor(config.streamerMmrGoalAccent, '#ffdf91');
+  config.streamerMmrGoalText = normalizeGoalColor(config.streamerMmrGoalText, '#f8f1df');
+  config.streamerMmrGoalBarHeight = clampInt(config.streamerMmrGoalBarHeight, 8, 24, 13);
+  config.streamerMmrGoalBarRadius = clampInt(config.streamerMmrGoalBarRadius, 0, 18, 7);
+  config.streamerMmrGoalGlow = clampInt(config.streamerMmrGoalGlow, 0, 30, 12);
+  config.streamerMmrGoalAnimated = config.streamerMmrGoalAnimated !== false;
   config.autoUpdateStreamerMmr = config.autoUpdateStreamerMmr !== false;
   config.autoBindStreamerAccounts = true;
   if (!['auto', 'account', 'mmr'].includes(config.streamerMedalSource)) config.streamerMedalSource = 'auto';
@@ -320,6 +330,15 @@ function activeAccountMmrTarget(config, accountId) {
 function stringOrNull(value) {
   const text = String(value || '').trim();
   return text ? text : null;
+}
+
+function normalizeGoalTemplate(value) {
+  return ['classic', 'bubbles', 'neon', 'minimal'].includes(value) ? value : 'classic';
+}
+
+function normalizeGoalColor(value, fallback) {
+  const text = String(value || '').trim();
+  return /^#[0-9a-f]{6}$/i.test(text) ? text.toLowerCase() : fallback;
 }
 
 function clampInt(value, min, max, fallback) {

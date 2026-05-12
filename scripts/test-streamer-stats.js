@@ -31,6 +31,33 @@ normalizeStreamerStatsConfig(normalizedConfig);
 assert.equal(normalizedConfig.streamerMmr, 99999);
 assert.equal(normalizedConfig.autoBindStreamerAccounts, true);
 assert.equal(normalizedConfig.showStreamerMmrGoal, true);
+assert.equal(normalizedConfig.showStreamerMmrGoalRecord, true);
+assert.equal(normalizedConfig.streamerMmrGoalTemplate, 'classic');
+assert.equal(normalizedConfig.streamerMmrGoalFillStart, '#63c9ff');
+
+const normalizedGoalStyle = {
+  streamerMmrGoalTemplate: 'bubbles',
+  streamerMmrGoalFillStart: '#ABCDEF',
+  streamerMmrGoalFillEnd: 'bad',
+  streamerMmrGoalBarHeight: 99,
+  streamerMmrGoalBarRadius: -10,
+  streamerMmrGoalGlow: 18,
+  streamerMmrGoalAnimated: false,
+  showStreamerMmrGoalRecord: false,
+  showStreamerMmrGoalWinRate: false,
+  showStreamerMmrGoalEta: false
+};
+normalizeStreamerStatsConfig(normalizedGoalStyle);
+assert.equal(normalizedGoalStyle.streamerMmrGoalTemplate, 'bubbles');
+assert.equal(normalizedGoalStyle.streamerMmrGoalFillStart, '#abcdef');
+assert.equal(normalizedGoalStyle.streamerMmrGoalFillEnd, '#8df0a1');
+assert.equal(normalizedGoalStyle.streamerMmrGoalBarHeight, 24);
+assert.equal(normalizedGoalStyle.streamerMmrGoalBarRadius, 0);
+assert.equal(normalizedGoalStyle.streamerMmrGoalGlow, 18);
+assert.equal(normalizedGoalStyle.streamerMmrGoalAnimated, false);
+assert.equal(normalizedGoalStyle.showStreamerMmrGoalRecord, true);
+assert.equal(normalizedGoalStyle.showStreamerMmrGoalWinRate, true);
+assert.equal(normalizedGoalStyle.showStreamerMmrGoalEta, true);
 
 const normalizedAccountsConfig = {
   streamerAccounts: [
