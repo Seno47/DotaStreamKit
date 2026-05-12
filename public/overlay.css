@@ -287,7 +287,7 @@ body {
   pointer-events: none;
   box-sizing: border-box;
   width: 420px;
-  height: 128px;
+  height: 104px;
   padding: 10px 12px 9px;
   overflow: hidden;
   border: 1px solid var(--goal-accent);
@@ -310,7 +310,6 @@ body {
   gap: 7px;
 }
 
-.streamerMmrGoalTop,
 .streamerMmrGoalMeta,
 .streamerMmrGoalKpis {
   display: flex;
@@ -318,19 +317,21 @@ body {
   min-width: 0;
 }
 
-.streamerMmrGoalTop,
 .streamerMmrGoalMeta {
   justify-content: space-between;
 }
 
-.streamerMmrGoalTop {
-  justify-content: flex-end;
-}
-
 .streamerMmrGoalPercent {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
   color: #ffffff;
-  font-size: 22px;
+  font-size: clamp(8px, calc(var(--goal-bar-height) - 2px), 13px);
   font-variant-numeric: tabular-nums;
+  line-height: 1;
+  pointer-events: none;
 }
 
 .streamerMmrGoalProgress {

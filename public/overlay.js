@@ -1006,8 +1006,8 @@ function applyStreamerMmrGoal(reference, protection, state) {
     ? minimapSide === 'right' ? 385 : 1110
     : minimapSide === 'right' ? 1060 : 390;
   const box = inLiveGame
-    ? { left, bottom: 176, width: 420, height: 128 }
-    : { left, top: 132, width: 420, height: 128 };
+    ? { left, bottom: 176, width: 420, height: 104 }
+    : { left, top: 132, width: 420, height: 104 };
   applyScaledBox(streamerMmrGoalEl, withOverlayOffset(box, settings.overlayPositions?.streamerMmrGoal), reference);
   setVisible(streamerMmrGoalEl, true);
 }
@@ -1097,7 +1097,6 @@ function ensureStreamerStatsNodes() {
 
 function ensureStreamerMmrGoalNodes() {
   if (streamerMmrGoalNodes) return streamerMmrGoalNodes;
-  const top = document.createElement('div');
   const percent = document.createElement('b');
   const progress = document.createElement('div');
   const fill = document.createElement('span');
@@ -1109,7 +1108,6 @@ function ensureStreamerMmrGoalNodes() {
   const record = document.createElement('span');
   const winRate = document.createElement('span');
   const eta = document.createElement('span');
-  top.className = 'streamerMmrGoalTop';
   percent.className = 'streamerMmrGoalPercent';
   progress.className = 'streamerMmrGoalProgress';
   fill.className = 'streamerMmrGoalFill';
@@ -1121,12 +1119,11 @@ function ensureStreamerMmrGoalNodes() {
   record.className = 'streamerMmrGoalRecord';
   winRate.className = 'streamerMmrGoalWinRate';
   eta.className = 'streamerMmrGoalEta';
-  top.append(percent);
-  progress.append(fill);
+  progress.append(fill, percent);
   meta.append(current, target, delta);
   kpis.append(record, winRate, eta);
-  streamerMmrGoalEl.replaceChildren(top, progress, meta, kpis);
-  streamerMmrGoalNodes = { top, percent, progress, fill, meta, current, target, delta, kpis, record, winRate, eta };
+  streamerMmrGoalEl.replaceChildren(progress, meta, kpis);
+  streamerMmrGoalNodes = { percent, progress, fill, meta, current, target, delta, kpis, record, winRate, eta };
   return streamerMmrGoalNodes;
 }
 

@@ -450,9 +450,9 @@ const overlayPreviewBoxes = {
     left: 1110,
     top: 812,
     width: 420,
-    height: 128,
+    height: 104,
     anchor: { x: 0, y: 0 },
-    visible: { width: 420, height: 128 }
+    visible: { width: 420, height: 104 }
   },
   roshanTimer: {
     left: 318,
@@ -2730,7 +2730,7 @@ function applyStreamerGoalPreview(root, goal, settings) {
     ? root
     : root.querySelector('.streamer-goal-preview') || root;
   applyStreamerGoalPreviewStyle(previewRoot, settings);
-  const percent = previewRoot.querySelector('#streamerGoalPreviewPercent, [data-goal-preview=\"percent\"]') || previewRoot.querySelector('.streamer-goal-preview-top b');
+  const percent = previewRoot.querySelector('#streamerGoalPreviewPercent, [data-goal-preview=\"percent\"]') || previewRoot.querySelector('.streamer-goal-preview-bar b');
   const bar = previewRoot.querySelector('#streamerGoalPreviewBar, [data-goal-preview=\"bar\"]') || previewRoot.querySelector('.streamer-goal-preview-bar');
   const fill = previewRoot.querySelector('#streamerGoalPreviewFill, [data-goal-preview=\"fill\"]') || previewRoot.querySelector('.streamer-goal-preview-bar span');
   const current = previewRoot.querySelector('#streamerGoalPreviewCurrent, [data-goal-preview=\"current\"]') || previewRoot.querySelector('.streamer-goal-preview-meta b');

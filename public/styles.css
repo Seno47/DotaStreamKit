@@ -1187,7 +1187,7 @@ dd {
 
 .streamer-goal-live-preview .streamer-goal-preview {
   width: min(420px, 100%);
-  min-height: 128px;
+  min-height: 104px;
 }
 
 .streamer-goal-preview {
@@ -1215,34 +1215,12 @@ dd {
   text-shadow: 0 2px 3px #000, 0 0 5px #000;
 }
 
-.streamer-goal-preview-top,
 .streamer-goal-preview-meta,
 .streamer-goal-preview-kpis {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: calc(8px * var(--preview-scale, 1));
-}
-
-.streamer-goal-preview-top {
-  justify-content: flex-end;
-  min-width: 0;
-  color: var(--goal-accent);
-  font-size: calc(17px * var(--preview-scale, 1));
-}
-
-.streamer-goal-preview-top span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.streamer-goal-preview-top b {
-  color: #fff;
-  font-size: calc(22px * var(--preview-scale, 1));
-  font-variant-numeric: tabular-nums;
 }
 
 .streamer-goal-preview-bar {
@@ -1274,6 +1252,19 @@ dd {
   inset: 0;
   pointer-events: none;
   opacity: 0;
+}
+
+.streamer-goal-preview-bar b {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: clamp(calc(8px * var(--preview-scale, 1)), calc((var(--goal-bar-height) - 2px) * var(--preview-scale, 1)), calc(13px * var(--preview-scale, 1)));
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  pointer-events: none;
 }
 
 .streamer-goal-preview-meta {
