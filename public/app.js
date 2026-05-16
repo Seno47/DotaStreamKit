@@ -526,6 +526,116 @@ const streamerGoalCssSnippets = {
   border-radius: 99px;
   background: var(--goal-accent);
   box-shadow: 0 0 12px var(--goal-accent);
+}`,
+  lightning: `[data-goal-part="bar"] {
+  overflow: hidden;
+}
+
+[data-goal-part="fill"]::before {
+  content: "";
+  position: absolute;
+  top: -35%;
+  left: -18%;
+  width: 18%;
+  height: 170%;
+  clip-path: polygon(44% 0, 78% 0, 58% 38%, 100% 38%, 30% 100%, 46% 56%, 0 56%);
+  background: linear-gradient(180deg, #fff 0%, var(--goal-accent) 48%, var(--goal-fill-end) 100%);
+  filter: drop-shadow(0 0 8px var(--goal-accent)) drop-shadow(0 0 14px #fff);
+  opacity: 0;
+  animation: goalCustomLightning 2.2s steps(1, end) infinite;
+}
+
+@keyframes goalCustomLightning {
+  0%, 58%, 100% { transform: translateX(0) skewX(-8deg); opacity: 0; }
+  60% { transform: translateX(150%) skewX(-8deg); opacity: .95; }
+  62% { opacity: .2; }
+  64% { transform: translateX(360%) skewX(-8deg); opacity: 1; }
+  67% { transform: translateX(720%) skewX(-8deg); opacity: 0; }
+}`,
+  eye: `[data-goal-part="root"] {
+  position: relative;
+  overflow: hidden;
+}
+
+[data-goal-part="root"]::before,
+[data-goal-part="root"]::after {
+  content: "";
+  position: absolute;
+  left: -6%;
+  z-index: 20;
+  width: 112%;
+  height: 52%;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(255,255,255,.12), transparent 58%), rgba(2, 4, 8, .78);
+  animation: goalCustomEyeClose 4.8s ease-in-out infinite;
+}
+
+[data-goal-part="root"]::before {
+  top: -52%;
+  border-radius: 0 0 50% 50%;
+  --goal-eye-close-y: 52%;
+}
+
+[data-goal-part="root"]::after {
+  bottom: -52%;
+  border-radius: 50% 50% 0 0;
+  --goal-eye-close-y: -52%;
+}
+
+@keyframes goalCustomEyeClose {
+  0%, 72%, 100% { transform: translateY(0); opacity: 0; }
+  78%, 88% { transform: translateY(var(--goal-eye-close-y)); opacity: 1; }
+}`,
+  scanner: `[data-goal-part="bar"] {
+  position: relative;
+  overflow: hidden;
+}
+
+[data-goal-part="bar"]::after {
+  content: "";
+  position: absolute;
+  inset: -45% auto -45% -28%;
+  z-index: 3;
+  width: 24%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.75), transparent);
+  filter: blur(1px);
+  mix-blend-mode: screen;
+  animation: goalCustomScanner 2.6s linear infinite;
+}
+
+@keyframes goalCustomScanner {
+  to { transform: translateX(560%); }
+}`,
+  sparks: `[data-goal-part="fill"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 12% 70%, rgba(255,255,255,.9) 0 1px, transparent 2px),
+    radial-gradient(circle at 34% 35%, var(--goal-accent) 0 2px, transparent 3px),
+    radial-gradient(circle at 61% 62%, rgba(255,255,255,.7) 0 1px, transparent 2px),
+    radial-gradient(circle at 84% 28%, var(--goal-fill-end) 0 2px, transparent 3px);
+  background-size: 118px 24px;
+  filter: drop-shadow(0 0 6px var(--goal-accent));
+  opacity: .85;
+  animation: goalCustomSparks 1.7s linear infinite;
+}
+
+@keyframes goalCustomSparks {
+  to { background-position: 118px -24px; }
+}`,
+  glitch: `[data-goal-part="meta"],
+[data-goal-part="kpis"],
+[data-goal-part="percent"] {
+  animation: goalCustomGlitch 2.8s steps(1, end) infinite;
+}
+
+@keyframes goalCustomGlitch {
+  0%, 84%, 100% { transform: translate(0, 0); text-shadow: 0 2px 3px #000, 0 0 5px #000; }
+  86% { transform: translate(2px, -1px); text-shadow: -2px 0 #00e5ff, 2px 0 #ff3b6b; }
+  88% { transform: translate(-2px, 1px); text-shadow: 2px 0 #00e5ff, -2px 0 #ff3b6b; }
+  90% { transform: translate(1px, 0); text-shadow: 0 0 9px var(--goal-accent); }
 }`
 };
 const overlayPreviewBoxes = {
@@ -751,6 +861,11 @@ const translations = {
     streamerGoalCssSnippetFrame: 'Рамка',
     streamerGoalCssSnippetPulse: 'Пульс',
     streamerGoalCssSnippetSeparator: 'Разделитель',
+    streamerGoalCssSnippetLightning: 'Молния',
+    streamerGoalCssSnippetEye: 'Глаз',
+    streamerGoalCssSnippetScanner: 'Сканер',
+    streamerGoalCssSnippetSparks: 'Искры',
+    streamerGoalCssSnippetGlitch: 'Глитч',
     streamerMedalSource: 'Источник медали',
     streamerMedalAuto: 'Аккаунт, затем MMR',
     streamerMedalAccount: 'Dota аккаунт',
@@ -1145,6 +1260,11 @@ const translations = {
     streamerGoalCssSnippetFrame: 'Frame',
     streamerGoalCssSnippetPulse: 'Pulse',
     streamerGoalCssSnippetSeparator: 'Separator',
+    streamerGoalCssSnippetLightning: 'Lightning',
+    streamerGoalCssSnippetEye: 'Eye blink',
+    streamerGoalCssSnippetScanner: 'Scanner',
+    streamerGoalCssSnippetSparks: 'Sparks',
+    streamerGoalCssSnippetGlitch: 'Glitch',
     streamerMedalSource: 'Medal source',
     streamerMedalAuto: 'Account, then MMR',
     streamerMedalAccount: 'Dota account',
