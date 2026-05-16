@@ -998,13 +998,15 @@ function applyStreamerMmrGoal(reference, protection, state) {
   nodes.fill.style.width = `${progress}%`;
   setTextContent(nodes.current, formatGoalText(goalStyle.currentPrefix, currentMmr, goalStyle.currentSuffix));
   setTextContent(nodes.target, formatGoalText(goalStyle.targetPrefix, targetMmr, goalStyle.targetSuffix));
+  nodes.target.hidden = settings.showStreamerMmrGoalTarget === false;
+  streamerMmrGoalEl.dataset.targetHidden = settings.showStreamerMmrGoalTarget === false ? 'true' : 'false';
   setTextContent(nodes.delta, remainingMmr > 0 ? formatGoalText(goalStyle.deltaPrefix, formatStreamerMmr(remainingMmr), goalStyle.deltaSuffix) : 'DONE');
   nodes.delta.hidden = settings.showStreamerMmrGoalDelta === false;
   setTextContent(nodes.record, `W ${wins} - L ${losses}`);
   nodes.record.hidden = false;
   setTextContent(nodes.winRate, total > 0 && goal.winRate !== null ? `${formatGoalPercent(goal.winRate)}% WR` : '- WR');
   nodes.winRate.hidden = false;
-  setTextContent(nodes.eta, remainingMmr > 0 ? `${Math.max(0, Number(goal.requiredWins || 0))}W left` : 'Goal hit');
+  setTextContent(nodes.eta, remainingMmr > 0 ? `${Math.max(0, Number(goal.requiredWins || 0))}W` : 'DONE');
   nodes.eta.hidden = false;
   streamerMmrGoalEl.classList.toggle('complete', remainingMmr <= 0);
 
@@ -1013,9 +1015,10 @@ function applyStreamerMmrGoal(reference, protection, state) {
   const left = inLiveGame
     ? minimapSide === 'right' ? 385 : 1110
     : minimapSide === 'right' ? 1060 : 390;
+  const boxHeight = Math.max(104, 104 + Math.max(0, goalStyle.barHeight - streamerMmrGoalStyleDefaults.barHeight));
   const box = inLiveGame
-    ? { left, bottom: 176, width: 420, height: 104 }
-    : { left, top: 132, width: 420, height: 104 };
+    ? { left, bottom: 176, width: 420, height: boxHeight }
+    : { left, top: 132, width: 420, height: boxHeight };
   applyScaledBox(streamerMmrGoalEl, withOverlayOffset(box, settings.overlayPositions?.streamerMmrGoal), reference);
   setVisible(streamerMmrGoalEl, true);
 }
@@ -1176,8 +1179,8 @@ function streamerMmrGoalStyleFromSettings(settings = {}) {
     track: normalizeGoalColor(settings.streamerMmrGoalTrack, streamerMmrGoalStyleDefaults.track),
     accent: normalizeGoalColor(settings.streamerMmrGoalAccent, streamerMmrGoalStyleDefaults.accent),
     text: normalizeGoalColor(settings.streamerMmrGoalText, streamerMmrGoalStyleDefaults.text),
-    barHeight: clampNumber(settings.streamerMmrGoalBarHeight, 8, 24, streamerMmrGoalStyleDefaults.barHeight),
-    barRadius: clampNumber(settings.streamerMmrGoalBarRadius, 0, 18, streamerMmrGoalStyleDefaults.barRadius),
+    barHeight: clampNumber(settings.streamerMmrGoalBarHeight, 8, 64, streamerMmrGoalStyleDefaults.barHeight),
+    barRadius: clampNumber(settings.streamerMmrGoalBarRadius, 0, 40, streamerMmrGoalStyleDefaults.barRadius),
     glow: clampNumber(settings.streamerMmrGoalGlow, 0, 30, streamerMmrGoalStyleDefaults.glow),
     animated: settings.streamerMmrGoalAnimated !== false,
     currentPrefix: normalizeGoalTextPart(settings.streamerMmrGoalCurrentPrefix, streamerMmrGoalStyleDefaults.currentPrefix),

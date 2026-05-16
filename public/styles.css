@@ -1274,7 +1274,7 @@ dd {
 
 .streamer-goal-live-preview .streamer-goal-preview {
   width: min(420px, 100%);
-  min-height: 104px;
+  min-height: calc(104px + max(0px, var(--goal-bar-height) - 13px));
 }
 
 .streamer-goal-preview {
@@ -1375,6 +1375,10 @@ dd {
 
 :where(.streamer-goal-preview-meta) :where(span) {
   margin-left: calc(3px * var(--preview-scale, 1));
+  margin-right: auto;
+}
+
+.streamer-goal-preview[data-target-hidden="true"] .streamer-goal-preview-meta b {
   margin-right: auto;
 }
 

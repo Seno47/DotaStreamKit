@@ -25,14 +25,15 @@ export function normalizeStreamerStatsConfig(config) {
   config.showStreamerMmrGoalWinRate = true;
   config.showStreamerMmrGoalEta = true;
   config.showStreamerMmrGoalDelta = config.showStreamerMmrGoalDelta !== false;
+  config.showStreamerMmrGoalTarget = config.showStreamerMmrGoalTarget !== false;
   config.streamerMmrGoalTemplate = normalizeGoalTemplate(config.streamerMmrGoalTemplate);
   config.streamerMmrGoalFillStart = normalizeGoalColor(config.streamerMmrGoalFillStart, '#63c9ff');
   config.streamerMmrGoalFillEnd = normalizeGoalColor(config.streamerMmrGoalFillEnd, '#8df0a1');
   config.streamerMmrGoalTrack = normalizeGoalColor(config.streamerMmrGoalTrack, '#101720');
   config.streamerMmrGoalAccent = normalizeGoalColor(config.streamerMmrGoalAccent, '#ffdf91');
   config.streamerMmrGoalText = normalizeGoalColor(config.streamerMmrGoalText, '#f8f1df');
-  config.streamerMmrGoalBarHeight = clampInt(config.streamerMmrGoalBarHeight, 8, 24, 13);
-  config.streamerMmrGoalBarRadius = clampInt(config.streamerMmrGoalBarRadius, 0, 18, 7);
+  config.streamerMmrGoalBarHeight = clampInt(config.streamerMmrGoalBarHeight, 8, 64, 13);
+  config.streamerMmrGoalBarRadius = clampInt(config.streamerMmrGoalBarRadius, 0, 40, 7);
   config.streamerMmrGoalGlow = clampInt(config.streamerMmrGoalGlow, 0, 30, 12);
   config.streamerMmrGoalAnimated = config.streamerMmrGoalAnimated !== false;
   config.streamerMmrGoalCurrentPrefix = normalizeGoalTextPart(config.streamerMmrGoalCurrentPrefix, '');
@@ -278,14 +279,17 @@ function normalizeStreamerAccounts(value, fallbackMmr = 0) {
     if (!row || typeof row !== 'object') continue;
     const accountId = normalizePositiveInt(row.accountId ?? row.dotaId ?? row.id);
     if (!accountId) continue;
+    const mmr = row.mmr === undefined || row.mmr === null || row.mmr === ''
+      ? clampInt(fallbackMmr, 0, 99999, 0)
+      : clampInt(row.mmr, 0, 99999, 0);
+    const goalMmr = clampInt(row.goalMmr ?? row.targetMmr, 0, 99999, 0);
+    const rawGoalStartMmr = clampInt(row.goalStartMmr ?? row.goalBaseMmr, 0, 99999, 0);
     byAccountId.set(String(accountId), {
       accountId,
       label: String(row.label || row.name || '').trim().slice(0, 40),
-      mmr: row.mmr === undefined || row.mmr === null || row.mmr === ''
-        ? clampInt(fallbackMmr, 0, 99999, 0)
-        : clampInt(row.mmr, 0, 99999, 0),
-      goalMmr: clampInt(row.goalMmr ?? row.targetMmr, 0, 99999, 0),
-      goalStartMmr: clampInt(row.goalStartMmr ?? row.goalBaseMmr, 0, 99999, 0),
+      mmr,
+      goalMmr,
+      goalStartMmr: rawGoalStartMmr === mmr ? 0 : rawGoalStartMmr,
       boundAt: stringOrNull(row.boundAt)
     });
   }

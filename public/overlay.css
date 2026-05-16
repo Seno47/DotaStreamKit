@@ -376,6 +376,10 @@ body {
   margin-right: auto;
 }
 
+#streamerMmrGoal[data-target-hidden="true"] .streamerMmrGoalCurrent {
+  margin-right: auto;
+}
+
 .streamerMmrGoalDelta {
   color: var(--goal-fill-end);
   font-size: 16px;

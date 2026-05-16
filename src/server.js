@@ -323,6 +323,7 @@ const defaultConfig = {
       showStreamerMmrGoalWinRate: true,
       showStreamerMmrGoalEta: true,
       showStreamerMmrGoalDelta: true,
+      showStreamerMmrGoalTarget: true,
       streamerMmrGoalTemplate: 'classic',
       streamerMmrGoalFillStart: '#63c9ff',
       streamerMmrGoalFillEnd: '#8df0a1',
@@ -1569,8 +1570,7 @@ function streamerMmrForAccount(settings, accountId) {
 function streamerMmrGoalState({ account, accountId, currentMmr, wins, losses, winDelta }) {
   const targetMmr = Math.max(0, Math.trunc(Number(account?.goalMmr || 0)));
   if (!targetMmr || !currentMmr) return null;
-  const rawStartMmr = Math.max(0, Math.trunc(Number(account?.goalStartMmr || 0)));
-  const startMmr = rawStartMmr > 0 ? rawStartMmr : Math.min(currentMmr, targetMmr);
+  const startMmr = Math.max(0, Math.trunc(Number(account?.goalStartMmr || 0)));
   const total = Math.max(0, Number(wins || 0) + Number(losses || 0));
   const winRate = total > 0 ? Math.round((Number(wins || 0) / total) * 1000) / 10 : null;
   const distance = targetMmr - startMmr;

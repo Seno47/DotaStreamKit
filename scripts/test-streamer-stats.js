@@ -32,6 +32,7 @@ assert.equal(normalizedConfig.streamerMmr, 99999);
 assert.equal(normalizedConfig.autoBindStreamerAccounts, true);
 assert.equal(normalizedConfig.showStreamerMmrGoal, true);
 assert.equal(normalizedConfig.showStreamerMmrGoalRecord, true);
+assert.equal(normalizedConfig.showStreamerMmrGoalTarget, true);
 assert.equal(normalizedConfig.streamerMmrGoalTemplate, 'classic');
 assert.equal(normalizedConfig.streamerMmrGoalFillStart, '#63c9ff');
 assert.equal(normalizedConfig.streamerMmrGoalTargetPrefix, '/ ');
@@ -61,7 +62,7 @@ normalizeStreamerStatsConfig(normalizedGoalStyle);
 assert.equal(normalizedGoalStyle.streamerMmrGoalTemplate, 'bubbles');
 assert.equal(normalizedGoalStyle.streamerMmrGoalFillStart, '#abcdef');
 assert.equal(normalizedGoalStyle.streamerMmrGoalFillEnd, '#8df0a1');
-assert.equal(normalizedGoalStyle.streamerMmrGoalBarHeight, 24);
+assert.equal(normalizedGoalStyle.streamerMmrGoalBarHeight, 64);
 assert.equal(normalizedGoalStyle.streamerMmrGoalBarRadius, 0);
 assert.equal(normalizedGoalStyle.streamerMmrGoalGlow, 18);
 assert.equal(normalizedGoalStyle.streamerMmrGoalAnimated, false);
@@ -80,14 +81,14 @@ const normalizedAccountsConfig = {
   streamerAccounts: [
     { accountId: '123', label: 'Main' },
     { id: '123', label: 'Duplicate', goalMmr: 6500, goalStartMmr: 5200 },
-    { dotaId: '456', name: 'Smurf' },
+    { dotaId: '456', name: 'Smurf', mmr: 4000, goalMmr: 5000, goalStartMmr: 4000 },
     { accountId: 'bad', label: 'Invalid' }
   ]
 };
 normalizeStreamerStatsConfig(normalizedAccountsConfig);
 assert.deepEqual(normalizedAccountsConfig.streamerAccounts, [
   { accountId: 123, label: 'Duplicate', mmr: 0, goalMmr: 6500, goalStartMmr: 5200, boundAt: null },
-  { accountId: 456, label: 'Smurf', mmr: 0, goalMmr: 0, goalStartMmr: 0, boundAt: null }
+  { accountId: 456, label: 'Smurf', mmr: 4000, goalMmr: 5000, goalStartMmr: 0, boundAt: null }
 ]);
 
 const config = {

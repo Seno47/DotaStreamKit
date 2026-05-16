@@ -330,13 +330,15 @@
                   <div class="streamer-goal-preview" data-goal-part="root">
                     <div class="streamer-goal-preview-bar" id="streamerGoalPreviewBar" data-goal-part="bar"><span id="streamerGoalPreviewFill" data-goal-part="fill"></span><b id="streamerGoalPreviewPercent" data-goal-part="percent">0%</b></div>
                     <div class="streamer-goal-preview-meta" data-goal-part="meta"><b id="streamerGoalPreviewCurrent" data-goal-part="current">0</b><span id="streamerGoalPreviewTarget" data-goal-part="target">/ 0</span><em id="streamerGoalPreviewDelta" data-goal-part="delta">+0</em></div>
-                    <div class="streamer-goal-preview-kpis" data-goal-part="kpis"><span id="streamerGoalPreviewRecord" data-goal-part="record">W 0 - L 0</span><span id="streamerGoalPreviewWinRate" data-goal-part="winrate">- WR</span><span id="streamerGoalPreviewEta" data-goal-part="eta">0W left</span></div>
+                    <div class="streamer-goal-preview-kpis" data-goal-part="kpis"><span id="streamerGoalPreviewRecord" data-goal-part="record">W 0 - L 0</span><span id="streamerGoalPreviewWinRate" data-goal-part="winrate">- WR</span><span id="streamerGoalPreviewEta" data-goal-part="eta">0W</span></div>
                   </div>
                 </div>
                 <div class="streamer-goal-grid">
                   <label id="streamerGoalMmrWrap">MMR goal<input id="streamerGoalMmr" type="number" min="0" max="99999" step="1"></label>
+                  <label id="streamerGoalStartMmrWrap">Start MMR<input id="streamerGoalStartMmr" type="number" min="0" max="99999" step="1" value="0"></label>
                   <label class="check"><input type="checkbox" id="showStreamerMmrGoal"> MMR goal overlay</label>
                   <label class="check"><input type="checkbox" id="showStreamerMmrGoalProgress"> Goal progress bar</label>
+                  <label class="check"><input type="checkbox" id="showStreamerMmrGoalTarget"> Target MMR number</label>
                   <label class="check"><input type="checkbox" id="showStreamerMmrGoalDelta"> MMR left</label>
                   <label id="streamerMmrGoalTemplateWrap">Progress style<select id="streamerMmrGoalTemplate"><option value="classic">Classic</option><option value="bubbles">Bubbles</option><option value="neon">Neon</option><option value="minimal">Minimal</option></select></label>
                   <label id="streamerMmrGoalFillStartWrap">Fill start<input id="streamerMmrGoalFillStart" type="color"></label>
@@ -344,8 +346,8 @@
                   <label id="streamerMmrGoalTrackWrap">Track<input id="streamerMmrGoalTrack" type="color"></label>
                   <label id="streamerMmrGoalAccentWrap">Accent<input id="streamerMmrGoalAccent" type="color"></label>
                   <label id="streamerMmrGoalTextWrap">Text<input id="streamerMmrGoalText" type="color"></label>
-                  <label id="streamerMmrGoalBarHeightWrap">Bar height<input id="streamerMmrGoalBarHeight" type="range" min="8" max="24" step="1"><output id="streamerMmrGoalBarHeightValue">13</output></label>
-                  <label id="streamerMmrGoalBarRadiusWrap">Roundness<input id="streamerMmrGoalBarRadius" type="range" min="0" max="18" step="1"><output id="streamerMmrGoalBarRadiusValue">7</output></label>
+                  <label id="streamerMmrGoalBarHeightWrap">Bar height<input id="streamerMmrGoalBarHeight" type="range" min="8" max="64" step="1"><output id="streamerMmrGoalBarHeightValue">13</output></label>
+                  <label id="streamerMmrGoalBarRadiusWrap">Roundness<input id="streamerMmrGoalBarRadius" type="range" min="0" max="40" step="1"><output id="streamerMmrGoalBarRadiusValue">7</output></label>
                   <label id="streamerMmrGoalGlowWrap">Glow<input id="streamerMmrGoalGlow" type="range" min="0" max="30" step="1"><output id="streamerMmrGoalGlowValue">12</output></label>
                   <label class="check"><input type="checkbox" id="streamerMmrGoalAnimated"> Animated bar</label>
                   <label id="streamerMmrGoalCurrentPrefixWrap">Current prefix<input id="streamerMmrGoalCurrentPrefix" type="text" maxlength="24" placeholder=""></label>
