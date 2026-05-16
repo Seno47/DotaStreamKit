@@ -319,6 +319,8 @@ const defaultConfig = {
       showStreamerWinLoss: true,
       showStreamerMmrGoal: true,
       showStreamerMmrGoalProgress: true,
+      showStreamerMmrGoalCurrent: true,
+      showStreamerMmrGoalTarget: true,
       showStreamerMmrGoalRecord: true,
       showStreamerMmrGoalWinRate: true,
       showStreamerMmrGoalEta: true,

@@ -997,16 +997,24 @@ function applyStreamerMmrGoal(reference, protection, state) {
   nodes.percent.hidden = settings.showStreamerMmrGoalProgress === false;
   nodes.fill.style.width = `${progress}%`;
   setTextContent(nodes.current, formatGoalText(goalStyle.currentPrefix, currentMmr, goalStyle.currentSuffix));
+  nodes.current.hidden = settings.showStreamerMmrGoalCurrent === false;
   setTextContent(nodes.target, formatGoalText(goalStyle.targetPrefix, targetMmr, goalStyle.targetSuffix));
+  nodes.target.hidden = settings.showStreamerMmrGoalTarget === false;
   streamerMmrGoalEl.dataset.backgroundHidden = settings.showStreamerMmrGoalBackground === false ? 'true' : 'false';
   setTextContent(nodes.delta, remainingMmr > 0 ? formatGoalText(goalStyle.deltaPrefix, formatStreamerMmr(remainingMmr), goalStyle.deltaSuffix) : 'DONE');
   nodes.delta.hidden = settings.showStreamerMmrGoalDelta === false;
   setTextContent(nodes.record, `W ${wins} - L ${losses}`);
-  nodes.record.hidden = false;
+  nodes.record.hidden = settings.showStreamerMmrGoalRecord === false;
   setTextContent(nodes.winRate, total > 0 && goal.winRate !== null ? `${formatGoalPercent(goal.winRate)}% WR` : '- WR');
-  nodes.winRate.hidden = false;
+  nodes.winRate.hidden = settings.showStreamerMmrGoalWinRate === false;
   setTextContent(nodes.eta, remainingMmr > 0 ? `${Math.max(0, Number(goal.requiredWins || 0))}W` : 'DONE');
-  nodes.eta.hidden = false;
+  nodes.eta.hidden = settings.showStreamerMmrGoalEta === false;
+  nodes.meta.hidden = settings.showStreamerMmrGoalCurrent === false
+    && settings.showStreamerMmrGoalTarget === false
+    && settings.showStreamerMmrGoalDelta === false;
+  nodes.kpis.hidden = settings.showStreamerMmrGoalRecord === false
+    && settings.showStreamerMmrGoalWinRate === false
+    && settings.showStreamerMmrGoalEta === false;
   streamerMmrGoalEl.classList.toggle('complete', remainingMmr <= 0);
 
   const minimapSide = protection.minimapSide === 'right' ? 'right' : 'left';

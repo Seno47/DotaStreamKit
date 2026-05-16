@@ -21,9 +21,11 @@ export function normalizeStreamerStatsConfig(config) {
   config.showStreamerWinLoss = config.showStreamerWinLoss !== false;
   config.showStreamerMmrGoal = config.showStreamerMmrGoal !== false;
   config.showStreamerMmrGoalProgress = config.showStreamerMmrGoalProgress !== false;
-  config.showStreamerMmrGoalRecord = true;
-  config.showStreamerMmrGoalWinRate = true;
-  config.showStreamerMmrGoalEta = true;
+  config.showStreamerMmrGoalCurrent = config.showStreamerMmrGoalCurrent !== false;
+  config.showStreamerMmrGoalTarget = config.showStreamerMmrGoalTarget !== false;
+  config.showStreamerMmrGoalRecord = config.showStreamerMmrGoalRecord !== false;
+  config.showStreamerMmrGoalWinRate = config.showStreamerMmrGoalWinRate !== false;
+  config.showStreamerMmrGoalEta = config.showStreamerMmrGoalEta !== false;
   config.showStreamerMmrGoalDelta = config.showStreamerMmrGoalDelta !== false;
   config.showStreamerMmrGoalBackground = config.showStreamerMmrGoalBackground !== false;
   config.streamerMmrGoalTemplate = normalizeGoalTemplate(config.streamerMmrGoalTemplate);

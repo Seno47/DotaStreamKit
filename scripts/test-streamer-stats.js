@@ -31,6 +31,8 @@ normalizeStreamerStatsConfig(normalizedConfig);
 assert.equal(normalizedConfig.streamerMmr, 99999);
 assert.equal(normalizedConfig.autoBindStreamerAccounts, true);
 assert.equal(normalizedConfig.showStreamerMmrGoal, true);
+assert.equal(normalizedConfig.showStreamerMmrGoalCurrent, true);
+assert.equal(normalizedConfig.showStreamerMmrGoalTarget, true);
 assert.equal(normalizedConfig.showStreamerMmrGoalRecord, true);
 assert.equal(normalizedConfig.showStreamerMmrGoalBackground, true);
 assert.equal(normalizedConfig.streamerMmrGoalTemplate, 'classic');
@@ -73,9 +75,9 @@ assert.equal(normalizedGoalStyle.streamerMmrGoalTargetSuffix, ' pts');
 assert.equal(normalizedGoalStyle.streamerMmrGoalDeltaPrefix, 'Left ');
 assert.equal(normalizedGoalStyle.streamerMmrGoalDeltaSuffix, ' mmr');
 assert.equal(normalizedGoalStyle.streamerMmrGoalCustomCss, '[data-goal-part="fill"] { animation: pulse 1s infinite; }');
-assert.equal(normalizedGoalStyle.showStreamerMmrGoalRecord, true);
-assert.equal(normalizedGoalStyle.showStreamerMmrGoalWinRate, true);
-assert.equal(normalizedGoalStyle.showStreamerMmrGoalEta, true);
+assert.equal(normalizedGoalStyle.showStreamerMmrGoalRecord, false);
+assert.equal(normalizedGoalStyle.showStreamerMmrGoalWinRate, false);
+assert.equal(normalizedGoalStyle.showStreamerMmrGoalEta, false);
 
 const normalizedAccountsConfig = {
   streamerAccounts: [

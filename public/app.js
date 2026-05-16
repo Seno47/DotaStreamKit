@@ -162,7 +162,12 @@ const els = {
   showStreamerMmrGoal: document.querySelector('#showStreamerMmrGoal'),
   showStreamerMmrGoalProgress: document.querySelector('#showStreamerMmrGoalProgress'),
   showStreamerMmrGoalBackground: document.querySelector('#showStreamerMmrGoalBackground'),
+  showStreamerMmrGoalCurrent: document.querySelector('#showStreamerMmrGoalCurrent'),
+  showStreamerMmrGoalTarget: document.querySelector('#showStreamerMmrGoalTarget'),
   showStreamerMmrGoalDelta: document.querySelector('#showStreamerMmrGoalDelta'),
+  showStreamerMmrGoalRecord: document.querySelector('#showStreamerMmrGoalRecord'),
+  showStreamerMmrGoalWinRate: document.querySelector('#showStreamerMmrGoalWinRate'),
+  showStreamerMmrGoalEta: document.querySelector('#showStreamerMmrGoalEta'),
   streamerMmrGoalTemplateWrap: document.querySelector('#streamerMmrGoalTemplateWrap'),
   streamerMmrGoalTemplate: document.querySelector('#streamerMmrGoalTemplate'),
   streamerMmrGoalFillStartWrap: document.querySelector('#streamerMmrGoalFillStartWrap'),
@@ -701,7 +706,12 @@ const translations = {
     showStreamerMmrGoal: 'Цель MMR в overlay',
     showStreamerMmrGoalProgress: 'Полоска прогресса цели',
     showStreamerMmrGoalBackground: 'Фон и рамка цели',
+    showStreamerMmrGoalCurrent: 'Стартовый / текущий MMR',
+    showStreamerMmrGoalTarget: 'Цель MMR',
     showStreamerMmrGoalDelta: 'Сколько MMR осталось',
+    showStreamerMmrGoalRecord: 'Счёт побед-поражений',
+    showStreamerMmrGoalWinRate: 'Winrate',
+    showStreamerMmrGoalEta: 'Побед до цели',
     streamerMmrGoalTemplate: 'Стиль полоски',
     streamerMmrGoalTemplateClassic: 'Классика',
     streamerMmrGoalTemplateBubbles: 'Анимированные пузырьки',
@@ -1090,7 +1100,12 @@ const translations = {
     showStreamerMmrGoal: 'MMR goal overlay',
     showStreamerMmrGoalProgress: 'Goal progress bar',
     showStreamerMmrGoalBackground: 'Background and frame',
+    showStreamerMmrGoalCurrent: 'Start / current MMR',
+    showStreamerMmrGoalTarget: 'Goal MMR',
     showStreamerMmrGoalDelta: 'MMR left',
+    showStreamerMmrGoalRecord: 'Win-Lose score',
+    showStreamerMmrGoalWinRate: 'Winrate',
+    showStreamerMmrGoalEta: 'Wins to goal',
     streamerMmrGoalTemplate: 'Progress style',
     streamerMmrGoalTemplateClassic: 'Classic',
     streamerMmrGoalTemplateBubbles: 'Animated bubbles',
@@ -1571,7 +1586,12 @@ function applyLanguage(config) {
   setLabelText(els.showStreamerMmrGoal.closest('label'), t('showStreamerMmrGoal'));
   setLabelText(els.showStreamerMmrGoalProgress.closest('label'), t('showStreamerMmrGoalProgress'));
   setLabelText(els.showStreamerMmrGoalBackground.closest('label'), t('showStreamerMmrGoalBackground'));
+  setLabelText(els.showStreamerMmrGoalCurrent.closest('label'), t('showStreamerMmrGoalCurrent'));
+  setLabelText(els.showStreamerMmrGoalTarget.closest('label'), t('showStreamerMmrGoalTarget'));
   setLabelText(els.showStreamerMmrGoalDelta.closest('label'), t('showStreamerMmrGoalDelta'));
+  setLabelText(els.showStreamerMmrGoalRecord.closest('label'), t('showStreamerMmrGoalRecord'));
+  setLabelText(els.showStreamerMmrGoalWinRate.closest('label'), t('showStreamerMmrGoalWinRate'));
+  setLabelText(els.showStreamerMmrGoalEta.closest('label'), t('showStreamerMmrGoalEta'));
   setLabelText(els.streamerMmrGoalTemplateWrap, t('streamerMmrGoalTemplate'));
   setOptionText(els.streamerMmrGoalTemplate, 'classic', t('streamerMmrGoalTemplateClassic'));
   setOptionText(els.streamerMmrGoalTemplate, 'bubbles', t('streamerMmrGoalTemplateBubbles'));
@@ -2004,7 +2024,12 @@ function render(data) {
   els.showStreamerMmrGoal.checked = matchIntel.showStreamerMmrGoal !== false;
   els.showStreamerMmrGoalProgress.checked = matchIntel.showStreamerMmrGoalProgress !== false;
   els.showStreamerMmrGoalBackground.checked = matchIntel.showStreamerMmrGoalBackground !== false;
+  els.showStreamerMmrGoalCurrent.checked = matchIntel.showStreamerMmrGoalCurrent !== false;
+  els.showStreamerMmrGoalTarget.checked = matchIntel.showStreamerMmrGoalTarget !== false;
   els.showStreamerMmrGoalDelta.checked = matchIntel.showStreamerMmrGoalDelta !== false;
+  els.showStreamerMmrGoalRecord.checked = matchIntel.showStreamerMmrGoalRecord !== false;
+  els.showStreamerMmrGoalWinRate.checked = matchIntel.showStreamerMmrGoalWinRate !== false;
+  els.showStreamerMmrGoalEta.checked = matchIntel.showStreamerMmrGoalEta !== false;
   const goalStyle = streamerMmrGoalStyleFromSettings(matchIntel);
   els.streamerMmrGoalTemplate.value = goalStyle.template;
   els.streamerMmrGoalFillStart.value = goalStyle.fillStart;
@@ -2938,10 +2963,20 @@ function applyStreamerGoalPreview(root, goal, settings) {
   if (fill) fill.style.width = `${Math.max(0, Math.min(100, Number(goal?.progress || 0)))}%`;
   toggleHidden(bar, settings.showStreamerMmrGoalProgress === false);
   toggleHidden(percent, settings.showStreamerMmrGoalProgress === false);
-  toggleHidden(record, false);
-  toggleHidden(winRate, false);
-  toggleHidden(eta, false);
+  toggleHidden(current, settings.showStreamerMmrGoalCurrent === false);
+  toggleHidden(target, settings.showStreamerMmrGoalTarget === false);
   toggleHidden(delta, settings.showStreamerMmrGoalDelta === false);
+  toggleHidden(record, settings.showStreamerMmrGoalRecord === false);
+  toggleHidden(winRate, settings.showStreamerMmrGoalWinRate === false);
+  toggleHidden(eta, settings.showStreamerMmrGoalEta === false);
+  const metaHidden = settings.showStreamerMmrGoalCurrent === false
+    && settings.showStreamerMmrGoalTarget === false
+    && settings.showStreamerMmrGoalDelta === false;
+  const kpisHidden = settings.showStreamerMmrGoalRecord === false
+    && settings.showStreamerMmrGoalWinRate === false
+    && settings.showStreamerMmrGoalEta === false;
+  toggleHidden(current?.parentElement, metaHidden);
+  toggleHidden(record?.parentElement, kpisHidden);
 }
 
 function applyStreamerGoalPreviewStyle(root, settings) {
@@ -3568,7 +3603,12 @@ els.spectatorGameLabelTemplate?.addEventListener('change', () => saveProtection(
   els.showStreamerMmrGoal,
   els.showStreamerMmrGoalProgress,
   els.showStreamerMmrGoalBackground,
+  els.showStreamerMmrGoalCurrent,
+  els.showStreamerMmrGoalTarget,
   els.showStreamerMmrGoalDelta,
+  els.showStreamerMmrGoalRecord,
+  els.showStreamerMmrGoalWinRate,
+  els.showStreamerMmrGoalEta,
   els.streamerMedalSource,
   els.autoUpdateStreamerMmr
 ].forEach((input) => input?.addEventListener('change', () => {
@@ -3773,9 +3813,11 @@ function protectionMatchIntelFromForm() {
     showStreamerWinLoss: els.showStreamerWinLoss.checked,
     showStreamerMmrGoal: els.showStreamerMmrGoal.checked,
     showStreamerMmrGoalProgress: els.showStreamerMmrGoalProgress.checked,
-    showStreamerMmrGoalRecord: true,
-    showStreamerMmrGoalWinRate: true,
-    showStreamerMmrGoalEta: true,
+    showStreamerMmrGoalCurrent: els.showStreamerMmrGoalCurrent.checked,
+    showStreamerMmrGoalTarget: els.showStreamerMmrGoalTarget.checked,
+    showStreamerMmrGoalRecord: els.showStreamerMmrGoalRecord.checked,
+    showStreamerMmrGoalWinRate: els.showStreamerMmrGoalWinRate.checked,
+    showStreamerMmrGoalEta: els.showStreamerMmrGoalEta.checked,
     showStreamerMmrGoalBackground: els.showStreamerMmrGoalBackground.checked,
     showStreamerMmrGoalDelta: els.showStreamerMmrGoalDelta.checked,
     streamerMmrGoalTemplate: els.streamerMmrGoalTemplate.value,
@@ -3825,7 +3867,12 @@ function updateMatchIntelFieldVisibility() {
   els.showStreamerMmrGoal.closest('label').hidden = !streamerStatsEnabled;
   els.showStreamerMmrGoalProgress.closest('label').hidden = !streamerGoalEnabled;
   els.showStreamerMmrGoalBackground.closest('label').hidden = !streamerGoalEnabled;
+  els.showStreamerMmrGoalCurrent.closest('label').hidden = !streamerGoalEnabled;
+  els.showStreamerMmrGoalTarget.closest('label').hidden = !streamerGoalEnabled;
   els.showStreamerMmrGoalDelta.closest('label').hidden = !streamerGoalEnabled;
+  els.showStreamerMmrGoalRecord.closest('label').hidden = !streamerGoalEnabled;
+  els.showStreamerMmrGoalWinRate.closest('label').hidden = !streamerGoalEnabled;
+  els.showStreamerMmrGoalEta.closest('label').hidden = !streamerGoalEnabled;
   [
     els.streamerMmrGoalTemplateWrap,
     els.streamerMmrGoalFillStartWrap,
