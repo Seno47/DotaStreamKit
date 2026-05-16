@@ -998,8 +998,7 @@ function applyStreamerMmrGoal(reference, protection, state) {
   nodes.fill.style.width = `${progress}%`;
   setTextContent(nodes.current, formatGoalText(goalStyle.currentPrefix, currentMmr, goalStyle.currentSuffix));
   setTextContent(nodes.target, formatGoalText(goalStyle.targetPrefix, targetMmr, goalStyle.targetSuffix));
-  nodes.target.hidden = settings.showStreamerMmrGoalTarget === false;
-  streamerMmrGoalEl.dataset.targetHidden = settings.showStreamerMmrGoalTarget === false ? 'true' : 'false';
+  streamerMmrGoalEl.dataset.backgroundHidden = settings.showStreamerMmrGoalBackground === false ? 'true' : 'false';
   setTextContent(nodes.delta, remainingMmr > 0 ? formatGoalText(goalStyle.deltaPrefix, formatStreamerMmr(remainingMmr), goalStyle.deltaSuffix) : 'DONE');
   nodes.delta.hidden = settings.showStreamerMmrGoalDelta === false;
   setTextContent(nodes.record, `W ${wins} - L ${losses}`);

@@ -25,7 +25,7 @@ export function normalizeStreamerStatsConfig(config) {
   config.showStreamerMmrGoalWinRate = true;
   config.showStreamerMmrGoalEta = true;
   config.showStreamerMmrGoalDelta = config.showStreamerMmrGoalDelta !== false;
-  config.showStreamerMmrGoalTarget = config.showStreamerMmrGoalTarget !== false;
+  config.showStreamerMmrGoalBackground = config.showStreamerMmrGoalBackground !== false;
   config.streamerMmrGoalTemplate = normalizeGoalTemplate(config.streamerMmrGoalTemplate);
   config.streamerMmrGoalFillStart = normalizeGoalColor(config.streamerMmrGoalFillStart, '#63c9ff');
   config.streamerMmrGoalFillEnd = normalizeGoalColor(config.streamerMmrGoalFillEnd, '#8df0a1');

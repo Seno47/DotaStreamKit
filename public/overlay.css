@@ -376,8 +376,12 @@ body {
   margin-right: auto;
 }
 
-#streamerMmrGoal[data-target-hidden="true"] .streamerMmrGoalCurrent {
-  margin-right: auto;
+#streamerMmrGoal[data-background-hidden="true"] {
+  padding: 0;
+  overflow: visible;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
 }
 
 .streamerMmrGoalDelta {

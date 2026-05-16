@@ -32,7 +32,7 @@ assert.equal(normalizedConfig.streamerMmr, 99999);
 assert.equal(normalizedConfig.autoBindStreamerAccounts, true);
 assert.equal(normalizedConfig.showStreamerMmrGoal, true);
 assert.equal(normalizedConfig.showStreamerMmrGoalRecord, true);
-assert.equal(normalizedConfig.showStreamerMmrGoalTarget, true);
+assert.equal(normalizedConfig.showStreamerMmrGoalBackground, true);
 assert.equal(normalizedConfig.streamerMmrGoalTemplate, 'classic');
 assert.equal(normalizedConfig.streamerMmrGoalFillStart, '#63c9ff');
 assert.equal(normalizedConfig.streamerMmrGoalTargetPrefix, '/ ');

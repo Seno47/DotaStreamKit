@@ -323,7 +323,7 @@ const defaultConfig = {
       showStreamerMmrGoalWinRate: true,
       showStreamerMmrGoalEta: true,
       showStreamerMmrGoalDelta: true,
-      showStreamerMmrGoalTarget: true,
+      showStreamerMmrGoalBackground: true,
       streamerMmrGoalTemplate: 'classic',
       streamerMmrGoalFillStart: '#63c9ff',
       streamerMmrGoalFillEnd: '#8df0a1',

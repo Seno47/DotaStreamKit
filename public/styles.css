@@ -1378,8 +1378,12 @@ dd {
   margin-right: auto;
 }
 
-.streamer-goal-preview[data-target-hidden="true"] .streamer-goal-preview-meta b {
-  margin-right: auto;
+.streamer-goal-preview[data-background-hidden="true"] {
+  padding: 0;
+  overflow: visible;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
 }
 
 :where(.streamer-goal-preview-meta) :where(em) {
