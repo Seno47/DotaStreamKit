@@ -346,7 +346,7 @@ function stringOrNull(value) {
 }
 
 function normalizeGoalTemplate(value) {
-  return ['classic', 'bubbles', 'neon', 'minimal'].includes(value) ? value : 'classic';
+  return ['classic', 'bubbles', 'neon', 'minimal', 'lightning', 'eye', 'scanner', 'sparks', 'glitch'].includes(value) ? value : 'classic';
 }
 
 function normalizeGoalColor(value, fallback) {

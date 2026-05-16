@@ -459,7 +459,106 @@ body {
   box-shadow: none;
 }
 
-#streamerMmrGoal[data-animated="false"] .streamerMmrGoalFill::after {
+#streamerMmrGoal.streamer-goal-template-lightning {
+  border-color: #f9f871;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(249, 248, 113, 0.2), transparent 34%),
+    linear-gradient(135deg, rgba(11, 14, 21, 0.94), rgba(21, 24, 32, 0.88));
+  box-shadow: 0 0 calc(var(--goal-glow) + 12px) rgba(249, 248, 113, 0.36), inset 0 0 18px rgba(255, 255, 255, 0.05);
+}
+
+#streamerMmrGoal.streamer-goal-template-lightning .streamerMmrGoalProgress {
+  border-color: rgba(249, 248, 113, 0.48);
+}
+
+#streamerMmrGoal.streamer-goal-template-lightning .streamerMmrGoalFill::before {
+  content: "";
+  position: absolute;
+  inset: -55% -18%;
+  background:
+    linear-gradient(115deg, transparent 0 31%, rgba(255, 255, 255, 0.95) 33% 35%, transparent 38%),
+    linear-gradient(64deg, transparent 0 50%, rgba(249, 248, 113, 0.9) 52% 55%, transparent 58%);
+  opacity: 0.72;
+  transform: translateX(-92%);
+  animation: streamerGoalTemplateLightning 1.45s steps(2, end) infinite;
+}
+
+#streamerMmrGoal.streamer-goal-template-eye {
+  overflow: hidden;
+}
+
+#streamerMmrGoal.streamer-goal-template-eye::before,
+#streamerMmrGoal.streamer-goal-template-eye::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  right: 12px;
+  width: 42px;
+  height: 18px;
+  border-color: rgba(255, 255, 255, 0.36);
+  opacity: 0.78;
+  pointer-events: none;
+  animation: streamerGoalTemplateEyeClose 3.2s ease-in-out infinite;
+}
+
+#streamerMmrGoal.streamer-goal-template-eye::before {
+  top: 14px;
+  border-top: 3px solid;
+  border-radius: 50% 50% 0 0;
+  transform-origin: center bottom;
+}
+
+#streamerMmrGoal.streamer-goal-template-eye::after {
+  top: 28px;
+  border-bottom: 3px solid;
+  border-radius: 0 0 50% 50%;
+  transform-origin: center top;
+}
+
+#streamerMmrGoal.streamer-goal-template-scanner .streamerMmrGoalProgress::after {
+  content: "";
+  position: absolute;
+  inset: -35% auto -35% 0;
+  width: 34px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  opacity: 0.66;
+  transform: translateX(-120%);
+  animation: streamerGoalTemplateScanner 2.1s ease-in-out infinite;
+}
+
+#streamerMmrGoal.streamer-goal-template-sparks .streamerMmrGoalFill::before {
+  content: "";
+  position: absolute;
+  inset: -18% 0;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.92) 0 1px, transparent 2px),
+    radial-gradient(circle, rgba(255, 218, 121, 0.86) 0 1px, transparent 2px),
+    radial-gradient(circle, rgba(99, 201, 255, 0.76) 0 1px, transparent 2px);
+  background-position: 8% 24%, 46% 70%, 82% 38%;
+  background-size: 42px 28px, 54px 34px, 66px 30px;
+  opacity: 0.72;
+  animation: streamerGoalTemplateSparks 1.4s linear infinite;
+}
+
+#streamerMmrGoal.streamer-goal-template-glitch {
+  border-color: rgba(255, 68, 119, 0.5);
+  filter: saturate(1.25);
+}
+
+#streamerMmrGoal.streamer-goal-template-glitch .streamerMmrGoalMeta,
+#streamerMmrGoal.streamer-goal-template-glitch .streamerMmrGoalKpis,
+#streamerMmrGoal.streamer-goal-template-glitch .streamerMmrGoalPercent {
+  animation: streamerGoalTemplateGlitch 1.8s steps(2, end) infinite;
+}
+
+#streamerMmrGoal[data-animated="false"]::before,
+#streamerMmrGoal[data-animated="false"]::after {
+  opacity: 0;
+  animation: none;
+}
+
+#streamerMmrGoal[data-animated="false"] :where(.streamerMmrGoalProgress, .streamerMmrGoalFill, .streamerMmrGoalMeta, .streamerMmrGoalKpis, .streamerMmrGoalPercent)::before,
+#streamerMmrGoal[data-animated="false"] :where(.streamerMmrGoalProgress, .streamerMmrGoalFill, .streamerMmrGoalMeta, .streamerMmrGoalKpis, .streamerMmrGoalPercent)::after {
   animation: none;
 }
 
@@ -471,6 +570,35 @@ body {
 @keyframes streamerGoalShine {
   0% { transform: translateX(-120%); }
   55%, 100% { transform: translateX(120%); }
+}
+
+@keyframes streamerGoalTemplateLightning {
+  0%, 70% { opacity: 0; transform: translateX(-92%); }
+  74% { opacity: 0.92; transform: translateX(-18%); }
+  78% { opacity: 0.36; transform: translateX(16%); }
+  82%, 100% { opacity: 0; transform: translateX(78%); }
+}
+
+@keyframes streamerGoalTemplateEyeClose {
+  0%, 82%, 100% { transform: scaleY(1); }
+  88%, 92% { transform: scaleY(0.12); }
+}
+
+@keyframes streamerGoalTemplateScanner {
+  0% { transform: translateX(-120%); }
+  60%, 100% { transform: translateX(580%); }
+}
+
+@keyframes streamerGoalTemplateSparks {
+  from { background-position: 8% 24%, 46% 70%, 82% 38%; }
+  to { background-position: 42% 68%, 10% 18%, 118% 76%; }
+}
+
+@keyframes streamerGoalTemplateGlitch {
+  0%, 86%, 100% { transform: translate(0); text-shadow: inherit; }
+  88% { transform: translate(-1px, 0); text-shadow: 2px 0 #ff4477, -2px 0 #63c9ff; }
+  90% { transform: translate(1px, 0); text-shadow: -2px 0 #ff4477, 2px 0 #63c9ff; }
+  92% { transform: translate(0); text-shadow: inherit; }
 }
 
 #streamerStats.visible {

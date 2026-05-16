@@ -79,6 +79,12 @@ assert.equal(normalizedGoalStyle.showStreamerMmrGoalRecord, false);
 assert.equal(normalizedGoalStyle.showStreamerMmrGoalWinRate, false);
 assert.equal(normalizedGoalStyle.showStreamerMmrGoalEta, false);
 
+const normalizedNewGoalStyle = {
+  streamerMmrGoalTemplate: 'lightning'
+};
+normalizeStreamerStatsConfig(normalizedNewGoalStyle);
+assert.equal(normalizedNewGoalStyle.streamerMmrGoalTemplate, 'lightning');
+
 const normalizedAccountsConfig = {
   streamerAccounts: [
     { accountId: '123', label: 'Main' },

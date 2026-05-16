@@ -1286,6 +1286,7 @@ dd {
   --goal-bar-height: 13px;
   --goal-bar-radius: 7px;
   --goal-glow: 12px;
+  position: relative;
   box-sizing: border-box;
   padding: calc(10px * var(--preview-scale, 1)) calc(12px * var(--preview-scale, 1));
   border: 1px solid var(--goal-accent);
@@ -1459,7 +1460,106 @@ dd {
   box-shadow: none;
 }
 
-.streamer-goal-preview[data-animated="false"] .streamer-goal-preview-bar span::after {
+.streamer-goal-template-lightning {
+  border-color: #f9f871;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(249, 248, 113, 0.2), transparent 34%),
+    linear-gradient(135deg, rgba(11, 14, 21, 0.94), rgba(21, 24, 32, 0.88));
+  box-shadow: 0 0 calc((var(--goal-glow) + 12px) * var(--preview-scale, 1)) rgba(249, 248, 113, 0.36), inset 0 0 18px rgba(255, 255, 255, 0.05);
+}
+
+.streamer-goal-template-lightning .streamer-goal-preview-bar {
+  border-color: rgba(249, 248, 113, 0.48);
+}
+
+.streamer-goal-template-lightning .streamer-goal-preview-bar span::before {
+  content: "";
+  position: absolute;
+  inset: -55% -18%;
+  background:
+    linear-gradient(115deg, transparent 0 31%, rgba(255, 255, 255, 0.95) 33% 35%, transparent 38%),
+    linear-gradient(64deg, transparent 0 50%, rgba(249, 248, 113, 0.9) 52% 55%, transparent 58%);
+  opacity: 0.72;
+  transform: translateX(-92%);
+  animation: streamerGoalTemplateLightning 1.45s steps(2, end) infinite;
+}
+
+.streamer-goal-template-eye {
+  overflow: hidden;
+}
+
+.streamer-goal-template-eye::before,
+.streamer-goal-template-eye::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  right: calc(12px * var(--preview-scale, 1));
+  width: calc(42px * var(--preview-scale, 1));
+  height: calc(18px * var(--preview-scale, 1));
+  border-color: rgba(255, 255, 255, 0.36);
+  opacity: 0.78;
+  pointer-events: none;
+  animation: streamerGoalTemplateEyeClose 3.2s ease-in-out infinite;
+}
+
+.streamer-goal-template-eye::before {
+  top: calc(14px * var(--preview-scale, 1));
+  border-top: calc(3px * var(--preview-scale, 1)) solid;
+  border-radius: 50% 50% 0 0;
+  transform-origin: center bottom;
+}
+
+.streamer-goal-template-eye::after {
+  top: calc(28px * var(--preview-scale, 1));
+  border-bottom: calc(3px * var(--preview-scale, 1)) solid;
+  border-radius: 0 0 50% 50%;
+  transform-origin: center top;
+}
+
+.streamer-goal-template-scanner .streamer-goal-preview-bar::after {
+  content: "";
+  position: absolute;
+  inset: -35% auto -35% 0;
+  width: calc(34px * var(--preview-scale, 1));
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  opacity: 0.66;
+  transform: translateX(-120%);
+  animation: streamerGoalTemplateScanner 2.1s ease-in-out infinite;
+}
+
+.streamer-goal-template-sparks .streamer-goal-preview-bar span::before {
+  content: "";
+  position: absolute;
+  inset: -18% 0;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.92) 0 1px, transparent 2px),
+    radial-gradient(circle, rgba(255, 218, 121, 0.86) 0 1px, transparent 2px),
+    radial-gradient(circle, rgba(99, 201, 255, 0.76) 0 1px, transparent 2px);
+  background-position: 8% 24%, 46% 70%, 82% 38%;
+  background-size: 42px 28px, 54px 34px, 66px 30px;
+  opacity: 0.72;
+  animation: streamerGoalTemplateSparks 1.4s linear infinite;
+}
+
+.streamer-goal-template-glitch {
+  border-color: rgba(255, 68, 119, 0.5);
+  filter: saturate(1.25);
+}
+
+.streamer-goal-template-glitch .streamer-goal-preview-meta,
+.streamer-goal-template-glitch .streamer-goal-preview-kpis,
+.streamer-goal-template-glitch .streamer-goal-preview-bar b {
+  animation: streamerGoalTemplateGlitch 1.8s steps(2, end) infinite;
+}
+
+.streamer-goal-preview[data-animated="false"]::before,
+.streamer-goal-preview[data-animated="false"]::after {
+  opacity: 0;
+  animation: none;
+}
+
+.streamer-goal-preview[data-animated="false"] :where(.streamer-goal-preview-bar, .streamer-goal-preview-bar span, .streamer-goal-preview-meta, .streamer-goal-preview-kpis, .streamer-goal-preview-bar b)::before,
+.streamer-goal-preview[data-animated="false"] :where(.streamer-goal-preview-bar, .streamer-goal-preview-bar span, .streamer-goal-preview-meta, .streamer-goal-preview-kpis, .streamer-goal-preview-bar b)::after {
   animation: none;
 }
 
@@ -1471,6 +1571,35 @@ dd {
 @keyframes streamerGoalShine {
   0% { transform: translateX(-120%); }
   55%, 100% { transform: translateX(120%); }
+}
+
+@keyframes streamerGoalTemplateLightning {
+  0%, 70% { opacity: 0; transform: translateX(-92%); }
+  74% { opacity: 0.92; transform: translateX(-18%); }
+  78% { opacity: 0.36; transform: translateX(16%); }
+  82%, 100% { opacity: 0; transform: translateX(78%); }
+}
+
+@keyframes streamerGoalTemplateEyeClose {
+  0%, 82%, 100% { transform: scaleY(1); }
+  88%, 92% { transform: scaleY(0.12); }
+}
+
+@keyframes streamerGoalTemplateScanner {
+  0% { transform: translateX(-120%); }
+  60%, 100% { transform: translateX(580%); }
+}
+
+@keyframes streamerGoalTemplateSparks {
+  from { background-position: 8% 24%, 46% 70%, 82% 38%; }
+  to { background-position: 42% 68%, 10% 18%, 118% 76%; }
+}
+
+@keyframes streamerGoalTemplateGlitch {
+  0%, 86%, 100% { transform: translate(0); text-shadow: inherit; }
+  88% { transform: translate(calc(-1px * var(--preview-scale, 1)), 0); text-shadow: 2px 0 #ff4477, -2px 0 #63c9ff; }
+  90% { transform: translate(calc(1px * var(--preview-scale, 1)), 0); text-shadow: -2px 0 #ff4477, 2px 0 #63c9ff; }
+  92% { transform: translate(0); text-shadow: inherit; }
 }
 
 .notable-player-id,
