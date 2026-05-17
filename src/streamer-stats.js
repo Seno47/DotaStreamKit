@@ -351,7 +351,7 @@ function stringOrNull(value) {
 }
 
 function normalizeGoalTemplate(value) {
-  return ['classic', 'bubbles', 'neon', 'minimal', 'lightning', 'eye', 'scanner', 'sparks', 'glitch'].includes(value) ? value : 'classic';
+  return ['classic', 'bubbles', 'neon', 'minimal', 'lightning', 'eye', 'scanner', 'shimmer', 'comet', 'aurora', 'pulse', 'segments', 'liquid', 'equalizer', 'heartbeat', 'sparks', 'glitch'].includes(value) ? value : 'classic';
 }
 
 function normalizeGoalColor(value, fallback) {

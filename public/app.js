@@ -457,7 +457,7 @@ const previewRankMedalThresholds = [
 ];
 
 const overlayPositionKeys = ['streamerStatsMenu', 'streamerStatsGame', 'streamerMmrGoal', 'roshanTimer', 'predictionOverlay'];
-const streamerMmrGoalTemplates = ['classic', 'bubbles', 'neon', 'minimal', 'lightning', 'eye', 'scanner', 'sparks', 'glitch'];
+const streamerMmrGoalTemplates = ['classic', 'bubbles', 'neon', 'minimal', 'lightning', 'eye', 'scanner', 'shimmer', 'comet', 'aurora', 'pulse', 'segments', 'liquid', 'equalizer', 'heartbeat', 'sparks', 'glitch'];
 const streamerMmrGoalTemplateClasses = streamerMmrGoalTemplates.map((template) => `streamer-goal-template-${template}`);
 const streamerMmrGoalStyleDefaults = {
   template: 'classic',
@@ -867,6 +867,14 @@ const translations = {
     streamerMmrGoalTemplateLightning: 'Диагональные полосы',
     streamerMmrGoalTemplateEye: 'Глаз',
     streamerMmrGoalTemplateScanner: 'Сканер',
+    streamerMmrGoalTemplateShimmer: 'Шиммер',
+    streamerMmrGoalTemplateComet: 'Комета',
+    streamerMmrGoalTemplateAurora: 'Аврора',
+    streamerMmrGoalTemplatePulse: 'Пульс',
+    streamerMmrGoalTemplateSegments: 'Сегменты',
+    streamerMmrGoalTemplateLiquid: 'Жидкость',
+    streamerMmrGoalTemplateEqualizer: 'Эквалайзер',
+    streamerMmrGoalTemplateHeartbeat: 'Сердцебиение',
     streamerMmrGoalTemplateSparks: 'Искры',
     streamerMmrGoalTemplateGlitch: 'Глитч',
     streamerMmrGoalFillStart: 'Цвет старта',
@@ -1276,6 +1284,14 @@ const translations = {
     streamerMmrGoalTemplateLightning: 'Diagonal stripes',
     streamerMmrGoalTemplateEye: 'Eye blink',
     streamerMmrGoalTemplateScanner: 'Scanner',
+    streamerMmrGoalTemplateShimmer: 'Shimmer',
+    streamerMmrGoalTemplateComet: 'Comet',
+    streamerMmrGoalTemplateAurora: 'Aurora',
+    streamerMmrGoalTemplatePulse: 'Pulse',
+    streamerMmrGoalTemplateSegments: 'Segments',
+    streamerMmrGoalTemplateLiquid: 'Liquid',
+    streamerMmrGoalTemplateEqualizer: 'Equalizer',
+    streamerMmrGoalTemplateHeartbeat: 'Heartbeat',
     streamerMmrGoalTemplateSparks: 'Sparks',
     streamerMmrGoalTemplateGlitch: 'Glitch',
     streamerMmrGoalFillStart: 'Fill start',
@@ -1777,6 +1793,14 @@ function applyLanguage(config) {
   setOptionText(els.streamerMmrGoalTemplate, 'lightning', t('streamerMmrGoalTemplateLightning'));
   setOptionText(els.streamerMmrGoalTemplate, 'eye', t('streamerMmrGoalTemplateEye'));
   setOptionText(els.streamerMmrGoalTemplate, 'scanner', t('streamerMmrGoalTemplateScanner'));
+  setOptionText(els.streamerMmrGoalTemplate, 'shimmer', t('streamerMmrGoalTemplateShimmer'));
+  setOptionText(els.streamerMmrGoalTemplate, 'comet', t('streamerMmrGoalTemplateComet'));
+  setOptionText(els.streamerMmrGoalTemplate, 'aurora', t('streamerMmrGoalTemplateAurora'));
+  setOptionText(els.streamerMmrGoalTemplate, 'pulse', t('streamerMmrGoalTemplatePulse'));
+  setOptionText(els.streamerMmrGoalTemplate, 'segments', t('streamerMmrGoalTemplateSegments'));
+  setOptionText(els.streamerMmrGoalTemplate, 'liquid', t('streamerMmrGoalTemplateLiquid'));
+  setOptionText(els.streamerMmrGoalTemplate, 'equalizer', t('streamerMmrGoalTemplateEqualizer'));
+  setOptionText(els.streamerMmrGoalTemplate, 'heartbeat', t('streamerMmrGoalTemplateHeartbeat'));
   setOptionText(els.streamerMmrGoalTemplate, 'sparks', t('streamerMmrGoalTemplateSparks'));
   setOptionText(els.streamerMmrGoalTemplate, 'glitch', t('streamerMmrGoalTemplateGlitch'));
   setLabelText(els.streamerMmrGoalFillStartWrap, t('streamerMmrGoalFillStart'));
@@ -3305,6 +3329,14 @@ function applyGoalAnimationDurationProperties(root, speed) {
     'diagonal-sweep': 1.7,
     eye: 3.8,
     scanner: 2.1,
+    shimmer: 1.9,
+    comet: 1.6,
+    aurora: 3.4,
+    pulse: 2.4,
+    segments: 1.25,
+    liquid: 2.8,
+    equalizer: 1.2,
+    heartbeat: 1.7,
     sparks: 1.4,
     glitch: 1.8,
     'custom-shine': 1.8,

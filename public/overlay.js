@@ -21,7 +21,7 @@ let predictionOverlayAnimation = null;
 let predictionOverlayFinalSync = null;
 let lastOverlaySnapshot = null;
 const predictionOverlayFinalHoldMs = 4000;
-const streamerMmrGoalTemplates = ['classic', 'bubbles', 'neon', 'minimal', 'lightning', 'eye', 'scanner', 'sparks', 'glitch'];
+const streamerMmrGoalTemplates = ['classic', 'bubbles', 'neon', 'minimal', 'lightning', 'eye', 'scanner', 'shimmer', 'comet', 'aurora', 'pulse', 'segments', 'liquid', 'equalizer', 'heartbeat', 'sparks', 'glitch'];
 const streamerMmrGoalTemplateClasses = streamerMmrGoalTemplates.map((template) => `streamer-goal-template-${template}`);
 const streamerMmrGoalStyleDefaults = {
   template: 'classic',
@@ -1277,6 +1277,14 @@ function applyGoalAnimationDurationProperties(root, speed) {
     'diagonal-sweep': 1.7,
     eye: 3.8,
     scanner: 2.1,
+    shimmer: 1.9,
+    comet: 1.6,
+    aurora: 3.4,
+    pulse: 2.4,
+    segments: 1.25,
+    liquid: 2.8,
+    equalizer: 1.2,
+    heartbeat: 1.7,
     sparks: 1.4,
     glitch: 1.8,
     'custom-shine': 1.8,

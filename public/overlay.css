@@ -298,6 +298,14 @@ body {
   --goal-duration-diagonal-sweep: 1.7s;
   --goal-duration-eye: 3.8s;
   --goal-duration-scanner: 2.1s;
+  --goal-duration-shimmer: 1.9s;
+  --goal-duration-comet: 1.6s;
+  --goal-duration-aurora: 3.4s;
+  --goal-duration-pulse: 2.4s;
+  --goal-duration-segments: 1.25s;
+  --goal-duration-liquid: 2.8s;
+  --goal-duration-equalizer: 1.2s;
+  --goal-duration-heartbeat: 1.7s;
   --goal-duration-sparks: 1.4s;
   --goal-duration-glitch: 1.8s;
   z-index: 2147483646;
@@ -541,12 +549,96 @@ body {
 #streamerMmrGoal.streamer-goal-template-scanner .streamerMmrGoalProgress::after {
   content: "";
   position: absolute;
-  inset: -35% auto -35% 0;
-  width: 34px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
-  opacity: 0.66;
-  transform: translateX(-120%);
+  inset: -65% auto -65% -46%;
+  width: 46%;
+  background:
+    radial-gradient(ellipse at center, rgba(255, 255, 255, 0.72), transparent 58%),
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.64), rgba(99, 201, 255, 0.5), transparent);
+  filter: blur(1px);
+  opacity: 0.86;
+  transform: translateX(-60%) skewX(-14deg);
+  mix-blend-mode: screen;
   animation: streamerGoalTemplateScanner var(--goal-duration-scanner, 2.1s) ease-in-out infinite;
+}
+
+#streamerMmrGoal.streamer-goal-template-shimmer .streamerMmrGoalFill::after {
+  opacity: 0.66;
+  background: linear-gradient(105deg, transparent 0 24%, rgba(255, 255, 255, 0.72) 42%, rgba(255, 255, 255, 0.18) 52%, transparent 68% 100%);
+  transform: translateX(-120%);
+  animation: streamerGoalTemplateShimmer var(--goal-duration-shimmer, 1.9s) cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+#streamerMmrGoal.streamer-goal-template-comet .streamerMmrGoalFill::before {
+  content: "";
+  position: absolute;
+  inset: -55% auto -55% -32%;
+  width: 34%;
+  background:
+    radial-gradient(circle at 86% 50%, rgba(255, 255, 255, 0.98) 0 4px, rgba(255, 255, 255, 0.22) 7px, transparent 15px),
+    linear-gradient(90deg, transparent, rgba(255, 223, 145, 0.2), rgba(255, 255, 255, 0.82));
+  filter: drop-shadow(0 0 9px var(--goal-accent));
+  animation: streamerGoalTemplateComet var(--goal-duration-comet, 1.6s) ease-in-out infinite;
+}
+
+#streamerMmrGoal.streamer-goal-template-aurora {
+  border-color: rgba(141, 240, 161, 0.58);
+}
+
+#streamerMmrGoal.streamer-goal-template-aurora .streamerMmrGoalFill {
+  background:
+    linear-gradient(90deg, var(--goal-fill-start), #c996ff, var(--goal-fill-end), #ffe08a, var(--goal-fill-start));
+  background-size: 260% 100%;
+  animation: streamerGoalTemplateAurora var(--goal-duration-aurora, 3.4s) ease-in-out infinite;
+}
+
+#streamerMmrGoal.streamer-goal-template-pulse {
+  animation: streamerGoalTemplatePulseRoot var(--goal-duration-pulse, 2.4s) ease-in-out infinite;
+}
+
+#streamerMmrGoal.streamer-goal-template-pulse .streamerMmrGoalFill {
+  animation: streamerGoalTemplatePulseFill var(--goal-duration-pulse, 2.4s) ease-in-out infinite;
+}
+
+#streamerMmrGoal.streamer-goal-template-segments .streamerMmrGoalFill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.42) 0 8px, transparent 8px 16px);
+  opacity: 0.65;
+  animation: streamerGoalTemplateSegments var(--goal-duration-segments, 1.25s) linear infinite;
+}
+
+#streamerMmrGoal.streamer-goal-template-liquid .streamerMmrGoalFill::before {
+  content: "";
+  position: absolute;
+  inset: -55% -8%;
+  background:
+    radial-gradient(ellipse at 20% 65%, rgba(255, 255, 255, 0.42), transparent 36%),
+    radial-gradient(ellipse at 68% 30%, rgba(255, 255, 255, 0.22), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 55%);
+  background-size: 80px 100%, 120px 100%, 100% 100%;
+  opacity: 0.78;
+  animation: streamerGoalTemplateLiquid var(--goal-duration-liquid, 2.8s) ease-in-out infinite;
+}
+
+#streamerMmrGoal.streamer-goal-template-equalizer .streamerMmrGoalFill::before {
+  content: "";
+  position: absolute;
+  inset: 8% 0;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.42) 0 4px, transparent 4px 9px),
+    linear-gradient(90deg, transparent 0 5px, rgba(255, 255, 255, 0.22) 5px 8px, transparent 8px 13px);
+  background-size: 18px 100%, 26px 100%;
+  opacity: 0.72;
+  transform-origin: center bottom;
+  animation: streamerGoalTemplateEqualizer var(--goal-duration-equalizer, 1.2s) steps(4, end) infinite;
+}
+
+#streamerMmrGoal.streamer-goal-template-heartbeat .streamerMmrGoalFill::after {
+  opacity: 0;
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.82), transparent 58%);
+  transform: scaleX(0.18);
+  animation: streamerGoalTemplateHeartbeat var(--goal-duration-heartbeat, 1.7s) ease-in-out infinite;
 }
 
 #streamerMmrGoal.streamer-goal-template-sparks .streamerMmrGoalFill::before {
@@ -577,6 +669,10 @@ body {
 #streamerMmrGoal[data-animated="false"]::before,
 #streamerMmrGoal[data-animated="false"]::after {
   opacity: 0;
+  animation: none;
+}
+
+#streamerMmrGoal[data-animated="false"] :where(.streamerMmrGoalProgress, .streamerMmrGoalFill, .streamerMmrGoalMeta, .streamerMmrGoalKpis, .streamerMmrGoalPercent) {
   animation: none;
 }
 
@@ -615,8 +711,61 @@ body {
 }
 
 @keyframes streamerGoalTemplateScanner {
-  0% { transform: translateX(-120%); }
-  60%, 100% { transform: translateX(580%); }
+  0% { transform: translateX(-60%) skewX(-14deg); opacity: 0; }
+  18% { opacity: 0.88; }
+  66%, 100% { transform: translateX(330%) skewX(-14deg); opacity: 0; }
+}
+
+@keyframes streamerGoalTemplateShimmer {
+  0% { transform: translateX(-130%); opacity: 0; }
+  22% { opacity: 0.66; }
+  78%, 100% { transform: translateX(130%); opacity: 0; }
+}
+
+@keyframes streamerGoalTemplateComet {
+  0% { transform: translateX(0) skewX(-9deg); opacity: 0; }
+  18% { opacity: 1; }
+  82%, 100% { transform: translateX(360%) skewX(-9deg); opacity: 0; }
+}
+
+@keyframes streamerGoalTemplateAurora {
+  0%, 100% { background-position: 0% 50%; filter: saturate(1); }
+  50% { background-position: 100% 50%; filter: saturate(1.3) brightness(1.08); }
+}
+
+@keyframes streamerGoalTemplatePulseRoot {
+  0%, 100% { box-shadow: 0 7px 22px rgba(0, 0, 0, 0.46), inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 var(--goal-glow) var(--goal-accent); }
+  50% { box-shadow: 0 7px 22px rgba(0, 0, 0, 0.46), inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 calc(var(--goal-glow) + 12px) var(--goal-fill-end); }
+}
+
+@keyframes streamerGoalTemplatePulseFill {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.22) saturate(1.18); }
+}
+
+@keyframes streamerGoalTemplateSegments {
+  from { background-position: 0 0; }
+  to { background-position: 32px 0; }
+}
+
+@keyframes streamerGoalTemplateLiquid {
+  0%, 100% { background-position: 0 0, 45px 0, 0 0; transform: translateY(0); }
+  50% { background-position: 80px 0, -35px 0, 0 0; transform: translateY(-8%); }
+}
+
+@keyframes streamerGoalTemplateEqualizer {
+  0%, 100% { transform: scaleY(0.42); background-position: 0 0, 0 0; }
+  25% { transform: scaleY(0.92); }
+  50% { transform: scaleY(0.58); background-position: 18px 0, -13px 0; }
+  75% { transform: scaleY(1); }
+}
+
+@keyframes streamerGoalTemplateHeartbeat {
+  0%, 100% { opacity: 0; transform: scaleX(0.18); }
+  18% { opacity: 0.78; transform: scaleX(0.34); }
+  28% { opacity: 0.18; transform: scaleX(0.48); }
+  38% { opacity: 0.72; transform: scaleX(0.66); }
+  58% { opacity: 0; transform: scaleX(1); }
 }
 
 @keyframes streamerGoalTemplateSparks {
