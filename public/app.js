@@ -436,6 +436,8 @@ let predictionConfigSaveTimer = null;
 const predictionConfigSaveTimers = { own: null, spectator: null };
 let overlayPositionSaveTimer = null;
 let streamerGoalStyleSaveTimer = null;
+let pendingStreamerGoalMatchIntel = null;
+let streamerGoalSaveRevision = 0;
 let activePage = localStorage.getItem('dsk.activePage') || 'protection';
 let editingNotablePlayerAccountId = '';
 let editingStreamerAccountId = '';
@@ -754,6 +756,7 @@ const translations = {
     supportDeveloper: 'Поддержать',
     installedVersion: 'Версия',
     updateAvailableInline: 'доступна {version}',
+    installUpdateInline: 'Установить',
     subtitle: 'Локальная защита стрима и автоматизация Twitch Predictions.',
     pageProtection: 'Защита',
     pageIntel: 'Оверлей',
@@ -1172,6 +1175,7 @@ const translations = {
     supportDeveloper: 'Support',
     installedVersion: 'Version',
     updateAvailableInline: 'available {version}',
+    installUpdateInline: 'Install',
     subtitle: 'Local stream protection and Twitch Predictions automation.',
     pageProtection: 'Protection',
     pageIntel: 'Overlay',
@@ -2164,12 +2168,37 @@ function metricOptionsHtml(profile = 'own') {
 function renderAppVersion(version, update = null) {
   if (!els.appVersion) return;
   const base = `${t('installedVersion')}: ${version || '-'}`;
-  const available = update?.updateAvailable && update.latestVersion
-    ? t('updateAvailableInline').replace('{version}', update.latestVersion)
-    : '';
-  els.appVersion.textContent = available ? `${base} / ${available}` : base;
-  els.appVersion.classList.toggle('has-update', Boolean(available));
+  const updateAvailable = update?.updateAvailable && update.latestVersion;
+  els.appVersion.replaceChildren(document.createTextNode(base));
+  if (updateAvailable) {
+    els.appVersion.append(document.createTextNode(' / '));
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'app-version-update';
+    button.dataset.installUpdateInline = 'true';
+    button.textContent = t('updateAvailableInline').replace('{version}', update.latestVersion);
+    els.appVersion.append(button);
+  }
+  els.appVersion.classList.toggle('has-update', Boolean(updateAvailable));
   els.appVersion.title = update?.error || (update?.checking ? t('updateChecking') : '');
+}
+
+function renderUpdateStatusText(status) {
+  if (!els.updateStatus) return;
+  els.updateStatus.dataset.custom = 'true';
+  els.updateStatus.replaceChildren();
+  if (status?.updateAvailable) {
+    els.updateStatus.append(document.createTextNode(t('updateAvailable').replace('{version}', status.latestVersion)));
+    els.updateStatus.append(document.createTextNode(' '));
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'inline-update-button';
+    button.dataset.installUpdateInline = 'true';
+    button.textContent = t('installUpdateInline');
+    els.updateStatus.append(button);
+  } else {
+    els.updateStatus.textContent = t('updateCurrent').replace('{version}', status?.currentVersion || '-');
+  }
 }
 
 function renderServerUpdateStatus(update) {
@@ -2188,10 +2217,7 @@ function renderServerUpdateStatus(update) {
     els.updateStatus.dataset.custom = 'true';
     els.updateStatus.textContent = update.error;
   } else {
-    els.updateStatus.dataset.custom = 'true';
-    els.updateStatus.textContent = update.updateAvailable
-      ? t('updateAvailable').replace('{version}', update.latestVersion)
-      : t('updateCurrent').replace('{version}', update.currentVersion);
+    renderUpdateStatusText(update);
   }
 }
 
@@ -2224,7 +2250,7 @@ function render(data) {
   els.queueAutoMode.value = config.protection.queueAutoMode || 'menu_search';
   els.draftHideMode.value = config.protection.draftHideMode || 'all';
   els.queueMode.value = config.protection.queueMode || 'partial';
-  const matchIntel = config.protection.matchIntel || {};
+  const matchIntel = applyPendingStreamerGoalMatchIntel(config.protection.matchIntel || {});
   els.matchIntelEnabled.checked = matchIntel.enabled !== false;
   els.showPlayerRanks.checked = matchIntel.showPlayerRanks !== false;
   els.showPlayerFlags.checked = matchIntel.showPlayerFlags === true;
@@ -3788,6 +3814,73 @@ function scheduleOverlayPositionSave() {
   }, 250);
 }
 
+function streamerGoalMatchIntelPatchFromForm() {
+  return {
+    showStreamerMmrGoal: els.showStreamerMmrGoal.checked,
+    showStreamerMmrGoalProgress: els.showStreamerMmrGoalProgress.checked,
+    showStreamerMmrGoalBackground: els.showStreamerMmrGoalBackground.checked,
+    showStreamerMmrGoalCurrent: els.showStreamerMmrGoalCurrent.checked,
+    showStreamerMmrGoalTarget: els.showStreamerMmrGoalTarget.checked,
+    showStreamerMmrGoalDelta: els.showStreamerMmrGoalDelta.checked,
+    showStreamerMmrGoalRecord: els.showStreamerMmrGoalRecord.checked,
+    showStreamerMmrGoalWinRate: els.showStreamerMmrGoalWinRate.checked,
+    showStreamerMmrGoalEta: els.showStreamerMmrGoalEta.checked,
+    streamerMmrGoalTemplate: els.streamerMmrGoalTemplate.value,
+    streamerMmrGoalFillStart: els.streamerMmrGoalFillStart.value,
+    streamerMmrGoalFillEnd: els.streamerMmrGoalFillEnd.value,
+    streamerMmrGoalTrack: els.streamerMmrGoalTrack.value,
+    streamerMmrGoalAccent: els.streamerMmrGoalAccent.value,
+    streamerMmrGoalText: els.streamerMmrGoalText.value,
+    streamerMmrGoalBarHeight: Number(els.streamerMmrGoalBarHeight.value),
+    streamerMmrGoalBarRadius: Number(els.streamerMmrGoalBarRadius.value),
+    streamerMmrGoalGlow: Number(els.streamerMmrGoalGlow.value),
+    streamerMmrGoalAnimationSpeed: Number(els.streamerMmrGoalAnimationSpeed.value),
+    streamerMmrGoalPaddingTop: Number(els.streamerMmrGoalPaddingTop.value),
+    streamerMmrGoalPaddingRight: Number(els.streamerMmrGoalPaddingRight.value),
+    streamerMmrGoalPaddingBottom: Number(els.streamerMmrGoalPaddingBottom.value),
+    streamerMmrGoalPaddingLeft: Number(els.streamerMmrGoalPaddingLeft.value),
+    streamerMmrGoalAnimated: els.streamerMmrGoalAnimated.checked,
+    streamerMmrGoalCurrentPrefix: els.streamerMmrGoalCurrentPrefix.value,
+    streamerMmrGoalCurrentSuffix: els.streamerMmrGoalCurrentSuffix.value,
+    streamerMmrGoalTargetPrefix: els.streamerMmrGoalTargetPrefix.value,
+    streamerMmrGoalTargetSuffix: els.streamerMmrGoalTargetSuffix.value,
+    streamerMmrGoalDeltaPrefix: els.streamerMmrGoalDeltaPrefix.value,
+    streamerMmrGoalDeltaSuffix: els.streamerMmrGoalDeltaSuffix.value,
+    streamerMmrGoalCustomCss: els.streamerMmrGoalCustomCss.value,
+    streamerAccounts: streamerAccountsFromForm()
+  };
+}
+
+function applyPendingStreamerGoalMatchIntel(matchIntel) {
+  if (!pendingStreamerGoalMatchIntel) return matchIntel;
+  return {
+    ...matchIntel,
+    ...pendingStreamerGoalMatchIntel,
+    streamerAccounts: pendingStreamerGoalMatchIntel.streamerAccounts || matchIntel.streamerAccounts
+  };
+}
+
+function markPendingStreamerGoalMatchIntel() {
+  pendingStreamerGoalMatchIntel = streamerGoalMatchIntelPatchFromForm();
+  streamerGoalSaveRevision += 1;
+  return streamerGoalSaveRevision;
+}
+
+function scheduleStreamerGoalSettingsSave(delay = 250) {
+  markPendingStreamerGoalMatchIntel();
+  clearTimeout(streamerGoalStyleSaveTimer);
+  streamerGoalStyleSaveTimer = setTimeout(() => {
+    flushStreamerGoalSettingsSave().catch((error) => console.error('Streamer goal settings save failed', error));
+  }, delay);
+}
+
+async function flushStreamerGoalSettingsSave() {
+  const revision = markPendingStreamerGoalMatchIntel();
+  clearTimeout(streamerGoalStyleSaveTimer);
+  await saveProtection({ matchIntel: protectionMatchIntelFromForm() });
+  if (revision === streamerGoalSaveRevision) pendingStreamerGoalMatchIntel = null;
+}
+
 function streamerMmrGoalPreviewBox(settings) {
   const base = overlayPreviewBoxes.streamerMmrGoal;
   const style = streamerMmrGoalStyleFromSettings(settings || {});
@@ -3808,10 +3901,7 @@ function streamerMmrGoalPreviewBox(settings) {
 }
 
 function scheduleStreamerGoalStyleSave() {
-  clearTimeout(streamerGoalStyleSaveTimer);
-  streamerGoalStyleSaveTimer = setTimeout(() => {
-    saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch((error) => console.error('Streamer goal style save failed', error));
-  }, 250);
+  scheduleStreamerGoalSettingsSave(250);
 }
 
 function insertStreamerGoalCss(text) {
@@ -3907,6 +3997,16 @@ els.spectatorGameLabelTemplate?.addEventListener('change', () => saveProtection(
   els.showStreamerMmr,
   els.showStreamerWinLoss,
   els.hideStreamerStatsDuringDraft,
+  els.streamerMedalSource,
+  els.autoUpdateStreamerMmr
+].forEach((input) => input?.addEventListener('change', () => {
+  if (input === els.streamerMedalSource) markStreamerSettingsAccountInteraction();
+  updateMatchIntelFieldVisibility();
+  renderStreamerGoalPreview(snapshot?.state?.streamerStats || {}, protectionMatchIntelFromForm(), activeStreamerSettingsAccountId);
+  saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+}));
+
+[
   els.showStreamerMmrGoal,
   els.showStreamerMmrGoalProgress,
   els.showStreamerMmrGoalBackground,
@@ -3915,14 +4015,11 @@ els.spectatorGameLabelTemplate?.addEventListener('change', () => saveProtection(
   els.showStreamerMmrGoalDelta,
   els.showStreamerMmrGoalRecord,
   els.showStreamerMmrGoalWinRate,
-  els.showStreamerMmrGoalEta,
-  els.streamerMedalSource,
-  els.autoUpdateStreamerMmr
+  els.showStreamerMmrGoalEta
 ].forEach((input) => input?.addEventListener('change', () => {
-  if (input === els.streamerMedalSource) markStreamerSettingsAccountInteraction();
   updateMatchIntelFieldVisibility();
   renderStreamerGoalPreview(snapshot?.state?.streamerStats || {}, protectionMatchIntelFromForm(), activeStreamerSettingsAccountId);
-  saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+  flushStreamerGoalSettingsSave().catch(alert);
 }));
 
 [
@@ -3957,7 +4054,7 @@ els.spectatorGameLabelTemplate?.addEventListener('change', () => saveProtection(
   input?.addEventListener('change', () => {
     updateStreamerGoalStyleOutputs();
     renderStreamerGoalPreview(snapshot?.state?.streamerStats || {}, protectionMatchIntelFromForm(), activeStreamerSettingsAccountId);
-    saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+    flushStreamerGoalSettingsSave().catch(alert);
   });
 });
 els.streamerGoalCssInsertButtons?.forEach((button) => {
@@ -3995,18 +4092,20 @@ els.streamerMmr.addEventListener('change', () => {
 els.streamerGoalMmr.addEventListener('input', () => {
   markStreamerSettingsAccountInteraction();
   renderStreamerGoalPreview(snapshot?.state?.streamerStats || {}, snapshot?.config?.protection?.matchIntel || {}, activeStreamerSettingsAccountId);
+  scheduleStreamerGoalSettingsSave();
 });
 els.streamerGoalMmr.addEventListener('change', () => {
   markStreamerSettingsAccountInteraction();
-  saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+  flushStreamerGoalSettingsSave().catch(alert);
 });
 els.streamerGoalStartMmr.addEventListener('input', () => {
   markStreamerSettingsAccountInteraction();
   renderStreamerGoalPreview(snapshot?.state?.streamerStats || {}, snapshot?.config?.protection?.matchIntel || {}, activeStreamerSettingsAccountId);
+  scheduleStreamerGoalSettingsSave();
 });
 els.streamerGoalStartMmr.addEventListener('change', () => {
   markStreamerSettingsAccountInteraction();
-  saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
+  flushStreamerGoalSettingsSave().catch(alert);
 });
 [els.streamerMmrWinDelta, els.streamerMmrLossDelta].forEach((input) => {
   input.addEventListener('change', () => saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert));
@@ -4440,6 +4539,12 @@ els.installGsi.addEventListener('click', () => api('/api/install-gsi', {
 els.autoInstallUpdates.addEventListener('change', saveUpdateSettings);
 els.checkUpdates.addEventListener('click', () => checkUpdates(true).catch(alert));
 els.installUpdate.addEventListener('click', () => installUpdate().catch(alert));
+els.appVersion?.addEventListener('click', (event) => {
+  if (event.target?.closest('[data-install-update-inline]')) installUpdate().catch(alert);
+});
+els.updateStatus?.addEventListener('click', (event) => {
+  if (event.target?.closest('[data-install-update-inline]')) installUpdate().catch(alert);
+});
 els.backupAll.addEventListener('change', syncBackupSectionToggles);
 els.backupSections.addEventListener('change', () => {
   const selected = selectedBackupSections();
@@ -4471,9 +4576,7 @@ async function checkUpdates(manual = false) {
   const status = await api('/api/updates/check', null, 'GET');
   latestUpdateStatus = status;
   els.installUpdate.disabled = !status.updateAvailable;
-  els.updateStatus.textContent = status.updateAvailable
-    ? t('updateAvailable').replace('{version}', status.latestVersion)
-    : t('updateCurrent').replace('{version}', status.currentVersion);
+  renderUpdateStatusText(status);
   if (status.updateAvailable && els.autoInstallUpdates.checked && !manual) {
     await installUpdate();
   }
@@ -4486,6 +4589,9 @@ async function installUpdate() {
   const result = await api('/api/updates/install', { release: latestUpdateStatus });
   els.updateStatus.textContent = result.message || t('updateStarted');
   els.installUpdate.disabled = true;
+  document.querySelectorAll('[data-install-update-inline]').forEach((button) => {
+    button.disabled = true;
+  });
 }
 
 function backupSectionInputs() {

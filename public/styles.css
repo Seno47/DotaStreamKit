@@ -261,6 +261,35 @@ label input[type='checkbox']:focus-visible {
   color: #f6c86b;
 }
 
+.app-version-update,
+.inline-update-button {
+  width: auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #ffd782;
+  font: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.app-version-update:hover,
+.inline-update-button:hover {
+  background: transparent;
+  color: #ffe6a8;
+}
+
+.app-version-update:disabled,
+.inline-update-button:disabled {
+  cursor: default;
+  opacity: 0.65;
+  text-decoration: none;
+}
+
 .developer-link span {
   color: #cbd5e1;
   font-size: 14px;
