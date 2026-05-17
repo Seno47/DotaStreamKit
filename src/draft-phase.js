@@ -15,6 +15,7 @@ export function inferOwnPickPhase({
   const ownCount = team ? counts[team] : null;
   const enemyTeam = team === 'radiant' ? 'dire' : team === 'dire' ? 'radiant' : null;
   const enemyCount = enemyTeam ? counts[enemyTeam] : null;
+  const activeTeam = inferDraftActiveTeam(payload?.draft);
 
   if (!heroSelection) {
     const ended = /STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS/i.test(state)
@@ -43,15 +44,29 @@ export function inferOwnPickPhase({
   const target = previousTarget || phaseTargetForOwnCount(ownCount);
   const hasBothTeamCounts = counts.reliable && Number.isFinite(ownCount) && Number.isFinite(enemyCount);
   const endedByCounts = Boolean(target && hasBothTeamCounts && ownCount >= target && enemyCount >= target);
+  const endedByActiveTeam = Boolean(activeTeam && activeTeam !== team);
   const alreadyEnded = !lifecycle.newDraft && previous.ownPickPhaseEnded === true;
 
   return {
-    ownPickPhaseEnded: alreadyEnded || endedByCounts,
+    ownPickPhaseEnded: alreadyEnded || endedByCounts || endedByActiveTeam,
     ownTeamPickedHeroCount: ownCount,
     enemyTeamPickedHeroCount: enemyCount,
     ownPickPhaseTargetCount: target,
     ownPickPhaseSource: counts.source
   };
+}
+
+function inferDraftActiveTeam(draft) {
+  if (!draft || typeof draft !== 'object') return null;
+  const direct = draft.active_team ?? draft.activeteam ?? draft.activeTeam ?? draft.pick_team ?? draft.pickTeam;
+  const normalizedDirect = normalizeTeam(direct);
+  if (normalizedDirect) return normalizedDirect;
+  for (const [key, value] of Object.entries(draft)) {
+    if (!/active.*team|team.*active|pick.*team/i.test(key)) continue;
+    const normalized = normalizeTeam(value);
+    if (normalized) return normalized;
+  }
+  return null;
 }
 
 export function collectDraftHeroCounts(payload = {}, playerTeam = null, playerHeroPicked = false) {

@@ -14,6 +14,19 @@ export const rankMedalThresholds = [
 
 export const calibrationMedal = { medal: 'calibration', name: 'Calibration', minMmr: 0, starStep: 0, stars: 0 };
 
+export function repairMojibakeText(value) {
+  const original = String(value || '').trim();
+  if (!original) return '';
+  const candidates = [
+    original,
+    decodeLatin1Utf8(original),
+    decodeWindows1251Utf8(original)
+  ].filter(Boolean);
+  return candidates.reduce((best, candidate) => (
+    mojibakeScore(candidate) < mojibakeScore(best) ? candidate : best
+  ), original);
+}
+
 export function normalizeStreamerStatsConfig(config) {
   config.showStreamerStats = config.showStreamerStats === true;
   config.showStreamerRankMedal = config.showStreamerRankMedal !== false;
@@ -293,7 +306,7 @@ function normalizeStreamerAccounts(value, fallbackMmr = 0) {
     const rawGoalStartMmr = clampInt(row.goalStartMmr ?? row.goalBaseMmr, 0, 99999, 0);
     byAccountId.set(String(accountId), {
       accountId,
-      label: String(row.label || row.name || '').trim().slice(0, 40),
+      label: repairMojibakeText(row.label || row.name || '').slice(0, 40),
       mmr,
       goalMmr,
       goalStartMmr: rawGoalStartMmr === mmr ? 0 : rawGoalStartMmr,
@@ -327,6 +340,57 @@ function normalizeAccountSession(value) {
     lastResultAt: stringOrNull(source.lastResultAt)
   };
 }
+
+function decodeLatin1Utf8(value) {
+  const bytes = [];
+  for (const char of value) {
+    const code = char.charCodeAt(0);
+    if (code > 255) return null;
+    bytes.push(code);
+  }
+  return Buffer.from(bytes).toString('utf8').trim();
+}
+
+function decodeWindows1251Utf8(value) {
+  const bytes = [];
+  for (const char of value) {
+    const byte = windows1251Byte(char);
+    if (byte === null) return null;
+    bytes.push(byte);
+  }
+  return Buffer.from(bytes).toString('utf8').trim();
+}
+
+function windows1251Byte(char) {
+  const code = char.charCodeAt(0);
+  if (code <= 127) return code;
+  const extended = windows1251ExtendedBytes.get(char);
+  if (extended !== undefined) return extended;
+  if (code >= 0x0410 && code <= 0x044F) return code - 0x0410 + 0xC0;
+  if (code === 0x0401) return 0xA8;
+  if (code === 0x0451) return 0xB8;
+  return code <= 255 ? code : null;
+}
+
+function mojibakeScore(value) {
+  const text = String(value || '');
+  const replacementCount = (text.match(/\uFFFD/g) || []).length;
+  const latin1Utf8Markers = (text.match(/[ÃÂÐÑ][\u0080-\u00BF\u00A0-\u00BF]/g) || []).length;
+  const windows1251Utf8Markers = (text.match(/[РС][\u00A0-\u00BF\u0400-\u045F]/g) || []).length;
+  const controlCount = (text.match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g) || []).length;
+  return replacementCount * 100 + controlCount * 30 + latin1Utf8Markers * 12 + windows1251Utf8Markers * 12;
+}
+
+const windows1251ExtendedBytes = new Map([
+  ['Ђ', 0x80], ['Ѓ', 0x81], ['‚', 0x82], ['ѓ', 0x83], ['„', 0x84], ['…', 0x85], ['†', 0x86], ['‡', 0x87],
+  ['€', 0x88], ['‰', 0x89], ['Љ', 0x8A], ['‹', 0x8B], ['Њ', 0x8C], ['Ќ', 0x8D], ['Ћ', 0x8E], ['Џ', 0x8F],
+  ['ђ', 0x90], ['‘', 0x91], ['’', 0x92], ['“', 0x93], ['”', 0x94], ['•', 0x95], ['–', 0x96], ['—', 0x97],
+  ['™', 0x99], ['љ', 0x9A], ['›', 0x9B], ['њ', 0x9C], ['ќ', 0x9D], ['ћ', 0x9E], ['џ', 0x9F],
+  ['\u00A0', 0xA0], ['Ў', 0xA1], ['ў', 0xA2], ['Ј', 0xA3], ['¤', 0xA4], ['Ґ', 0xA5], ['¦', 0xA6], ['§', 0xA7],
+  ['Ё', 0xA8], ['©', 0xA9], ['Є', 0xAA], ['«', 0xAB], ['¬', 0xAC], ['\u00AD', 0xAD], ['®', 0xAE], ['Ї', 0xAF],
+  ['°', 0xB0], ['±', 0xB1], ['І', 0xB2], ['і', 0xB3], ['ґ', 0xB4], ['µ', 0xB5], ['¶', 0xB6], ['·', 0xB7],
+  ['ё', 0xB8], ['№', 0xB9], ['є', 0xBA], ['»', 0xBB], ['ј', 0xBC], ['Ѕ', 0xBD], ['ѕ', 0xBE], ['ї', 0xBF]
+]);
 
 function activeAccountMmrTarget(config, accountId) {
   const accounts = Array.isArray(config.streamerAccounts) ? config.streamerAccounts : [];

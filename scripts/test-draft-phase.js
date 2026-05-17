@@ -170,6 +170,35 @@ result = inferOwnPickPhase({
 assert.equal(result.ownPickPhaseEnded, true);
 
 result = inferOwnPickPhase({
+  previous: {},
+  payload: {
+    draft: {
+      active_team: 'dire'
+    }
+  },
+  gameState: heroSelection,
+  playerHeroPicked: true,
+  playerTeam: 'radiant',
+  lifecycle: { newDraft: false }
+});
+assert.equal(result.ownPickPhaseEnded, true);
+assert.equal(result.ownTeamPickedHeroCount, 1);
+
+result = inferOwnPickPhase({
+  previous: {},
+  payload: {
+    draft: {
+      active_team: 'radiant'
+    }
+  },
+  gameState: heroSelection,
+  playerHeroPicked: true,
+  playerTeam: 'radiant',
+  lifecycle: { newDraft: false }
+});
+assert.equal(result.ownPickPhaseEnded, false);
+
+result = inferOwnPickPhase({
   previous: { ownPickPhaseTargetCount: 4, ownPickPhaseEnded: true },
   payload: {},
   gameState: heroSelection,

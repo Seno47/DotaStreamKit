@@ -4,6 +4,7 @@ import {
   normalizeStreamerStatsConfig,
   rankMedalFromMmr,
   rankMedalFromRankTier,
+  repairMojibakeText,
   restorePreviousStreamerSession,
   updateStreamerSessionPresence
 } from '../src/streamer-stats.js';
@@ -113,6 +114,17 @@ assert.deepEqual(normalizedAccountsConfig.streamerAccounts, [
   { accountId: 123, label: 'Duplicate', mmr: 0, goalMmr: 6500, goalStartMmr: 5200, boundAt: null },
   { accountId: 456, label: 'Smurf', mmr: 4000, goalMmr: 5000, goalStartMmr: 0, boundAt: null }
 ]);
+assert.equal(repairMojibakeText('РќР°Р·РІР°РЅРёРµ'), 'Название');
+assert.equal(repairMojibakeText('\u00d0\u009d\u00d0\u00b0\u00d0\u00b7\u00d0\u00b2\u00d0\u00b0\u00d0\u00bd\u00d0\u00b8\u00d0\u00b5'), 'Название');
+assert.equal(repairMojibakeText('Роман'), 'Роман');
+
+const normalizedMojibakeAccountsConfig = {
+  streamerAccounts: [
+    { accountId: '789', label: 'РќР°Р·РІР°РЅРёРµ', mmr: 1000 }
+  ]
+};
+normalizeStreamerStatsConfig(normalizedMojibakeAccountsConfig);
+assert.equal(normalizedMojibakeAccountsConfig.streamerAccounts[0].label, 'Название');
 
 const config = {
   showStreamerStats: true,

@@ -25,6 +25,7 @@ import {
   applyStreamerMatchResult,
   normalizeStreamerStatsConfig,
   normalizeStreamerStatsState,
+  repairMojibakeText,
   resetStreamerSession,
   restorePreviousStreamerSession,
   selectStreamerMedal,
@@ -2189,15 +2190,21 @@ async function handleGsi(req, res) {
   });
   const isStreamerPlaying = playerActivity === 'playing';
   const canInheritPlayerState = shouldInheritPlayerState({ previous, gameState, matchId, playerActivity, localPlayerPayload });
-  const playerTeam = normalizeTeam(isStreamerPlaying ? (player.team_name || player.team || streamerMatchPlayer?.team || player.activity) : null);
-  const playerSlotRaw = isStreamerPlaying ? (player.player_slot ?? player.playerSlot ?? null) : null;
-  const playerTeamSlotRaw = isStreamerPlaying ? (player.team_slot ?? player.teamSlot ?? null) : null;
-  const teamStats = collectTeamStats(payload, playerTeam);
   const playerStateLifecycle = {
     ...lifecycle,
     inheritPlayerState: canInheritPlayerState,
     fallbackHeroName: isStreamerPlaying ? streamerMatchPlayer?.hero : ''
   };
+  const playerTeam = inferLocalPlayerTeam({
+    player,
+    streamerMatchPlayer,
+    previous,
+    lifecycle: playerStateLifecycle,
+    isStreamerPlaying
+  });
+  const playerSlotRaw = isStreamerPlaying ? (player.player_slot ?? player.playerSlot ?? null) : null;
+  const playerTeamSlotRaw = isStreamerPlaying ? (player.team_slot ?? player.teamSlot ?? null) : null;
+  const teamStats = collectTeamStats(payload, playerTeam);
   const playerStatsPayload = isStreamerPlaying ? player : {};
   const heroPayload = isStreamerPlaying ? hero : {};
   const previousPlayerState = canInheritPlayerState ? previous : {};
@@ -2356,12 +2363,12 @@ function updateStreamerStatsIdentity(payload) {
 }
 
 function streamerAccountLabelFromPayload(payload) {
-  return String(
+  return repairMojibakeText(
     payload?.player?.name
     || payload?.player?.player_name
     || payload?.player?.personaname
     || ''
-  ).trim().slice(0, 40);
+  ).slice(0, 40);
 }
 
 function applyStreamerStatsMatchResult(previous, gsi) {
@@ -2434,7 +2441,7 @@ function buildRosterDebug(payload) {
       accountId: normalizeAccountId(player.accountid ?? player.account_id ?? player.accountId ?? player.steamid ?? player.steam_id),
       name: String(player.name || player.player_name || player.personaname || '').slice(0, 40),
       hero: String(player.hero_name || player.heroName || player.hero || '').slice(0, 60),
-      team: normalizeTeam(player.team_name || player.team || player.activity || ''),
+      team: normalizePlayerTeam(player) || normalizeTeam(player.activity || ''),
       playerSlot: player.player_slot ?? player.playerSlot ?? null,
       teamSlot: player.team_slot ?? player.teamSlot ?? null
     }))
@@ -2454,10 +2461,9 @@ function findStreamerMatchPlayer(payload, players) {
     if (!player || typeof player !== 'object') continue;
     const accountId = normalizeAccountId(player.accountid ?? player.account_id ?? player.accountId ?? player.steamid ?? player.steam_id);
     if (String(accountId || '') !== String(streamerAccountId)) continue;
-    const teamValue = player.team_name || player.team || (player.player_slot ?? player.team_slot);
     return {
       accountId,
-      team: normalizeTeam(teamValue),
+      team: normalizePlayerTeam(player),
       hero: String(player.hero_name || player.heroName || player.hero || '').slice(0, 60)
     };
   }
@@ -2843,10 +2849,11 @@ function inferPlayerActivity({ previous, activitySignal, gameState, matchId, loc
   const state = String(gameState || '');
   const previousMatchId = previous?.activeMatchId || previous?.matchId || null;
   const sameMatch = Boolean(matchId && previousMatchId && String(matchId) === String(previousMatchId));
-  if (!/PRE_GAME|GAME_IN_PROGRESS/i.test(state)) return null;
+  if (!/HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS/i.test(state)) return null;
 
   if (localPlayerPayload || streamerInMatch) return 'playing';
   if (sameMatch && previous.connected && String(previous?.playerActivity || '').toLowerCase() === 'playing') return 'playing';
+  if (!/PRE_GAME|GAME_IN_PROGRESS/i.test(state)) return null;
   return 'spectating';
 }
 
@@ -2891,6 +2898,37 @@ function shouldInheritPlayerState({ previous, gameState, matchId, playerActivity
   const previousMatchId = previous?.activeMatchId || previous?.matchId || null;
   if (matchId && previousMatchId && String(matchId) !== String(previousMatchId)) return false;
   return String(previous?.playerActivity || '').toLowerCase() === 'playing';
+}
+
+function inferLocalPlayerTeam({ player, streamerMatchPlayer, previous, lifecycle = {}, isStreamerPlaying }) {
+  if (!isStreamerPlaying) return null;
+  const direct = normalizeTeam(player?.team_name || player?.team || streamerMatchPlayer?.team || player?.activity);
+  if (direct) return direct;
+
+  const playerSlotTeam = normalizePlayerSlotTeam(player?.player_slot ?? player?.playerSlot);
+  if (playerSlotTeam) return playerSlotTeam;
+
+  const previousTeam = lifecycle.inheritPlayerState ? normalizeTeam(previous?.playerTeam) : null;
+  if (previousTeam) return previousTeam;
+
+  return normalizeTeamSlotTeam(player?.team_slot ?? player?.teamSlot);
+}
+
+function normalizePlayerSlotTeam(value) {
+  const slot = Number(value);
+  if (!Number.isFinite(slot)) return null;
+  if (slot >= 128) return 'dire';
+  if (slot >= 0 && slot < 5) return 'radiant';
+  if (slot >= 5 && slot < 10) return 'dire';
+  return null;
+}
+
+function normalizeTeamSlotTeam(value) {
+  const slot = Number(value);
+  if (!Number.isFinite(slot)) return null;
+  if (slot >= 5 && slot < 10) return 'dire';
+  if (slot >= 0 && slot < 5) return 'radiant';
+  return null;
 }
 
 function hasLocalPlayerPayload(payload) {
