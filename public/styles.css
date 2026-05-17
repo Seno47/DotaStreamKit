@@ -1500,32 +1500,33 @@ dd {
   overflow: hidden;
 }
 
-.streamer-goal-template-eye::before,
-.streamer-goal-template-eye::after {
+.streamer-goal-template-eye .streamer-goal-preview-bar::before,
+.streamer-goal-template-eye .streamer-goal-preview-bar::after {
   content: "";
   position: absolute;
-  z-index: 2;
-  right: calc(12px * var(--preview-scale, 1));
-  width: calc(42px * var(--preview-scale, 1));
-  height: calc(18px * var(--preview-scale, 1));
-  border-color: rgba(255, 255, 255, 0.36);
-  opacity: 0.78;
+  left: -5%;
+  z-index: 3;
+  width: 110%;
+  height: 60%;
+  background:
+    radial-gradient(ellipse at center, rgba(255, 255, 255, 0.16), transparent 62%),
+    rgba(2, 4, 8, 0.82);
+  box-shadow: 0 0 calc(12px * var(--preview-scale, 1)) rgba(255, 255, 255, 0.16);
+  opacity: 0;
   pointer-events: none;
-  animation: streamerGoalTemplateEyeClose 3.2s ease-in-out infinite;
+  animation: streamerGoalTemplateEyeClose 3.8s ease-in-out infinite;
 }
 
-.streamer-goal-template-eye::before {
-  top: calc(14px * var(--preview-scale, 1));
-  border-top: calc(3px * var(--preview-scale, 1)) solid;
-  border-radius: 50% 50% 0 0;
-  transform-origin: center bottom;
-}
-
-.streamer-goal-template-eye::after {
-  top: calc(28px * var(--preview-scale, 1));
-  border-bottom: calc(3px * var(--preview-scale, 1)) solid;
+.streamer-goal-template-eye .streamer-goal-preview-bar::before {
+  top: -58%;
   border-radius: 0 0 50% 50%;
-  transform-origin: center top;
+  --goal-eye-close-y: 90%;
+}
+
+.streamer-goal-template-eye .streamer-goal-preview-bar::after {
+  bottom: -58%;
+  border-radius: 50% 50% 0 0;
+  --goal-eye-close-y: -90%;
 }
 
 .streamer-goal-template-scanner .streamer-goal-preview-bar::after {
@@ -1600,8 +1601,8 @@ dd {
 }
 
 @keyframes streamerGoalTemplateEyeClose {
-  0%, 82%, 100% { transform: scaleY(1); }
-  88%, 92% { transform: scaleY(0.12); }
+  0%, 68%, 100% { transform: translateY(0); opacity: 0; }
+  76%, 88% { transform: translateY(var(--goal-eye-close-y)); opacity: 1; }
 }
 
 @keyframes streamerGoalTemplateScanner {

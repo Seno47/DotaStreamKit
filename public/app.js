@@ -565,39 +565,43 @@ const streamerGoalCssSnippets = {
   35% { opacity: .5; }
   70%, 100% { transform: translateX(120%); opacity: 0; }
 }`,
-  eye: `[data-goal-part="root"] {
+  eye: `[data-goal-part="bar"] {
   position: relative;
   overflow: hidden;
 }
 
-[data-goal-part="root"]::before,
-[data-goal-part="root"]::after {
+[data-goal-part="bar"]::before,
+[data-goal-part="bar"]::after {
   content: "";
   position: absolute;
-  left: -6%;
-  z-index: 20;
-  width: 112%;
-  height: 52%;
+  left: -5%;
+  z-index: 3;
+  width: 110%;
+  height: 60%;
   pointer-events: none;
-  background: radial-gradient(ellipse at center, rgba(255,255,255,.12), transparent 58%), rgba(2, 4, 8, .78);
-  animation: goalCustomEyeClose 4.8s ease-in-out infinite;
+  background:
+    radial-gradient(ellipse at center, rgba(255,255,255,.16), transparent 62%),
+    rgba(2, 4, 8, .82);
+  box-shadow: 0 0 12px rgba(255,255,255,.16);
+  opacity: 0;
+  animation: goalCustomEyeClose 3.8s ease-in-out infinite;
 }
 
-[data-goal-part="root"]::before {
-  top: -52%;
+[data-goal-part="bar"]::before {
+  top: -58%;
   border-radius: 0 0 50% 50%;
-  --goal-eye-close-y: 52%;
+  --goal-eye-close-y: 90%;
 }
 
-[data-goal-part="root"]::after {
-  bottom: -52%;
+[data-goal-part="bar"]::after {
+  bottom: -58%;
   border-radius: 50% 50% 0 0;
-  --goal-eye-close-y: -52%;
+  --goal-eye-close-y: -90%;
 }
 
 @keyframes goalCustomEyeClose {
-  0%, 72%, 100% { transform: translateY(0); opacity: 0; }
-  78%, 88% { transform: translateY(var(--goal-eye-close-y)); opacity: 1; }
+  0%, 68%, 100% { transform: translateY(0); opacity: 0; }
+  76%, 88% { transform: translateY(var(--goal-eye-close-y)); opacity: 1; }
 }`,
   scanner: `[data-goal-part="bar"] {
   position: relative;
