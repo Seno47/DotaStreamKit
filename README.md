@@ -76,7 +76,9 @@ http://localhost:37273/overlay.html
 - скрытие меню поиска игры через загруженный или встроенный скрин меню;
 - Match Intel оверлей: отмеченные игроки, флаги, держатель Aegis и таймер Рошана;
 - статистика стримера на оверлее: Dota-медаль, звёзды/пипы, ранг в leaderboard, MMR и W-L счётчик;
-- настройка положения отдельных блоков оверлея: медали в меню, медали в игре, таймера Рошана и Twitch-прогноза;
+- цель MMR на оверлее: текущий MMR, старт, цель, прогресс-бар, W-L, winrate и сколько побед осталось до цели;
+- настройка внешнего вида цели MMR: фон можно убрать, размер полоски увеличить, выбрать стиль, анимацию, скорость, отступы и свой CSS;
+- настройка положения отдельных блоков оверлея: медали в меню, медали в игре, цели MMR, таймера Рошана и Twitch-прогноза;
 - режим калибровки: при MMR `0` показывается отдельная calibration-медаль, а MMR после матчей не меняется;
 - автоматическое создание Twitch Predictions после пика героя стримером;
 - автоматическое закрытие, отмена и ручное управление прогнозами;
@@ -118,7 +120,7 @@ http://localhost:37273/overlay.html
 
 В разделе `Setup` можно вручную проверить обновления или включить проверку при запуске. DotaStreamKit устанавливает только готовые GitHub Release assets, поэтому случайный коммит из ветки `master` не попадёт пользователю как обновление.
 
-Там же есть экспорт и импорт настроек. По умолчанию переносится всё, включая Twitch/Dota-настройки, пресеты защиты, прогнозы, Win/Lose/MMR и загруженные картинки, но перед импортом или экспортом можно оставить только нужные разделы.
+Там же есть экспорт и импорт настроек. По умолчанию переносится всё, включая Twitch/Dota-настройки, пресеты защиты, цель MMR, прогнозы, Win/Lose/MMR и загруженные картинки, но перед импортом или экспортом можно оставить только нужные разделы. Настройки цели MMR входят в раздел `Защита и overlay`; текущая W-L/MMR статистика сессии переносится разделом `Win/Lose/MMR`.
 
 ### Настройка Twitch
 
@@ -276,7 +278,8 @@ Match Intel добавляет на OBS-оверлей небольшие игр
 - флаги игроков, если страна известна или задана вручную;
 - таймер Aegis под игроком, который держит Aegis: ровно 5 минут после подбора;
 - таймер Рошана с окном возрождения;
-- статистику стримера: медаль, MMR, ранг в leaderboard и W-L за сессию.
+- статистику стримера: медаль, MMR, ранг в leaderboard и W-L за сессию;
+- цель MMR: отдельный компактный блок с прогрессом от стартового MMR до выбранной цели.
 
 Отмеченные игроки берутся из двух источников. DotaStreamKit может использовать данные OpenDota для игроков с высоким рангом в leaderboard, а ещё позволяет добавить игроков вручную по Dota account id. Ручной список удобен для друзей, частых соперников, известных игроков или любых аккаунтов, которые ты хочешь отмечать всегда. Для каждого такого игрока можно задать ник и двухбуквенный код страны.
 
@@ -284,11 +287,15 @@ Match Intel добавляет на OBS-оверлей небольшие игр
 
 MMR можно вести вручную или обновлять автоматически после победы/поражения. Авто-обновление применяет заданные `Win MMR` и `Loss MMR`, но не выходит за диапазон `1..99999`. Если поставить MMR `0`, программа считает аккаунт на калибровке: показывает calibration-медаль и не трогает MMR после матчей.
 
-В этой же вкладке есть редактор положения оверлея. Можно выбрать нужный блок, посмотреть его на превью со скриншотом или на чёрном/белом фоне, сдвинуть по горизонтали и вертикали, сбросить один блок или вернуть все позиции к значениям по умолчанию. Так настраиваются медаль в меню, медаль в игре, таймер Рошана и блок Twitch-прогноза.
+Цель MMR настраивается отдельно для аккаунтов стримера. Можно указать стартовый MMR для расчёта прогресса, целевой MMR и выбрать, какие части показывать: текущий MMR, старт, цель, сколько MMR осталось, счёт W-L, winrate и количество побед до цели. Если нужен минимальный вид для OBS, можно убрать общий фон/рамку и оставить только хотбар, цифры и текст.
+
+Внешний вид цели MMR можно собрать без ручного CSS: есть пресеты полоски, готовые анимации, настройка скорости, высоты прогресс-бара, скругления, свечения, цветов и отдельных отступов сверху/снизу/слева/справа. Для тонкой доработки остаётся поле custom CSS.
+
+В этой же вкладке есть редактор положения оверлея. Можно выбрать нужный блок, посмотреть его на превью со скриншотом или на чёрном/белом фоне, сдвинуть по горизонтали и вертикали, сбросить один блок или вернуть все позиции к значениям по умолчанию. Так настраиваются медаль в меню, медаль в игре, цель MMR, таймер Рошана и блок Twitch-прогноза.
 
 Интерфейс Match Intel разбит на сворачиваемые секции: игровая информация, статистика стримера, позиции оверлея и кастомные notable players. Верхняя строка показывает короткий статус включённых подсказок и помогает быстро понять, что сейчас активно.
 
-Во время драфта медаль и W-L скрываются, чтобы не мешать защите пиков. После выхода из матча Match Intel очищается с оверлея, чтобы старые отметки, Aegis или таймер Рошана не оставались на экране.
+Во время драфта и стадии планирования медаль, MMR и W-L по умолчанию скрываются, чтобы не мешать защите пиков. Это можно выключить отдельным переключателем, если статистику нужно оставить видимой даже на драфте. После выхода из матча Match Intel очищается с оверлея, чтобы старые отметки, Aegis или таймер Рошана не оставались на экране.
 
 Для просмотра чужих игр есть отдельные настройки Match Intel. В этом режиме DotaStreamKit может показывать отмеченных игроков, флаги, Aegis и Рошана, но не включает защитные маски драфта, верхней панели или миникарты: при spectate-режиме карта и интерфейс остаются открытыми.
 
@@ -459,7 +466,9 @@ Main features:
 - hides queue/search menu areas using a menu screenshot;
 - Match Intel overlay: notable players, country flags, Aegis holder, and Roshan timer;
 - streamer stats overlay: Dota rank medal, pips/stars, leaderboard rank, MMR, and W-L counter;
-- position customization for overlay blocks: menu medal, in-game medal, Roshan timer, and Twitch prediction;
+- MMR goal overlay: current MMR, start MMR, target, progress bar, W-L, winrate, and wins needed for the goal;
+- MMR goal styling without custom code: hide the panel background, enlarge the bar, choose a style preset, animation, speed, padding, and custom CSS;
+- position customization for overlay blocks: menu medal, in-game medal, MMR goal, Roshan timer, and Twitch prediction;
 - calibration mode: MMR `0` shows a calibration medal and disables automatic MMR changes;
 - creates Twitch Channel Points Predictions after the streamer picks a hero;
 - supports manual prediction controls and automatic lock/resolve/cancel flows;
@@ -501,7 +510,7 @@ If Windows SmartScreen warns you about an unknown app, that is expected for an u
 
 The `Setup` page can check for updates manually or on startup. Updates are installed only from published GitHub Release assets, so an unfinished commit on `master` will not be treated as an update.
 
-The same page has settings export/import. By default it transfers everything, including Twitch/Dota setup, protection presets, predictions, Win/Lose/MMR, and uploaded images. Before importing or exporting, you can keep only the sections you need.
+The same page has settings export/import. By default it transfers everything, including Twitch/Dota setup, protection presets, MMR goal settings, predictions, Win/Lose/MMR, and uploaded images. Before importing or exporting, you can keep only the sections you need. MMR goal configuration belongs to `Protection and overlay`; current session W-L/MMR state belongs to `Win/Lose/MMR`.
 
 ### Twitch Setup
 
@@ -642,7 +651,8 @@ Available overlay pieces:
 - player flags when the country is known or set manually;
 - Aegis timer under the current Aegis holder: exactly 5 minutes after pickup;
 - Roshan timer with the respawn window;
-- streamer stats: rank medal, MMR, leaderboard rank, and session W-L.
+- streamer stats: rank medal, MMR, leaderboard rank, and session W-L;
+- MMR goal: a compact progress block from a chosen start MMR to the account target.
 
 Notable players come from two places. DotaStreamKit can use OpenDota data for high leaderboard players, and you can also add any Dota account id manually. The manual list is useful for friends, frequent stream snipers, known players, or any account you want to mark every time. Each manual player can have a custom nickname and a two-letter country code.
 
@@ -650,11 +660,15 @@ Streamer stats are configured separately from notable players. You can show only
 
 Manual MMR can be updated automatically after wins and losses. The configured `Win MMR` and `Loss MMR` values are applied after the match, clamped to `1..99999`. If MMR is set to `0`, DotaStreamKit treats the account as calibrating: it shows the calibration medal and does not change MMR after matches.
 
-The same tab includes an overlay position editor. Choose a block, preview it on a screenshot or a black/white background, move it horizontally and vertically, reset one block, or reset every overlay position. It supports the menu medal, in-game medal, Roshan timer, and Twitch prediction block.
+The MMR goal block is configured per streamer account. You can set the start MMR used for progress calculation, the target MMR, and choose which parts are visible: current MMR, start, target, remaining MMR, W-L record, winrate, and wins needed to reach the target. For a clean OBS-only look, the panel background/frame can be hidden while the bar, numbers, and text stay visible.
+
+MMR goal styling does not require hand-written CSS. The dashboard includes bar presets, ready animations, animation speed, bar height, radius, glow, colors, and separate top/right/bottom/left padding controls. Custom CSS is still available for final tweaks.
+
+The same tab includes an overlay position editor. Choose a block, preview it on a screenshot or a black/white background, move it horizontally and vertically, reset one block, or reset every overlay position. It supports the menu medal, in-game medal, MMR goal, Roshan timer, and Twitch prediction block.
 
 The Match Intel page is grouped into collapsible sections for game information, streamer stats, overlay positions, and custom notable players. A small status row shows which helper groups are currently active.
 
-During draft, the medal and W-L are hidden so they do not interfere with pick protection. After leaving a match, Match Intel is cleared from the overlay so old player marks, Aegis, or Roshan timers do not stay on screen.
+During draft and strategy time, the medal, MMR, and W-L are hidden by default so they do not interfere with pick protection. A separate switch can keep streamer stats visible during those stages. After leaving a match, Match Intel is cleared from the overlay so old player marks, Aegis, or Roshan timers do not stay on screen.
 
 Watched games have separate Match Intel settings. In spectator mode DotaStreamKit can still show notable players, flags, Aegis, and Roshan, but it does not enable draft, top-bar, or minimap protection masks: the watched game UI stays visible.
 
