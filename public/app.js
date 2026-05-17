@@ -534,23 +534,36 @@ const streamerGoalCssSnippets = {
 [data-goal-part="fill"]::before {
   content: "";
   position: absolute;
-  top: -35%;
-  left: -18%;
-  width: 18%;
-  height: 170%;
-  clip-path: polygon(44% 0, 78% 0, 58% 38%, 100% 38%, 30% 100%, 46% 56%, 0 56%);
-  background: linear-gradient(180deg, #fff 0%, var(--goal-accent) 48%, var(--goal-fill-end) 100%);
-  filter: drop-shadow(0 0 8px var(--goal-accent)) drop-shadow(0 0 14px #fff);
-  opacity: 0;
-  animation: goalCustomLightning 2.2s steps(1, end) infinite;
+  inset: -42% 0;
+  background-image:
+    linear-gradient(10deg, transparent 0 40%, rgba(255,255,255,.95) 42% 43%, transparent 45% 100%),
+    linear-gradient(-7deg, transparent 0 50%, rgba(249,248,113,.9) 52% 54%, transparent 56% 100%),
+    linear-gradient(5deg, transparent 0 60%, rgba(99,201,255,.76) 62% 63%, transparent 65% 100%);
+  background-size: 96px 19px, 128px 23px, 72px 15px;
+  filter: drop-shadow(0 0 6px var(--goal-accent)) drop-shadow(0 0 10px #fff);
+  opacity: .82;
+  animation: goalCustomLightning 1.15s linear infinite;
+}
+
+[data-goal-part="fill"]::after {
+  opacity: .42;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.72), transparent);
+  transform: translateX(-120%);
+  animation: goalCustomLightningSweep 1.7s ease-in-out infinite;
 }
 
 @keyframes goalCustomLightning {
-  0%, 58%, 100% { transform: translateX(0) skewX(-8deg); opacity: 0; }
-  60% { transform: translateX(150%) skewX(-8deg); opacity: .95; }
-  62% { opacity: .2; }
-  64% { transform: translateX(360%) skewX(-8deg); opacity: 1; }
-  67% { transform: translateX(720%) skewX(-8deg); opacity: 0; }
+  0% { background-position: 0 4px, 18px 11px, 38px 1px; opacity: .38; }
+  18% { opacity: .95; }
+  42% { opacity: .48; }
+  63% { opacity: .9; }
+  100% { background-position: 192px 4px, -110px 11px, 146px 1px; opacity: .38; }
+}
+
+@keyframes goalCustomLightningSweep {
+  0% { transform: translateX(-120%); opacity: 0; }
+  35% { opacity: .5; }
+  70%, 100% { transform: translateX(120%); opacity: 0; }
 }`,
   eye: `[data-goal-part="root"] {
   position: relative;

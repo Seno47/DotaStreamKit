@@ -1475,13 +1475,25 @@ dd {
 .streamer-goal-template-lightning .streamer-goal-preview-bar span::before {
   content: "";
   position: absolute;
-  inset: -55% -18%;
-  background:
-    linear-gradient(115deg, transparent 0 31%, rgba(255, 255, 255, 0.95) 33% 35%, transparent 38%),
-    linear-gradient(64deg, transparent 0 50%, rgba(249, 248, 113, 0.9) 52% 55%, transparent 58%);
-  opacity: 0.72;
-  transform: translateX(-92%);
-  animation: streamerGoalTemplateLightning 1.45s steps(2, end) infinite;
+  inset: -42% 0;
+  background-image:
+    linear-gradient(10deg, transparent 0 40%, rgba(255, 255, 255, 0.95) 42% 43%, transparent 45% 100%),
+    linear-gradient(-7deg, transparent 0 50%, rgba(249, 248, 113, 0.9) 52% 54%, transparent 56% 100%),
+    linear-gradient(5deg, transparent 0 60%, rgba(99, 201, 255, 0.76) 62% 63%, transparent 65% 100%);
+  background-size:
+    calc(96px * var(--preview-scale, 1)) calc(19px * var(--preview-scale, 1)),
+    calc(128px * var(--preview-scale, 1)) calc(23px * var(--preview-scale, 1)),
+    calc(72px * var(--preview-scale, 1)) calc(15px * var(--preview-scale, 1));
+  filter: drop-shadow(0 0 calc(6px * var(--preview-scale, 1)) var(--goal-accent)) drop-shadow(0 0 calc(10px * var(--preview-scale, 1)) #fff);
+  opacity: 0.82;
+  animation: streamerGoalTemplateLightning 1.15s linear infinite;
+}
+
+.streamer-goal-template-lightning .streamer-goal-preview-bar span::after {
+  opacity: 0.42;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
+  transform: translateX(-120%);
+  animation: streamerGoalTemplateLightningSweep 1.7s ease-in-out infinite;
 }
 
 .streamer-goal-template-eye {
@@ -1574,10 +1586,17 @@ dd {
 }
 
 @keyframes streamerGoalTemplateLightning {
-  0%, 70% { opacity: 0; transform: translateX(-92%); }
-  74% { opacity: 0.92; transform: translateX(-18%); }
-  78% { opacity: 0.36; transform: translateX(16%); }
-  82%, 100% { opacity: 0; transform: translateX(78%); }
+  0% { background-position: 0 4px, 18px 11px, 38px 1px; opacity: 0.38; }
+  18% { opacity: 0.95; }
+  42% { opacity: 0.48; }
+  63% { opacity: 0.9; }
+  100% { background-position: 192px 4px, -110px 11px, 146px 1px; opacity: 0.38; }
+}
+
+@keyframes streamerGoalTemplateLightningSweep {
+  0% { transform: translateX(-120%); opacity: 0; }
+  35% { opacity: 0.5; }
+  70%, 100% { transform: translateX(120%); opacity: 0; }
 }
 
 @keyframes streamerGoalTemplateEyeClose {
