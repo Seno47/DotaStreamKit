@@ -38,6 +38,10 @@ export function normalizeStreamerStatsConfig(config) {
   config.streamerMmrGoalBarRadius = clampInt(config.streamerMmrGoalBarRadius, 0, 40, 7);
   config.streamerMmrGoalGlow = clampInt(config.streamerMmrGoalGlow, 0, 30, 12);
   config.streamerMmrGoalAnimationSpeed = clampNumber(config.streamerMmrGoalAnimationSpeed, 0.25, 3, 1);
+  config.streamerMmrGoalPaddingTop = clampInt(config.streamerMmrGoalPaddingTop, 0, 48, 10);
+  config.streamerMmrGoalPaddingRight = clampInt(config.streamerMmrGoalPaddingRight, 0, 48, 12);
+  config.streamerMmrGoalPaddingBottom = clampInt(config.streamerMmrGoalPaddingBottom, 0, 48, 9);
+  config.streamerMmrGoalPaddingLeft = clampInt(config.streamerMmrGoalPaddingLeft, 0, 48, 12);
   config.streamerMmrGoalAnimated = config.streamerMmrGoalAnimated !== false;
   config.streamerMmrGoalCurrentPrefix = normalizeGoalTextPart(config.streamerMmrGoalCurrentPrefix, '');
   config.streamerMmrGoalCurrentSuffix = normalizeGoalTextPart(config.streamerMmrGoalCurrentSuffix, '');

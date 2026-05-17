@@ -1273,8 +1273,8 @@ dd {
 }
 
 .streamer-goal-live-preview .streamer-goal-preview {
-  width: min(420px, 100%);
-  min-height: calc(104px + max(0px, var(--goal-bar-height) - 13px));
+  width: min(calc(420px + max(0px, var(--goal-padding-left) - 12px) + max(0px, var(--goal-padding-right) - 12px)), 100%);
+  min-height: calc(104px + max(0px, var(--goal-bar-height) - 13px) + max(0px, var(--goal-padding-top) - 10px) + max(0px, var(--goal-padding-bottom) - 9px));
 }
 
 .streamer-goal-preview {
@@ -1286,6 +1286,10 @@ dd {
   --goal-bar-height: 13px;
   --goal-bar-radius: 7px;
   --goal-glow: 12px;
+  --goal-padding-top: 10px;
+  --goal-padding-right: 12px;
+  --goal-padding-bottom: 9px;
+  --goal-padding-left: 12px;
   --goal-animation-scale: 1;
   --goal-duration-bubbles: 1.7s;
   --goal-duration-shine: 2.1s;
@@ -1297,7 +1301,11 @@ dd {
   --goal-duration-glitch: 1.8s;
   position: relative;
   box-sizing: border-box;
-  padding: calc(10px * var(--preview-scale, 1)) calc(12px * var(--preview-scale, 1));
+  padding:
+    calc(var(--goal-padding-top) * var(--preview-scale, 1))
+    calc(var(--goal-padding-right) * var(--preview-scale, 1))
+    calc(var(--goal-padding-bottom) * var(--preview-scale, 1))
+    calc(var(--goal-padding-left) * var(--preview-scale, 1));
   border: 1px solid var(--goal-accent);
   border-radius: calc(8px * var(--preview-scale, 1));
   background:

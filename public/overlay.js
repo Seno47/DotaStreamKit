@@ -34,6 +34,10 @@ const streamerMmrGoalStyleDefaults = {
   barRadius: 7,
   glow: 12,
   animationSpeed: 1,
+  paddingTop: 10,
+  paddingRight: 12,
+  paddingBottom: 9,
+  paddingLeft: 12,
   animated: true,
   currentPrefix: '',
   currentSuffix: '',
@@ -1023,10 +1027,22 @@ function applyStreamerMmrGoal(reference, protection, state) {
   const left = inLiveGame
     ? minimapSide === 'right' ? 385 : 1110
     : minimapSide === 'right' ? 1060 : 390;
-  const boxHeight = Math.max(104, 104 + Math.max(0, goalStyle.barHeight - streamerMmrGoalStyleDefaults.barHeight));
+  const boxWidth = Math.max(
+    420,
+    420
+      + Math.max(0, goalStyle.paddingLeft - streamerMmrGoalStyleDefaults.paddingLeft)
+      + Math.max(0, goalStyle.paddingRight - streamerMmrGoalStyleDefaults.paddingRight)
+  );
+  const boxHeight = Math.max(
+    104,
+    104
+      + Math.max(0, goalStyle.barHeight - streamerMmrGoalStyleDefaults.barHeight)
+      + Math.max(0, goalStyle.paddingTop - streamerMmrGoalStyleDefaults.paddingTop)
+      + Math.max(0, goalStyle.paddingBottom - streamerMmrGoalStyleDefaults.paddingBottom)
+  );
   const box = inLiveGame
-    ? { left, bottom: 176, width: 420, height: boxHeight }
-    : { left, top: 132, width: 420, height: boxHeight };
+    ? { left, bottom: 176, width: boxWidth, height: boxHeight }
+    : { left, top: 132, width: boxWidth, height: boxHeight };
   applyScaledBox(streamerMmrGoalEl, withOverlayOffset(box, settings.overlayPositions?.streamerMmrGoal), reference);
   setVisible(streamerMmrGoalEl, true);
 }
@@ -1172,6 +1188,10 @@ function applyStreamerMmrGoalStyle(root, settings) {
   root.style.setProperty('--goal-bar-height', `${style.barHeight}px`);
   root.style.setProperty('--goal-bar-radius', `${style.barRadius}px`);
   root.style.setProperty('--goal-glow', `${style.glow}px`);
+  root.style.setProperty('--goal-padding-top', `${style.paddingTop}px`);
+  root.style.setProperty('--goal-padding-right', `${style.paddingRight}px`);
+  root.style.setProperty('--goal-padding-bottom', `${style.paddingBottom}px`);
+  root.style.setProperty('--goal-padding-left', `${style.paddingLeft}px`);
   root.style.setProperty('--goal-animation-scale', formatGoalAnimationScale(style.animationSpeed));
   applyGoalAnimationDurationProperties(root, style.animationSpeed);
   root.dataset.goalPart = root.dataset.goalPart || 'root';
@@ -1193,6 +1213,10 @@ function streamerMmrGoalStyleFromSettings(settings = {}) {
     barRadius: clampNumber(settings.streamerMmrGoalBarRadius, 0, 40, streamerMmrGoalStyleDefaults.barRadius),
     glow: clampNumber(settings.streamerMmrGoalGlow, 0, 30, streamerMmrGoalStyleDefaults.glow),
     animationSpeed: clampNumber(settings.streamerMmrGoalAnimationSpeed, 0.25, 3, streamerMmrGoalStyleDefaults.animationSpeed),
+    paddingTop: clampNumber(settings.streamerMmrGoalPaddingTop, 0, 48, streamerMmrGoalStyleDefaults.paddingTop),
+    paddingRight: clampNumber(settings.streamerMmrGoalPaddingRight, 0, 48, streamerMmrGoalStyleDefaults.paddingRight),
+    paddingBottom: clampNumber(settings.streamerMmrGoalPaddingBottom, 0, 48, streamerMmrGoalStyleDefaults.paddingBottom),
+    paddingLeft: clampNumber(settings.streamerMmrGoalPaddingLeft, 0, 48, streamerMmrGoalStyleDefaults.paddingLeft),
     animated: settings.streamerMmrGoalAnimated !== false,
     currentPrefix: normalizeGoalTextPart(settings.streamerMmrGoalCurrentPrefix, streamerMmrGoalStyleDefaults.currentPrefix),
     currentSuffix: normalizeGoalTextPart(settings.streamerMmrGoalCurrentSuffix, streamerMmrGoalStyleDefaults.currentSuffix),

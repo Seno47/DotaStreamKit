@@ -192,6 +192,18 @@ const els = {
   streamerMmrGoalAnimationSpeedWrap: document.querySelector('#streamerMmrGoalAnimationSpeedWrap'),
   streamerMmrGoalAnimationSpeed: document.querySelector('#streamerMmrGoalAnimationSpeed'),
   streamerMmrGoalAnimationSpeedValue: document.querySelector('#streamerMmrGoalAnimationSpeedValue'),
+  streamerMmrGoalPaddingTopWrap: document.querySelector('#streamerMmrGoalPaddingTopWrap'),
+  streamerMmrGoalPaddingTop: document.querySelector('#streamerMmrGoalPaddingTop'),
+  streamerMmrGoalPaddingTopValue: document.querySelector('#streamerMmrGoalPaddingTopValue'),
+  streamerMmrGoalPaddingRightWrap: document.querySelector('#streamerMmrGoalPaddingRightWrap'),
+  streamerMmrGoalPaddingRight: document.querySelector('#streamerMmrGoalPaddingRight'),
+  streamerMmrGoalPaddingRightValue: document.querySelector('#streamerMmrGoalPaddingRightValue'),
+  streamerMmrGoalPaddingBottomWrap: document.querySelector('#streamerMmrGoalPaddingBottomWrap'),
+  streamerMmrGoalPaddingBottom: document.querySelector('#streamerMmrGoalPaddingBottom'),
+  streamerMmrGoalPaddingBottomValue: document.querySelector('#streamerMmrGoalPaddingBottomValue'),
+  streamerMmrGoalPaddingLeftWrap: document.querySelector('#streamerMmrGoalPaddingLeftWrap'),
+  streamerMmrGoalPaddingLeft: document.querySelector('#streamerMmrGoalPaddingLeft'),
+  streamerMmrGoalPaddingLeftValue: document.querySelector('#streamerMmrGoalPaddingLeftValue'),
   streamerMmrGoalAnimated: document.querySelector('#streamerMmrGoalAnimated'),
   streamerMmrGoalCurrentPrefixWrap: document.querySelector('#streamerMmrGoalCurrentPrefixWrap'),
   streamerMmrGoalCurrentPrefix: document.querySelector('#streamerMmrGoalCurrentPrefix'),
@@ -458,6 +470,10 @@ const streamerMmrGoalStyleDefaults = {
   barRadius: 7,
   glow: 12,
   animationSpeed: 1,
+  paddingTop: 10,
+  paddingRight: 12,
+  paddingBottom: 9,
+  paddingLeft: 12,
   animated: true,
   currentPrefix: '',
   currentSuffix: '',
@@ -862,6 +878,10 @@ const translations = {
     streamerMmrGoalBarRadius: 'Скругление',
     streamerMmrGoalGlow: 'Свечение',
     streamerMmrGoalAnimationSpeed: 'Скорость анимации',
+    streamerMmrGoalPaddingTop: 'Отступ сверху',
+    streamerMmrGoalPaddingRight: 'Отступ справа',
+    streamerMmrGoalPaddingBottom: 'Отступ снизу',
+    streamerMmrGoalPaddingLeft: 'Отступ слева',
     streamerMmrGoalAnimated: 'Анимация полоски',
     streamerMmrGoalCurrentPrefix: 'Текст перед текущим MMR',
     streamerMmrGoalCurrentSuffix: 'Текст после текущего MMR',
@@ -1267,6 +1287,10 @@ const translations = {
     streamerMmrGoalBarRadius: 'Roundness',
     streamerMmrGoalGlow: 'Glow',
     streamerMmrGoalAnimationSpeed: 'Animation speed',
+    streamerMmrGoalPaddingTop: 'Top padding',
+    streamerMmrGoalPaddingRight: 'Right padding',
+    streamerMmrGoalPaddingBottom: 'Bottom padding',
+    streamerMmrGoalPaddingLeft: 'Left padding',
     streamerMmrGoalAnimated: 'Animated bar',
     streamerMmrGoalCurrentPrefix: 'Text before current MMR',
     streamerMmrGoalCurrentSuffix: 'Text after current MMR',
@@ -1764,6 +1788,10 @@ function applyLanguage(config) {
   setLabelText(els.streamerMmrGoalBarRadiusWrap, t('streamerMmrGoalBarRadius'));
   setLabelText(els.streamerMmrGoalGlowWrap, t('streamerMmrGoalGlow'));
   setLabelText(els.streamerMmrGoalAnimationSpeedWrap, t('streamerMmrGoalAnimationSpeed'));
+  setLabelText(els.streamerMmrGoalPaddingTopWrap, t('streamerMmrGoalPaddingTop'));
+  setLabelText(els.streamerMmrGoalPaddingRightWrap, t('streamerMmrGoalPaddingRight'));
+  setLabelText(els.streamerMmrGoalPaddingBottomWrap, t('streamerMmrGoalPaddingBottom'));
+  setLabelText(els.streamerMmrGoalPaddingLeftWrap, t('streamerMmrGoalPaddingLeft'));
   setLabelText(els.streamerMmrGoalAnimated.closest('label'), t('streamerMmrGoalAnimated'));
   setLabelText(els.streamerMmrGoalCurrentPrefixWrap, t('streamerMmrGoalCurrentPrefix'));
   setLabelText(els.streamerMmrGoalCurrentSuffixWrap, t('streamerMmrGoalCurrentSuffix'));
@@ -2200,6 +2228,10 @@ function render(data) {
   setInputValue(els.streamerMmrGoalBarRadius, goalStyle.barRadius);
   setInputValue(els.streamerMmrGoalGlow, goalStyle.glow);
   setInputValue(els.streamerMmrGoalAnimationSpeed, goalStyle.animationSpeed);
+  setInputValue(els.streamerMmrGoalPaddingTop, goalStyle.paddingTop);
+  setInputValue(els.streamerMmrGoalPaddingRight, goalStyle.paddingRight);
+  setInputValue(els.streamerMmrGoalPaddingBottom, goalStyle.paddingBottom);
+  setInputValue(els.streamerMmrGoalPaddingLeft, goalStyle.paddingLeft);
   els.streamerMmrGoalAnimated.checked = goalStyle.animated;
   setInputValue(els.streamerMmrGoalCurrentPrefix, goalStyle.currentPrefix);
   setInputValue(els.streamerMmrGoalCurrentSuffix, goalStyle.currentSuffix);
@@ -3153,6 +3185,10 @@ function applyStreamerGoalPreviewStyle(root, settings) {
   root.style.setProperty('--goal-bar-height', `${style.barHeight}px`);
   root.style.setProperty('--goal-bar-radius', `${style.barRadius}px`);
   root.style.setProperty('--goal-glow', `${style.glow}px`);
+  root.style.setProperty('--goal-padding-top', `${style.paddingTop}px`);
+  root.style.setProperty('--goal-padding-right', `${style.paddingRight}px`);
+  root.style.setProperty('--goal-padding-bottom', `${style.paddingBottom}px`);
+  root.style.setProperty('--goal-padding-left', `${style.paddingLeft}px`);
   root.style.setProperty('--goal-animation-scale', formatGoalAnimationScale(style.animationSpeed));
   applyGoalAnimationDurationProperties(root, style.animationSpeed);
   root.dataset.goalPart = root.dataset.goalPart || 'root';
@@ -3174,6 +3210,10 @@ function streamerMmrGoalStyleFromSettings(settings = {}) {
     barRadius: clampGoalInt(settings.streamerMmrGoalBarRadius, 0, 40, streamerMmrGoalStyleDefaults.barRadius),
     glow: clampGoalInt(settings.streamerMmrGoalGlow, 0, 30, streamerMmrGoalStyleDefaults.glow),
     animationSpeed: clampGoalNumber(settings.streamerMmrGoalAnimationSpeed, 0.25, 3, streamerMmrGoalStyleDefaults.animationSpeed),
+    paddingTop: clampGoalInt(settings.streamerMmrGoalPaddingTop, 0, 48, streamerMmrGoalStyleDefaults.paddingTop),
+    paddingRight: clampGoalInt(settings.streamerMmrGoalPaddingRight, 0, 48, streamerMmrGoalStyleDefaults.paddingRight),
+    paddingBottom: clampGoalInt(settings.streamerMmrGoalPaddingBottom, 0, 48, streamerMmrGoalStyleDefaults.paddingBottom),
+    paddingLeft: clampGoalInt(settings.streamerMmrGoalPaddingLeft, 0, 48, streamerMmrGoalStyleDefaults.paddingLeft),
     animated: settings.streamerMmrGoalAnimated !== false,
     currentPrefix: normalizeGoalTextPart(settings.streamerMmrGoalCurrentPrefix, streamerMmrGoalStyleDefaults.currentPrefix),
     currentSuffix: normalizeGoalTextPart(settings.streamerMmrGoalCurrentSuffix, streamerMmrGoalStyleDefaults.currentSuffix),
@@ -3714,8 +3754,20 @@ function scheduleOverlayPositionSave() {
 function streamerMmrGoalPreviewBox(settings) {
   const base = overlayPreviewBoxes.streamerMmrGoal;
   const style = streamerMmrGoalStyleFromSettings(settings || {});
-  const height = Math.max(base.height, base.height + Math.max(0, style.barHeight - streamerMmrGoalStyleDefaults.barHeight));
-  return { ...base, height, visible: { ...base.visible, height } };
+  const width = Math.max(
+    base.width,
+    base.width
+      + Math.max(0, style.paddingLeft - streamerMmrGoalStyleDefaults.paddingLeft)
+      + Math.max(0, style.paddingRight - streamerMmrGoalStyleDefaults.paddingRight)
+  );
+  const height = Math.max(
+    base.height,
+    base.height
+      + Math.max(0, style.barHeight - streamerMmrGoalStyleDefaults.barHeight)
+      + Math.max(0, style.paddingTop - streamerMmrGoalStyleDefaults.paddingTop)
+      + Math.max(0, style.paddingBottom - streamerMmrGoalStyleDefaults.paddingBottom)
+  );
+  return { ...base, width, height, visible: { ...base.visible, width, height } };
 }
 
 function scheduleStreamerGoalStyleSave() {
@@ -3748,6 +3800,16 @@ function updateStreamerGoalStyleOutputs() {
     const speed = clampGoalNumber(els.streamerMmrGoalAnimationSpeed?.value, 0.25, 3, streamerMmrGoalStyleDefaults.animationSpeed);
     els.streamerMmrGoalAnimationSpeedValue.textContent = `${Number(speed.toFixed(2))}x`;
   }
+  [
+    ['PaddingTop', 'paddingTop'],
+    ['PaddingRight', 'paddingRight'],
+    ['PaddingBottom', 'paddingBottom'],
+    ['PaddingLeft', 'paddingLeft']
+  ].forEach(([elementKey, defaultKey]) => {
+    const output = els[`streamerMmrGoal${elementKey}Value`];
+    const input = els[`streamerMmrGoal${elementKey}`];
+    if (output) output.textContent = `${input?.value || streamerMmrGoalStyleDefaults[defaultKey]}px`;
+  });
 }
 
 function countryFlagEmoji(code) {
@@ -3836,6 +3898,10 @@ els.spectatorGameLabelTemplate?.addEventListener('change', () => saveProtection(
   els.streamerMmrGoalBarRadius,
   els.streamerMmrGoalGlow,
   els.streamerMmrGoalAnimationSpeed,
+  els.streamerMmrGoalPaddingTop,
+  els.streamerMmrGoalPaddingRight,
+  els.streamerMmrGoalPaddingBottom,
+  els.streamerMmrGoalPaddingLeft,
   els.streamerMmrGoalAnimated,
   els.streamerMmrGoalCurrentPrefix,
   els.streamerMmrGoalCurrentSuffix,
@@ -4038,6 +4104,10 @@ function protectionMatchIntelFromForm() {
     streamerMmrGoalBarRadius: Number(els.streamerMmrGoalBarRadius.value),
     streamerMmrGoalGlow: Number(els.streamerMmrGoalGlow.value),
     streamerMmrGoalAnimationSpeed: Number(els.streamerMmrGoalAnimationSpeed.value),
+    streamerMmrGoalPaddingTop: Number(els.streamerMmrGoalPaddingTop.value),
+    streamerMmrGoalPaddingRight: Number(els.streamerMmrGoalPaddingRight.value),
+    streamerMmrGoalPaddingBottom: Number(els.streamerMmrGoalPaddingBottom.value),
+    streamerMmrGoalPaddingLeft: Number(els.streamerMmrGoalPaddingLeft.value),
     streamerMmrGoalAnimated: els.streamerMmrGoalAnimated.checked,
     streamerMmrGoalCurrentPrefix: els.streamerMmrGoalCurrentPrefix.value,
     streamerMmrGoalCurrentSuffix: els.streamerMmrGoalCurrentSuffix.value,
@@ -4093,6 +4163,10 @@ function updateMatchIntelFieldVisibility() {
     els.streamerMmrGoalBarRadiusWrap,
     els.streamerMmrGoalGlowWrap,
     els.streamerMmrGoalAnimationSpeedWrap,
+    els.streamerMmrGoalPaddingTopWrap,
+    els.streamerMmrGoalPaddingRightWrap,
+    els.streamerMmrGoalPaddingBottomWrap,
+    els.streamerMmrGoalPaddingLeftWrap,
     els.streamerMmrGoalAnimated?.closest('label'),
     els.streamerMmrGoalCurrentPrefixWrap,
     els.streamerMmrGoalCurrentSuffixWrap,

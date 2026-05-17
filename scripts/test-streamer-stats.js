@@ -38,6 +38,10 @@ assert.equal(normalizedConfig.showStreamerMmrGoalBackground, true);
 assert.equal(normalizedConfig.streamerMmrGoalTemplate, 'classic');
 assert.equal(normalizedConfig.streamerMmrGoalFillStart, '#63c9ff');
 assert.equal(normalizedConfig.streamerMmrGoalAnimationSpeed, 1);
+assert.equal(normalizedConfig.streamerMmrGoalPaddingTop, 10);
+assert.equal(normalizedConfig.streamerMmrGoalPaddingRight, 12);
+assert.equal(normalizedConfig.streamerMmrGoalPaddingBottom, 9);
+assert.equal(normalizedConfig.streamerMmrGoalPaddingLeft, 12);
 assert.equal(normalizedConfig.streamerMmrGoalTargetPrefix, '/ ');
 assert.equal(normalizedConfig.streamerMmrGoalDeltaPrefix, '+');
 assert.equal(normalizedConfig.streamerMmrGoalCustomCss, '');
@@ -50,6 +54,10 @@ const normalizedGoalStyle = {
   streamerMmrGoalBarRadius: -10,
   streamerMmrGoalGlow: 18,
   streamerMmrGoalAnimationSpeed: 9,
+  streamerMmrGoalPaddingTop: 99,
+  streamerMmrGoalPaddingRight: 22,
+  streamerMmrGoalPaddingBottom: -5,
+  streamerMmrGoalPaddingLeft: 0,
   streamerMmrGoalAnimated: false,
   streamerMmrGoalCurrentPrefix: 'Current ',
   streamerMmrGoalCurrentSuffix: ' MMR',
@@ -70,6 +78,10 @@ assert.equal(normalizedGoalStyle.streamerMmrGoalBarHeight, 64);
 assert.equal(normalizedGoalStyle.streamerMmrGoalBarRadius, 0);
 assert.equal(normalizedGoalStyle.streamerMmrGoalGlow, 18);
 assert.equal(normalizedGoalStyle.streamerMmrGoalAnimationSpeed, 3);
+assert.equal(normalizedGoalStyle.streamerMmrGoalPaddingTop, 48);
+assert.equal(normalizedGoalStyle.streamerMmrGoalPaddingRight, 22);
+assert.equal(normalizedGoalStyle.streamerMmrGoalPaddingBottom, 0);
+assert.equal(normalizedGoalStyle.streamerMmrGoalPaddingLeft, 0);
 assert.equal(normalizedGoalStyle.streamerMmrGoalAnimated, false);
 assert.equal(normalizedGoalStyle.streamerMmrGoalCurrentPrefix, 'Current ');
 assert.equal(normalizedGoalStyle.streamerMmrGoalCurrentSuffix, ' MMR');
