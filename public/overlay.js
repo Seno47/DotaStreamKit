@@ -33,6 +33,7 @@ const streamerMmrGoalStyleDefaults = {
   barHeight: 13,
   barRadius: 7,
   glow: 12,
+  animationSpeed: 1,
   animated: true,
   currentPrefix: '',
   currentSuffix: '',
@@ -1171,6 +1172,8 @@ function applyStreamerMmrGoalStyle(root, settings) {
   root.style.setProperty('--goal-bar-height', `${style.barHeight}px`);
   root.style.setProperty('--goal-bar-radius', `${style.barRadius}px`);
   root.style.setProperty('--goal-glow', `${style.glow}px`);
+  root.style.setProperty('--goal-animation-scale', formatGoalAnimationScale(style.animationSpeed));
+  applyGoalAnimationDurationProperties(root, style.animationSpeed);
   root.dataset.goalPart = root.dataset.goalPart || 'root';
   return style;
 }
@@ -1189,6 +1192,7 @@ function streamerMmrGoalStyleFromSettings(settings = {}) {
     barHeight: clampNumber(settings.streamerMmrGoalBarHeight, 8, 64, streamerMmrGoalStyleDefaults.barHeight),
     barRadius: clampNumber(settings.streamerMmrGoalBarRadius, 0, 40, streamerMmrGoalStyleDefaults.barRadius),
     glow: clampNumber(settings.streamerMmrGoalGlow, 0, 30, streamerMmrGoalStyleDefaults.glow),
+    animationSpeed: clampNumber(settings.streamerMmrGoalAnimationSpeed, 0.25, 3, streamerMmrGoalStyleDefaults.animationSpeed),
     animated: settings.streamerMmrGoalAnimated !== false,
     currentPrefix: normalizeGoalTextPart(settings.streamerMmrGoalCurrentPrefix, streamerMmrGoalStyleDefaults.currentPrefix),
     currentSuffix: normalizeGoalTextPart(settings.streamerMmrGoalCurrentSuffix, streamerMmrGoalStyleDefaults.currentSuffix),
@@ -1230,6 +1234,40 @@ function normalizeGoalCustomCss(value) {
 function normalizeGoalColor(value, fallback) {
   const text = String(value || '').trim();
   return /^#[0-9a-f]{6}$/i.test(text) ? text.toLowerCase() : fallback;
+}
+
+function formatGoalAnimationScale(speed) {
+  return String(Math.round((1 / clampNumber(speed, 0.25, 3, streamerMmrGoalStyleDefaults.animationSpeed)) * 1000) / 1000);
+}
+
+function formatGoalAnimationDuration(seconds, speed) {
+  const duration = seconds * clampNumber(formatGoalAnimationScale(speed), 1 / 3, 4, 1);
+  return `${Number(duration.toFixed(3))}s`;
+}
+
+function applyGoalAnimationDurationProperties(root, speed) {
+  const durations = {
+    bubbles: 1.7,
+    shine: 2.1,
+    diagonal: 1.15,
+    'diagonal-sweep': 1.7,
+    eye: 3.8,
+    scanner: 2.1,
+    sparks: 1.4,
+    glitch: 1.8,
+    'custom-shine': 1.8,
+    'custom-bubbles': 2.4,
+    'custom-pulse': 1.8,
+    'custom-diagonal': 1.15,
+    'custom-diagonal-sweep': 1.7,
+    'custom-eye': 3.8,
+    'custom-scanner': 2.6,
+    'custom-sparks': 1.7,
+    'custom-glitch': 2.8
+  };
+  Object.entries(durations).forEach(([name, seconds]) => {
+    root.style.setProperty(`--goal-duration-${name}`, formatGoalAnimationDuration(seconds, speed));
+  });
 }
 
 function setTextContent(el, value) {

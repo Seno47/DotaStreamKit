@@ -37,6 +37,7 @@ export function normalizeStreamerStatsConfig(config) {
   config.streamerMmrGoalBarHeight = clampInt(config.streamerMmrGoalBarHeight, 8, 64, 13);
   config.streamerMmrGoalBarRadius = clampInt(config.streamerMmrGoalBarRadius, 0, 40, 7);
   config.streamerMmrGoalGlow = clampInt(config.streamerMmrGoalGlow, 0, 30, 12);
+  config.streamerMmrGoalAnimationSpeed = clampNumber(config.streamerMmrGoalAnimationSpeed, 0.25, 3, 1);
   config.streamerMmrGoalAnimated = config.streamerMmrGoalAnimated !== false;
   config.streamerMmrGoalCurrentPrefix = normalizeGoalTextPart(config.streamerMmrGoalCurrentPrefix, '');
   config.streamerMmrGoalCurrentSuffix = normalizeGoalTextPart(config.streamerMmrGoalCurrentSuffix, '');
@@ -366,4 +367,10 @@ function clampInt(value, min, max, fallback) {
   const number = Number(value);
   if (!Number.isFinite(number)) return fallback;
   return Math.min(Math.max(Math.trunc(number), min), max);
+}
+
+function clampNumber(value, min, max, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(Math.max(number, min), max);
 }

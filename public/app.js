@@ -189,6 +189,9 @@ const els = {
   streamerMmrGoalGlowWrap: document.querySelector('#streamerMmrGoalGlowWrap'),
   streamerMmrGoalGlow: document.querySelector('#streamerMmrGoalGlow'),
   streamerMmrGoalGlowValue: document.querySelector('#streamerMmrGoalGlowValue'),
+  streamerMmrGoalAnimationSpeedWrap: document.querySelector('#streamerMmrGoalAnimationSpeedWrap'),
+  streamerMmrGoalAnimationSpeed: document.querySelector('#streamerMmrGoalAnimationSpeed'),
+  streamerMmrGoalAnimationSpeedValue: document.querySelector('#streamerMmrGoalAnimationSpeedValue'),
   streamerMmrGoalAnimated: document.querySelector('#streamerMmrGoalAnimated'),
   streamerMmrGoalCurrentPrefixWrap: document.querySelector('#streamerMmrGoalCurrentPrefixWrap'),
   streamerMmrGoalCurrentPrefix: document.querySelector('#streamerMmrGoalCurrentPrefix'),
@@ -454,6 +457,7 @@ const streamerMmrGoalStyleDefaults = {
   barHeight: 13,
   barRadius: 7,
   glow: 12,
+  animationSpeed: 1,
   animated: true,
   currentPrefix: '',
   currentSuffix: '',
@@ -470,7 +474,7 @@ const streamerGoalCssSnippets = {
   inset: 0;
   background: linear-gradient(110deg, transparent 0%, rgba(255,255,255,.45) 45%, transparent 72%);
   transform: translateX(-120%);
-  animation: goalCustomShine 1.8s ease-in-out infinite;
+  animation: goalCustomShine var(--goal-duration-custom-shine, 1.8s) ease-in-out infinite;
 }
 
 @keyframes goalCustomShine {
@@ -485,7 +489,7 @@ const streamerGoalCssSnippets = {
     radial-gradient(circle at 46% 35%, rgba(255,255,255,.32) 0 3px, transparent 4px),
     radial-gradient(circle at 74% 62%, rgba(255,255,255,.38) 0 2px, transparent 3px);
   background-size: 84px 22px;
-  animation: goalCustomBubbles 2.4s linear infinite;
+  animation: goalCustomBubbles var(--goal-duration-custom-bubbles, 2.4s) linear infinite;
 }
 
 @keyframes goalCustomBubbles {
@@ -512,7 +516,7 @@ const streamerGoalCssSnippets = {
   outline-offset: 3px;
 }`,
   pulse: `[data-goal-part="root"] {
-  animation: goalCustomPulse 1.8s ease-in-out infinite;
+  animation: goalCustomPulse var(--goal-duration-custom-pulse, 1.8s) ease-in-out infinite;
 }
 
 @keyframes goalCustomPulse {
@@ -542,14 +546,14 @@ const streamerGoalCssSnippets = {
   background-size: 96px 19px, 128px 23px, 72px 15px;
   filter: drop-shadow(0 0 6px var(--goal-accent)) drop-shadow(0 0 10px #fff);
   opacity: .82;
-  animation: goalCustomLightning 1.15s linear infinite;
+  animation: goalCustomLightning var(--goal-duration-custom-diagonal, 1.15s) linear infinite;
 }
 
 [data-goal-part="fill"]::after {
   opacity: .42;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,.72), transparent);
   transform: translateX(-120%);
-  animation: goalCustomLightningSweep 1.7s ease-in-out infinite;
+  animation: goalCustomLightningSweep var(--goal-duration-custom-diagonal-sweep, 1.7s) ease-in-out infinite;
 }
 
 @keyframes goalCustomLightning {
@@ -584,7 +588,7 @@ const streamerGoalCssSnippets = {
     rgba(2, 4, 8, .82);
   box-shadow: 0 0 12px rgba(255,255,255,.16);
   opacity: 0;
-  animation: goalCustomEyeClose 3.8s ease-in-out infinite;
+  animation: goalCustomEyeClose var(--goal-duration-custom-eye, 3.8s) ease-in-out infinite;
 }
 
 [data-goal-part="bar"]::before {
@@ -618,7 +622,7 @@ const streamerGoalCssSnippets = {
   background: linear-gradient(90deg, transparent, rgba(255,255,255,.75), transparent);
   filter: blur(1px);
   mix-blend-mode: screen;
-  animation: goalCustomScanner 2.6s linear infinite;
+  animation: goalCustomScanner var(--goal-duration-custom-scanner, 2.6s) linear infinite;
 }
 
 @keyframes goalCustomScanner {
@@ -636,7 +640,7 @@ const streamerGoalCssSnippets = {
   background-size: 118px 24px;
   filter: drop-shadow(0 0 6px var(--goal-accent));
   opacity: .85;
-  animation: goalCustomSparks 1.7s linear infinite;
+  animation: goalCustomSparks var(--goal-duration-custom-sparks, 1.7s) linear infinite;
 }
 
 @keyframes goalCustomSparks {
@@ -645,7 +649,7 @@ const streamerGoalCssSnippets = {
   glitch: `[data-goal-part="meta"],
 [data-goal-part="kpis"],
 [data-goal-part="percent"] {
-  animation: goalCustomGlitch 2.8s steps(1, end) infinite;
+  animation: goalCustomGlitch var(--goal-duration-custom-glitch, 2.8s) steps(1, end) infinite;
 }
 
 @keyframes goalCustomGlitch {
@@ -857,6 +861,7 @@ const translations = {
     streamerMmrGoalBarHeight: 'Толщина',
     streamerMmrGoalBarRadius: 'Скругление',
     streamerMmrGoalGlow: 'Свечение',
+    streamerMmrGoalAnimationSpeed: 'Скорость анимации',
     streamerMmrGoalAnimated: 'Анимация полоски',
     streamerMmrGoalCurrentPrefix: 'Текст перед текущим MMR',
     streamerMmrGoalCurrentSuffix: 'Текст после текущего MMR',
@@ -1261,6 +1266,7 @@ const translations = {
     streamerMmrGoalBarHeight: 'Bar height',
     streamerMmrGoalBarRadius: 'Roundness',
     streamerMmrGoalGlow: 'Glow',
+    streamerMmrGoalAnimationSpeed: 'Animation speed',
     streamerMmrGoalAnimated: 'Animated bar',
     streamerMmrGoalCurrentPrefix: 'Text before current MMR',
     streamerMmrGoalCurrentSuffix: 'Text after current MMR',
@@ -1757,6 +1763,7 @@ function applyLanguage(config) {
   setLabelText(els.streamerMmrGoalBarHeightWrap, t('streamerMmrGoalBarHeight'));
   setLabelText(els.streamerMmrGoalBarRadiusWrap, t('streamerMmrGoalBarRadius'));
   setLabelText(els.streamerMmrGoalGlowWrap, t('streamerMmrGoalGlow'));
+  setLabelText(els.streamerMmrGoalAnimationSpeedWrap, t('streamerMmrGoalAnimationSpeed'));
   setLabelText(els.streamerMmrGoalAnimated.closest('label'), t('streamerMmrGoalAnimated'));
   setLabelText(els.streamerMmrGoalCurrentPrefixWrap, t('streamerMmrGoalCurrentPrefix'));
   setLabelText(els.streamerMmrGoalCurrentSuffixWrap, t('streamerMmrGoalCurrentSuffix'));
@@ -2192,6 +2199,7 @@ function render(data) {
   setInputValue(els.streamerMmrGoalBarHeight, goalStyle.barHeight);
   setInputValue(els.streamerMmrGoalBarRadius, goalStyle.barRadius);
   setInputValue(els.streamerMmrGoalGlow, goalStyle.glow);
+  setInputValue(els.streamerMmrGoalAnimationSpeed, goalStyle.animationSpeed);
   els.streamerMmrGoalAnimated.checked = goalStyle.animated;
   setInputValue(els.streamerMmrGoalCurrentPrefix, goalStyle.currentPrefix);
   setInputValue(els.streamerMmrGoalCurrentSuffix, goalStyle.currentSuffix);
@@ -3145,6 +3153,8 @@ function applyStreamerGoalPreviewStyle(root, settings) {
   root.style.setProperty('--goal-bar-height', `${style.barHeight}px`);
   root.style.setProperty('--goal-bar-radius', `${style.barRadius}px`);
   root.style.setProperty('--goal-glow', `${style.glow}px`);
+  root.style.setProperty('--goal-animation-scale', formatGoalAnimationScale(style.animationSpeed));
+  applyGoalAnimationDurationProperties(root, style.animationSpeed);
   root.dataset.goalPart = root.dataset.goalPart || 'root';
   return style;
 }
@@ -3163,6 +3173,7 @@ function streamerMmrGoalStyleFromSettings(settings = {}) {
     barHeight: clampGoalInt(settings.streamerMmrGoalBarHeight, 8, 64, streamerMmrGoalStyleDefaults.barHeight),
     barRadius: clampGoalInt(settings.streamerMmrGoalBarRadius, 0, 40, streamerMmrGoalStyleDefaults.barRadius),
     glow: clampGoalInt(settings.streamerMmrGoalGlow, 0, 30, streamerMmrGoalStyleDefaults.glow),
+    animationSpeed: clampGoalNumber(settings.streamerMmrGoalAnimationSpeed, 0.25, 3, streamerMmrGoalStyleDefaults.animationSpeed),
     animated: settings.streamerMmrGoalAnimated !== false,
     currentPrefix: normalizeGoalTextPart(settings.streamerMmrGoalCurrentPrefix, streamerMmrGoalStyleDefaults.currentPrefix),
     currentSuffix: normalizeGoalTextPart(settings.streamerMmrGoalCurrentSuffix, streamerMmrGoalStyleDefaults.currentSuffix),
@@ -3229,6 +3240,46 @@ function clampGoalInt(value, min, max, fallback) {
   const number = Number(value);
   if (!Number.isFinite(number)) return fallback;
   return Math.max(min, Math.min(max, Math.trunc(number)));
+}
+
+function clampGoalNumber(value, min, max, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(min, Math.min(max, number));
+}
+
+function formatGoalAnimationScale(speed) {
+  return String(Math.round((1 / clampGoalNumber(speed, 0.25, 3, streamerMmrGoalStyleDefaults.animationSpeed)) * 1000) / 1000);
+}
+
+function formatGoalAnimationDuration(seconds, speed) {
+  const duration = seconds * clampGoalNumber(formatGoalAnimationScale(speed), 1 / 3, 4, 1);
+  return `${Number(duration.toFixed(3))}s`;
+}
+
+function applyGoalAnimationDurationProperties(root, speed) {
+  const durations = {
+    bubbles: 1.7,
+    shine: 2.1,
+    diagonal: 1.15,
+    'diagonal-sweep': 1.7,
+    eye: 3.8,
+    scanner: 2.1,
+    sparks: 1.4,
+    glitch: 1.8,
+    'custom-shine': 1.8,
+    'custom-bubbles': 2.4,
+    'custom-pulse': 1.8,
+    'custom-diagonal': 1.15,
+    'custom-diagonal-sweep': 1.7,
+    'custom-eye': 3.8,
+    'custom-scanner': 2.6,
+    'custom-sparks': 1.7,
+    'custom-glitch': 2.8
+  };
+  Object.entries(durations).forEach(([name, seconds]) => {
+    root.style.setProperty(`--goal-duration-${name}`, formatGoalAnimationDuration(seconds, speed));
+  });
 }
 
 function toggleHidden(element, hidden) {
@@ -3693,6 +3744,10 @@ function updateStreamerGoalStyleOutputs() {
   if (els.streamerMmrGoalBarHeightValue) els.streamerMmrGoalBarHeightValue.textContent = String(els.streamerMmrGoalBarHeight?.value || streamerMmrGoalStyleDefaults.barHeight);
   if (els.streamerMmrGoalBarRadiusValue) els.streamerMmrGoalBarRadiusValue.textContent = String(els.streamerMmrGoalBarRadius?.value || streamerMmrGoalStyleDefaults.barRadius);
   if (els.streamerMmrGoalGlowValue) els.streamerMmrGoalGlowValue.textContent = String(els.streamerMmrGoalGlow?.value || streamerMmrGoalStyleDefaults.glow);
+  if (els.streamerMmrGoalAnimationSpeedValue) {
+    const speed = clampGoalNumber(els.streamerMmrGoalAnimationSpeed?.value, 0.25, 3, streamerMmrGoalStyleDefaults.animationSpeed);
+    els.streamerMmrGoalAnimationSpeedValue.textContent = `${Number(speed.toFixed(2))}x`;
+  }
 }
 
 function countryFlagEmoji(code) {
@@ -3780,6 +3835,7 @@ els.spectatorGameLabelTemplate?.addEventListener('change', () => saveProtection(
   els.streamerMmrGoalBarHeight,
   els.streamerMmrGoalBarRadius,
   els.streamerMmrGoalGlow,
+  els.streamerMmrGoalAnimationSpeed,
   els.streamerMmrGoalAnimated,
   els.streamerMmrGoalCurrentPrefix,
   els.streamerMmrGoalCurrentSuffix,
@@ -3981,6 +4037,7 @@ function protectionMatchIntelFromForm() {
     streamerMmrGoalBarHeight: Number(els.streamerMmrGoalBarHeight.value),
     streamerMmrGoalBarRadius: Number(els.streamerMmrGoalBarRadius.value),
     streamerMmrGoalGlow: Number(els.streamerMmrGoalGlow.value),
+    streamerMmrGoalAnimationSpeed: Number(els.streamerMmrGoalAnimationSpeed.value),
     streamerMmrGoalAnimated: els.streamerMmrGoalAnimated.checked,
     streamerMmrGoalCurrentPrefix: els.streamerMmrGoalCurrentPrefix.value,
     streamerMmrGoalCurrentSuffix: els.streamerMmrGoalCurrentSuffix.value,
@@ -4035,6 +4092,7 @@ function updateMatchIntelFieldVisibility() {
     els.streamerMmrGoalBarHeightWrap,
     els.streamerMmrGoalBarRadiusWrap,
     els.streamerMmrGoalGlowWrap,
+    els.streamerMmrGoalAnimationSpeedWrap,
     els.streamerMmrGoalAnimated?.closest('label'),
     els.streamerMmrGoalCurrentPrefixWrap,
     els.streamerMmrGoalCurrentSuffixWrap,

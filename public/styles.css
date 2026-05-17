@@ -1286,6 +1286,15 @@ dd {
   --goal-bar-height: 13px;
   --goal-bar-radius: 7px;
   --goal-glow: 12px;
+  --goal-animation-scale: 1;
+  --goal-duration-bubbles: 1.7s;
+  --goal-duration-shine: 2.1s;
+  --goal-duration-diagonal: 1.15s;
+  --goal-duration-diagonal-sweep: 1.7s;
+  --goal-duration-eye: 3.8s;
+  --goal-duration-scanner: 2.1s;
+  --goal-duration-sparks: 1.4s;
+  --goal-duration-glitch: 1.8s;
   position: relative;
   box-sizing: border-box;
   padding: calc(10px * var(--preview-scale, 1)) calc(12px * var(--preview-scale, 1));
@@ -1427,7 +1436,7 @@ dd {
     radial-gradient(circle at 28px 38%, rgba(255, 255, 255, 0.42) 0 1px, transparent 2px),
     radial-gradient(circle at 46px 68%, rgba(255, 255, 255, 0.34) 0 2px, transparent 3px);
   background-size: 58px 100%;
-  animation: streamerGoalBubbles 1.7s linear infinite;
+  animation: streamerGoalBubbles var(--goal-duration-bubbles, 1.7s) linear infinite;
 }
 
 .streamer-goal-template-neon {
@@ -1445,7 +1454,7 @@ dd {
 .streamer-goal-template-neon .streamer-goal-preview-bar span::after {
   opacity: 0.45;
   background: linear-gradient(110deg, transparent 0 32%, rgba(255, 255, 255, 0.72) 46%, transparent 60% 100%);
-  animation: streamerGoalShine 2.1s ease-in-out infinite;
+  animation: streamerGoalShine var(--goal-duration-shine, 2.1s) ease-in-out infinite;
 }
 
 .streamer-goal-template-minimal {
@@ -1486,14 +1495,14 @@ dd {
     calc(72px * var(--preview-scale, 1)) calc(15px * var(--preview-scale, 1));
   filter: drop-shadow(0 0 calc(6px * var(--preview-scale, 1)) var(--goal-accent)) drop-shadow(0 0 calc(10px * var(--preview-scale, 1)) #fff);
   opacity: 0.82;
-  animation: streamerGoalTemplateLightning 1.15s linear infinite;
+  animation: streamerGoalTemplateLightning var(--goal-duration-diagonal, 1.15s) linear infinite;
 }
 
 .streamer-goal-template-lightning .streamer-goal-preview-bar span::after {
   opacity: 0.42;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
   transform: translateX(-120%);
-  animation: streamerGoalTemplateLightningSweep 1.7s ease-in-out infinite;
+  animation: streamerGoalTemplateLightningSweep var(--goal-duration-diagonal-sweep, 1.7s) ease-in-out infinite;
 }
 
 .streamer-goal-template-eye {
@@ -1514,7 +1523,7 @@ dd {
   box-shadow: 0 0 calc(12px * var(--preview-scale, 1)) rgba(255, 255, 255, 0.16);
   opacity: 0;
   pointer-events: none;
-  animation: streamerGoalTemplateEyeClose 3.8s ease-in-out infinite;
+  animation: streamerGoalTemplateEyeClose var(--goal-duration-eye, 3.8s) ease-in-out infinite;
 }
 
 .streamer-goal-template-eye .streamer-goal-preview-bar::before {
@@ -1537,7 +1546,7 @@ dd {
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
   opacity: 0.66;
   transform: translateX(-120%);
-  animation: streamerGoalTemplateScanner 2.1s ease-in-out infinite;
+  animation: streamerGoalTemplateScanner var(--goal-duration-scanner, 2.1s) ease-in-out infinite;
 }
 
 .streamer-goal-template-sparks .streamer-goal-preview-bar span::before {
@@ -1551,7 +1560,7 @@ dd {
   background-position: 8% 24%, 46% 70%, 82% 38%;
   background-size: 42px 28px, 54px 34px, 66px 30px;
   opacity: 0.72;
-  animation: streamerGoalTemplateSparks 1.4s linear infinite;
+  animation: streamerGoalTemplateSparks var(--goal-duration-sparks, 1.4s) linear infinite;
 }
 
 .streamer-goal-template-glitch {
@@ -1562,7 +1571,7 @@ dd {
 .streamer-goal-template-glitch .streamer-goal-preview-meta,
 .streamer-goal-template-glitch .streamer-goal-preview-kpis,
 .streamer-goal-template-glitch .streamer-goal-preview-bar b {
-  animation: streamerGoalTemplateGlitch 1.8s steps(2, end) infinite;
+  animation: streamerGoalTemplateGlitch var(--goal-duration-glitch, 1.8s) steps(2, end) infinite;
 }
 
 .streamer-goal-preview[data-animated="false"]::before,
