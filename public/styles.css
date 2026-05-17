@@ -1273,8 +1273,8 @@ dd {
 }
 
 .streamer-goal-live-preview .streamer-goal-preview {
-  width: min(calc(420px + max(0px, var(--goal-padding-left) - 12px) + max(0px, var(--goal-padding-right) - 12px)), 100%);
-  min-height: calc(104px + max(0px, var(--goal-bar-height) - 13px) + max(0px, var(--goal-padding-top) - 10px) + max(0px, var(--goal-padding-bottom) - 9px));
+  width: min(calc(420px + (var(--goal-padding-left) - 10px) + (var(--goal-padding-right) - 10px)), 100%);
+  min-height: max(48px, calc(88px + (var(--goal-bar-height) - 13px) + (var(--goal-padding-top) - 10px) + (var(--goal-padding-bottom) - 10px)));
 }
 
 .streamer-goal-preview {
@@ -1287,9 +1287,9 @@ dd {
   --goal-bar-radius: 7px;
   --goal-glow: 12px;
   --goal-padding-top: 10px;
-  --goal-padding-right: 12px;
-  --goal-padding-bottom: 9px;
-  --goal-padding-left: 12px;
+  --goal-padding-right: 10px;
+  --goal-padding-bottom: 10px;
+  --goal-padding-left: 10px;
   --goal-animation-scale: 1;
   --goal-duration-bubbles: 1.7s;
   --goal-duration-shine: 2.1s;

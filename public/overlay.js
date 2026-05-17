@@ -35,9 +35,9 @@ const streamerMmrGoalStyleDefaults = {
   glow: 12,
   animationSpeed: 1,
   paddingTop: 10,
-  paddingRight: 12,
-  paddingBottom: 9,
-  paddingLeft: 12,
+  paddingRight: 10,
+  paddingBottom: 10,
+  paddingLeft: 10,
   animated: true,
   currentPrefix: '',
   currentSuffix: '',
@@ -903,7 +903,8 @@ function applyStreamerStats(reference, protection, state) {
   const medal = stats.medal;
   const calibrationMedal = String(medal?.id || '') === 'calibration';
   streamerStatsEl.classList.toggle('calibrationMedal', calibrationMedal);
-  const hideDraftSummary = shouldHideStreamerSummaryDuringDraft(state, gameState);
+  const hideDraftSummary = settings.hideStreamerStatsDuringDraft !== false
+    && shouldHideStreamerSummaryDuringDraft(state, gameState);
   if (!hideDraftSummary && settings.showStreamerRankMedal !== false && medal?.id) {
     const src = `/assets/rank-medal-${encodeURIComponent(medal.id)}.png?v=${assetVersion(state)}`;
     if (nodes.medal.getAttribute('src') !== src) nodes.medal.src = src;
@@ -944,7 +945,7 @@ function applyStreamerStats(reference, protection, state) {
   }
   streamerStatsEl.classList.toggle('hasLeaderboard', !nodes.leaderboard.hidden);
   const mmr = Number(stats.currentMmr || settings.streamerMmr || 0);
-  if (settings.showStreamerMmr !== false && mmr > 0) {
+  if (!hideDraftSummary && settings.showStreamerMmr !== false && mmr > 0) {
     setTextContent(nodes.mmr, formatStreamerMmr(mmr));
     nodes.mmr.hidden = false;
   } else {
@@ -1028,17 +1029,17 @@ function applyStreamerMmrGoal(reference, protection, state) {
     ? minimapSide === 'right' ? 385 : 1110
     : minimapSide === 'right' ? 1060 : 390;
   const boxWidth = Math.max(
-    420,
+    300,
     420
-      + Math.max(0, goalStyle.paddingLeft - streamerMmrGoalStyleDefaults.paddingLeft)
-      + Math.max(0, goalStyle.paddingRight - streamerMmrGoalStyleDefaults.paddingRight)
+      + goalStyle.paddingLeft - streamerMmrGoalStyleDefaults.paddingLeft
+      + goalStyle.paddingRight - streamerMmrGoalStyleDefaults.paddingRight
   );
   const boxHeight = Math.max(
-    104,
-    104
-      + Math.max(0, goalStyle.barHeight - streamerMmrGoalStyleDefaults.barHeight)
-      + Math.max(0, goalStyle.paddingTop - streamerMmrGoalStyleDefaults.paddingTop)
-      + Math.max(0, goalStyle.paddingBottom - streamerMmrGoalStyleDefaults.paddingBottom)
+    48,
+    88
+      + goalStyle.barHeight - streamerMmrGoalStyleDefaults.barHeight
+      + goalStyle.paddingTop - streamerMmrGoalStyleDefaults.paddingTop
+      + goalStyle.paddingBottom - streamerMmrGoalStyleDefaults.paddingBottom
   );
   const box = inLiveGame
     ? { left, bottom: 176, width: boxWidth, height: boxHeight }
@@ -1070,7 +1071,7 @@ function shouldShowStreamerStatsInOverlay(state) {
 function shouldHideStreamerSummaryDuringDraft(state, gameState) {
   return state.protection?.draft === true
     || state.protection?.topBar === true
-    || /HERO_SELECTION|DRAFT/i.test(gameState);
+    || /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|DRAFT/i.test(gameState);
 }
 
 function streamerMedalGapOffset(medalId) {

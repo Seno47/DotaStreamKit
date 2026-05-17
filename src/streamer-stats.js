@@ -32,6 +32,7 @@ export function normalizeStreamerStatsConfig(config) {
   config.showStreamerRankMedal = config.showStreamerRankMedal !== false;
   config.showStreamerMmr = config.showStreamerMmr !== false;
   config.showStreamerWinLoss = config.showStreamerWinLoss !== false;
+  config.hideStreamerStatsDuringDraft = config.hideStreamerStatsDuringDraft !== false;
   config.showStreamerMmrGoal = config.showStreamerMmrGoal !== false;
   config.showStreamerMmrGoalProgress = config.showStreamerMmrGoalProgress !== false;
   config.showStreamerMmrGoalCurrent = config.showStreamerMmrGoalCurrent !== false;
@@ -52,9 +53,9 @@ export function normalizeStreamerStatsConfig(config) {
   config.streamerMmrGoalGlow = clampInt(config.streamerMmrGoalGlow, 0, 30, 12);
   config.streamerMmrGoalAnimationSpeed = clampNumber(config.streamerMmrGoalAnimationSpeed, 0.25, 3, 1);
   config.streamerMmrGoalPaddingTop = clampInt(config.streamerMmrGoalPaddingTop, 0, 48, 10);
-  config.streamerMmrGoalPaddingRight = clampInt(config.streamerMmrGoalPaddingRight, 0, 48, 12);
-  config.streamerMmrGoalPaddingBottom = clampInt(config.streamerMmrGoalPaddingBottom, 0, 48, 9);
-  config.streamerMmrGoalPaddingLeft = clampInt(config.streamerMmrGoalPaddingLeft, 0, 48, 12);
+  config.streamerMmrGoalPaddingRight = clampInt(config.streamerMmrGoalPaddingRight, 0, 48, 10);
+  config.streamerMmrGoalPaddingBottom = clampInt(config.streamerMmrGoalPaddingBottom, 0, 48, 10);
+  config.streamerMmrGoalPaddingLeft = clampInt(config.streamerMmrGoalPaddingLeft, 0, 48, 10);
   config.streamerMmrGoalAnimated = config.streamerMmrGoalAnimated !== false;
   config.streamerMmrGoalCurrentPrefix = normalizeGoalTextPart(config.streamerMmrGoalCurrentPrefix, '');
   config.streamerMmrGoalCurrentSuffix = normalizeGoalTextPart(config.streamerMmrGoalCurrentSuffix, '');

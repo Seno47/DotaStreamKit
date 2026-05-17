@@ -288,9 +288,9 @@ body {
   --goal-bar-radius: 7px;
   --goal-glow: 12px;
   --goal-padding-top: 10px;
-  --goal-padding-right: 12px;
-  --goal-padding-bottom: 9px;
-  --goal-padding-left: 12px;
+  --goal-padding-right: 10px;
+  --goal-padding-bottom: 10px;
+  --goal-padding-left: 10px;
   --goal-animation-scale: 1;
   --goal-duration-bubbles: 1.7s;
   --goal-duration-shine: 2.1s;
@@ -312,7 +312,7 @@ body {
   pointer-events: none;
   box-sizing: border-box;
   width: 420px;
-  height: 104px;
+  height: 88px;
   padding: var(--goal-padding-top) var(--goal-padding-right) var(--goal-padding-bottom) var(--goal-padding-left);
   overflow: hidden;
   border: 1px solid var(--goal-accent);
