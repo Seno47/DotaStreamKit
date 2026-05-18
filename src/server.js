@@ -1527,6 +1527,9 @@ function publicStreamerStats() {
   const accountSession = overlayAccountId ? stats.accountSessions?.[String(overlayAccountId)] : null;
   const accountWins = overlayAccountId ? accountSession?.wins || 0 : stats.wins;
   const accountLosses = overlayAccountId ? accountSession?.losses || 0 : stats.losses;
+  const goalRecord = overlayAccountId ? stats.accountGoalRecords?.[String(overlayAccountId)] : null;
+  const goalWins = overlayAccountId ? goalRecord?.wins || 0 : accountWins;
+  const goalLosses = overlayAccountId ? goalRecord?.losses || 0 : accountLosses;
   const medalMmr = settings.streamerMedalSource === 'account' && stats.accountRankTier
     ? null
     : Math.max(0, configuredMmr);
@@ -1545,8 +1548,8 @@ function publicStreamerStats() {
       account,
       accountId: overlayAccountId,
       currentMmr: configuredMmr,
-      wins: accountWins,
-      losses: accountLosses,
+      wins: goalWins,
+      losses: goalLosses,
       winDelta: settings.streamerMmrWinDelta
     }),
     medal: medal ? {

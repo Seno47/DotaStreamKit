@@ -91,6 +91,7 @@ export function normalizeStreamerStatsState(value) {
     accountLeaderboardRank: normalizePositiveInt(state.accountLeaderboardRank),
     accountRankCheckedAt: stringOrNull(state.accountRankCheckedAt),
     accountSessions: normalizeAccountSessions(state.accountSessions),
+    accountGoalRecords: normalizeAccountGoalRecords(state.accountGoalRecords ?? state.accountSessions),
     previousSession: normalizePreviousSession(state.previousSession)
   };
 }
@@ -154,6 +155,15 @@ export function applyStreamerMatchResult(state, config, result, matchId, now = n
     if (result === 'win') accountSession.wins += 1;
     if (result === 'lose') accountSession.losses += 1;
     nextState.accountSessions[accountKey] = accountSession;
+
+    const goalRecord = normalizeAccountGoalRecord(nextState.accountGoalRecords[accountKey]);
+    goalRecord.accountId = streamerAccountId;
+    if (result === 'win') goalRecord.wins += 1;
+    if (result === 'lose') goalRecord.losses += 1;
+    goalRecord.lastMatchId = String(matchId);
+    goalRecord.lastResult = result;
+    goalRecord.lastResultAt = iso;
+    nextState.accountGoalRecords[accountKey] = goalRecord;
   }
 
   let configChanged = false;
@@ -261,6 +271,7 @@ export function resetStreamerSession(state, now = new Date()) {
   next.wins = 0;
   next.losses = 0;
   next.accountSessions = {};
+  next.accountGoalRecords = {};
   next.sessionStartedAt = now.toISOString();
   next.offlineSince = null;
   next.lastMatchId = null;
@@ -328,6 +339,29 @@ function normalizeAccountSessions(value) {
     sessions[String(accountId)] = session;
   }
   return sessions;
+}
+
+function normalizeAccountGoalRecords(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  const records = {};
+  for (const [key, row] of Object.entries(source)) {
+    const accountId = normalizePositiveInt(row?.accountId ?? key);
+    if (!accountId) continue;
+    records[String(accountId)] = normalizeAccountGoalRecord({ ...row, accountId });
+  }
+  return records;
+}
+
+function normalizeAccountGoalRecord(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  return {
+    accountId: normalizePositiveInt(source.accountId),
+    wins: clampInt(source.wins, 0, 10000, 0),
+    losses: clampInt(source.losses, 0, 10000, 0),
+    lastMatchId: stringOrNull(source.lastMatchId),
+    lastResult: ['win', 'lose'].includes(source.lastResult) ? source.lastResult : null,
+    lastResultAt: stringOrNull(source.lastResultAt)
+  };
 }
 
 function normalizeAccountSession(value) {

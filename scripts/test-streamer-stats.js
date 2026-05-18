@@ -5,6 +5,7 @@ import {
   rankMedalFromMmr,
   rankMedalFromRankTier,
   repairMojibakeText,
+  resetStreamerSession,
   restorePreviousStreamerSession,
   updateStreamerSessionPresence
 } from '../src/streamer-stats.js';
@@ -183,10 +184,19 @@ assert.equal(applied.config.streamerAccounts[1].mmr, 5975);
 assert.equal(applied.state.lastStreamerAccountId, 456);
 assert.equal(applied.state.accountSessions['456'].wins, 0);
 assert.equal(applied.state.accountSessions['456'].losses, 1);
+assert.equal(applied.state.accountGoalRecords['456'].wins, 0);
+assert.equal(applied.state.accountGoalRecords['456'].losses, 1);
 assert.equal(applied.state.lastMmrChange, -25);
 
 let session = updateStreamerSessionPresence(
-  { wins: 2, losses: 1, sessionStartedAt: '2026-05-01T08:00:00Z' },
+  {
+    wins: 2,
+    losses: 1,
+    sessionStartedAt: '2026-05-01T08:00:00Z',
+    accountGoalRecords: {
+      456: { accountId: 456, wins: 9, losses: 4 }
+    }
+  },
   false,
   new Date('2026-05-01T09:00:00Z')
 );
@@ -197,11 +207,20 @@ session = updateStreamerSessionPresence(session.state, false, new Date('2026-05-
 assert.equal(session.state.wins, 0);
 assert.equal(session.state.losses, 0);
 assert.deepEqual(session.state.accountSessions, {});
+assert.equal(session.state.accountGoalRecords['456'].wins, 9);
+assert.equal(session.state.accountGoalRecords['456'].losses, 4);
 assert.equal(session.state.previousSession.wins, 2);
 
 const restored = restorePreviousStreamerSession(session.state, new Date('2026-05-01T11:02:00Z'));
 assert.equal(restored.state.wins, 2);
 assert.equal(restored.state.losses, 1);
+assert.equal(restored.state.accountGoalRecords['456'].wins, 9);
+assert.equal(restored.state.accountGoalRecords['456'].losses, 4);
 assert.equal(restored.state.previousSession, null);
+
+const reset = resetStreamerSession(restored.state, new Date('2026-05-01T11:03:00Z'));
+assert.equal(reset.state.wins, 0);
+assert.equal(reset.state.losses, 0);
+assert.deepEqual(reset.state.accountGoalRecords, {});
 
 console.log('Streamer stats checks passed');
