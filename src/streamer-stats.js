@@ -33,6 +33,8 @@ export function normalizeStreamerStatsConfig(config) {
   config.showStreamerMmr = config.showStreamerMmr !== false;
   config.showStreamerWinLoss = config.showStreamerWinLoss !== false;
   if (!['left', 'right', 'bottom', 'top'].includes(config.streamerWinLossPosition)) config.streamerWinLossPosition = 'left';
+  if (!['left', 'right', 'bottom', 'top'].includes(config.streamerWinLossMenuPosition)) config.streamerWinLossMenuPosition = config.streamerWinLossPosition;
+  if (!['left', 'right', 'bottom', 'top'].includes(config.streamerWinLossGamePosition)) config.streamerWinLossGamePosition = config.streamerWinLossPosition;
   config.hideStreamerStatsDuringDraft = config.hideStreamerStatsDuringDraft !== false;
   config.showStreamerMmrGoal = config.showStreamerMmrGoal !== false;
   config.showStreamerMmrGoalProgress = config.showStreamerMmrGoalProgress !== false;
@@ -69,6 +71,8 @@ export function normalizeStreamerStatsConfig(config) {
   config.autoBindStreamerAccounts = true;
   if (!['auto', 'account', 'mmr'].includes(config.streamerMedalSource)) config.streamerMedalSource = 'auto';
   config.streamerMmr = clampInt(config.streamerMmr, 0, 99999, 0);
+  config.streamerGoalMmr = clampInt(config.streamerGoalMmr, 0, 99999, 0);
+  config.streamerGoalStartMmr = clampInt(config.streamerGoalStartMmr, 0, 99999, 0);
   config.streamerMmrWinDelta = clampInt(config.streamerMmrWinDelta, 0, 200, 25);
   config.streamerMmrLossDelta = clampInt(config.streamerMmrLossDelta, 0, 200, 25);
   config.streamerAccounts = normalizeStreamerAccounts(config.streamerAccounts, config.streamerMmr);

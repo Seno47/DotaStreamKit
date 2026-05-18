@@ -319,6 +319,8 @@ const defaultConfig = {
       showStreamerMmr: true,
       showStreamerWinLoss: true,
       streamerWinLossPosition: 'left',
+      streamerWinLossMenuPosition: 'left',
+      streamerWinLossGamePosition: 'left',
       hideStreamerStatsDuringDraft: true,
       showStreamerMmrGoal: true,
       showStreamerMmrGoalProgress: true,
@@ -353,6 +355,8 @@ const defaultConfig = {
       streamerMmrGoalCustomCss: '',
       streamerMedalSource: 'auto',
       streamerMmr: 0,
+      streamerGoalMmr: 0,
+      streamerGoalStartMmr: 0,
       autoUpdateStreamerMmr: true,
       autoBindStreamerAccounts: true,
       streamerAccounts: [],
@@ -1521,7 +1525,7 @@ function publicState() {
 function publicStreamerStats() {
   const stats = normalizeStreamerStatsState(runtime.state.streamerStats);
   const settings = runtime.config.protection.matchIntel || {};
-  const overlayAccountId = stats.streamerAccountId || stats.lastStreamerAccountId;
+  const overlayAccountId = streamerOverlayAccountId(settings, stats);
   const configuredMmr = streamerMmrForAccount(settings, overlayAccountId);
   const account = streamerAccountForAccount(settings, overlayAccountId);
   const accountSession = overlayAccountId ? stats.accountSessions?.[String(overlayAccountId)] : null;
@@ -1545,7 +1549,7 @@ function publicStreamerStats() {
     losses: accountLosses,
     currentMmr: configuredMmr,
     mmrGoal: streamerMmrGoalState({
-      account,
+      account: account || (!overlayAccountId ? fallbackStreamerGoalAccount(settings) : null),
       accountId: overlayAccountId,
       currentMmr: configuredMmr,
       wins: goalWins,
@@ -1567,10 +1571,24 @@ function publicStreamerStats() {
   };
 }
 
+function streamerOverlayAccountId(settings, stats) {
+  const currentAccountId = stats.streamerAccountId || stats.lastStreamerAccountId;
+  if (currentAccountId) return currentAccountId;
+  const accounts = Array.isArray(settings.streamerAccounts) ? settings.streamerAccounts : [];
+  return accounts.length === 1 ? accounts[0]?.accountId || null : null;
+}
+
 function streamerAccountForAccount(settings, accountId) {
   return Array.isArray(settings.streamerAccounts) && accountId
     ? settings.streamerAccounts.find((item) => String(item?.accountId || '') === String(accountId))
     : null;
+}
+
+function fallbackStreamerGoalAccount(settings) {
+  return {
+    goalMmr: settings.streamerGoalMmr,
+    goalStartMmr: settings.streamerGoalStartMmr
+  };
 }
 
 function streamerMmrForAccount(settings, accountId) {
@@ -2356,12 +2374,15 @@ function updateStreamerStatsIdentity(payload) {
   let configChanged = false;
   const accounts = Array.isArray(settings.streamerAccounts) ? settings.streamerAccounts : [];
   if (!accounts.some((item) => String(item?.accountId || '') === String(accountId))) {
+    const inheritFallback = accounts.length === 0;
     settings.streamerAccounts = [
       ...accounts,
       {
         accountId,
         label: streamerAccountLabelFromPayload(payload),
-        mmr: Number(settings.streamerMmr || 0) > 0 ? Math.trunc(Number(settings.streamerMmr || 0)) : 0,
+        mmr: inheritFallback && Number(settings.streamerMmr || 0) > 0 ? Math.trunc(Number(settings.streamerMmr || 0)) : 0,
+        goalMmr: inheritFallback && Number(settings.streamerGoalMmr || 0) > 0 ? Math.trunc(Number(settings.streamerGoalMmr || 0)) : 0,
+        goalStartMmr: inheritFallback && Number(settings.streamerGoalStartMmr || 0) > 0 ? Math.trunc(Number(settings.streamerGoalStartMmr || 0)) : 0,
         boundAt: new Date().toISOString()
       }
     ];

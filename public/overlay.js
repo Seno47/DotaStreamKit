@@ -901,7 +901,12 @@ function applyStreamerStats(reference, protection, state) {
 
   const nodes = ensureStreamerStatsNodes();
   const medal = stats.medal;
-  const winLossPosition = normalizeStreamerWinLossPosition(settings.streamerWinLossPosition);
+  const inLiveGame = !spectatorView && /PRE_GAME|GAME_IN_PROGRESS/i.test(gameState);
+  const legacyWinLossPosition = normalizeStreamerWinLossPosition(settings.streamerWinLossPosition);
+  const winLossPosition = normalizeStreamerWinLossPosition(
+    inLiveGame ? settings.streamerWinLossGamePosition : settings.streamerWinLossMenuPosition,
+    legacyWinLossPosition
+  );
   ['left', 'right', 'bottom', 'top'].forEach((position) => {
     streamerStatsEl.classList.toggle(`winLossPosition-${position}`, winLossPosition === position);
   });
@@ -962,7 +967,6 @@ function applyStreamerStats(reference, protection, state) {
   }
 
   const minimapSide = protection.minimapSide === 'right' ? 'right' : 'left';
-  const inLiveGame = !spectatorView && /PRE_GAME|GAME_IN_PROGRESS/i.test(gameState);
   streamerStatsEl.classList.toggle('mainMenuScale', !inLiveGame);
   streamerStatsEl.classList.toggle('liveGameScale', inLiveGame);
   const left = inLiveGame
@@ -1095,8 +1099,8 @@ function streamerMedalGapOffset(medalId) {
   return Math.max(0, (transparentBottomByMedal[String(medalId)] || 0) - 16);
 }
 
-function normalizeStreamerWinLossPosition(value) {
-  return ['left', 'right', 'bottom', 'top'].includes(value) ? value : 'left';
+function normalizeStreamerWinLossPosition(value, fallback = 'left') {
+  return ['left', 'right', 'bottom', 'top'].includes(value) ? value : fallback;
 }
 
 function streamerStatsBoxSize(winLossPosition, inLiveGame) {

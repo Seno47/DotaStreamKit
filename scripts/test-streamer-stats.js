@@ -31,8 +31,13 @@ assert.equal(rankMedalFromRankTier(80).stars, 0);
 const normalizedConfig = { streamerMmr: 120000 };
 normalizeStreamerStatsConfig(normalizedConfig);
 assert.equal(normalizedConfig.streamerMmr, 99999);
+assert.equal(normalizedConfig.streamerGoalMmr, 0);
+assert.equal(normalizedConfig.streamerGoalStartMmr, 0);
 assert.equal(normalizedConfig.autoBindStreamerAccounts, true);
 assert.equal(normalizedConfig.hideStreamerStatsDuringDraft, true);
+assert.equal(normalizedConfig.streamerWinLossPosition, 'left');
+assert.equal(normalizedConfig.streamerWinLossMenuPosition, 'left');
+assert.equal(normalizedConfig.streamerWinLossGamePosition, 'left');
 assert.equal(normalizedConfig.showStreamerMmrGoal, true);
 assert.equal(normalizedConfig.showStreamerMmrGoalCurrent, true);
 assert.equal(normalizedConfig.showStreamerMmrGoalTarget, true);
@@ -98,10 +103,17 @@ assert.equal(normalizedGoalStyle.showStreamerMmrGoalWinRate, false);
 assert.equal(normalizedGoalStyle.showStreamerMmrGoalEta, false);
 
 const normalizedNewGoalStyle = {
-  streamerMmrGoalTemplate: 'aurora'
+  streamerMmrGoalTemplate: 'aurora',
+  streamerWinLossPosition: 'right',
+  streamerGoalMmr: 7000,
+  streamerGoalStartMmr: 5120
 };
 normalizeStreamerStatsConfig(normalizedNewGoalStyle);
 assert.equal(normalizedNewGoalStyle.streamerMmrGoalTemplate, 'aurora');
+assert.equal(normalizedNewGoalStyle.streamerWinLossMenuPosition, 'right');
+assert.equal(normalizedNewGoalStyle.streamerWinLossGamePosition, 'right');
+assert.equal(normalizedNewGoalStyle.streamerGoalMmr, 7000);
+assert.equal(normalizedNewGoalStyle.streamerGoalStartMmr, 5120);
 
 const normalizedAccountsConfig = {
   streamerAccounts: [
