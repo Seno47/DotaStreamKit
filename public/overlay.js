@@ -991,7 +991,13 @@ function applyStreamerMmrGoal(reference, protection, state) {
     : (protection.matchIntel || {});
   const goal = state.streamerStats?.mmrGoal || null;
   const gameState = String(state.gsi?.gameState || '');
-  if (!settings.showStreamerStats || !settings.showStreamerMmrGoal || !goal || !shouldShowStreamerStatsInOverlay(state)) {
+  if (
+    !settings.showStreamerStats
+    || !settings.showStreamerMmrGoal
+    || !goal
+    || !shouldShowStreamerStatsInOverlay(state)
+    || !shouldShowStreamerMmrGoalForCurrentState(settings, state, gameState, spectatorView)
+  ) {
     setVisible(streamerMmrGoalEl, false);
     return;
   }
@@ -1081,6 +1087,16 @@ function shouldHideStreamerSummaryDuringDraft(state, gameState) {
   return state.protection?.draft === true
     || state.protection?.topBar === true
     || /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|DRAFT/i.test(gameState);
+}
+
+function shouldShowStreamerMmrGoalForCurrentState(settings, state, gameState, spectatorView) {
+  if (!spectatorView && /PRE_GAME|GAME_IN_PROGRESS/i.test(gameState)) {
+    return settings.showStreamerMmrGoalInGame !== false;
+  }
+  if (shouldHideStreamerSummaryDuringDraft(state, gameState)) {
+    return settings.showStreamerMmrGoalDuringDraft !== false;
+  }
+  return settings.showStreamerMmrGoalInMenu !== false;
 }
 
 function streamerMedalGapOffset(medalId) {

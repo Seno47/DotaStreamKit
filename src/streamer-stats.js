@@ -37,6 +37,9 @@ export function normalizeStreamerStatsConfig(config) {
   if (!['left', 'right', 'bottom', 'top'].includes(config.streamerWinLossGamePosition)) config.streamerWinLossGamePosition = config.streamerWinLossPosition;
   config.hideStreamerStatsDuringDraft = config.hideStreamerStatsDuringDraft !== false;
   config.showStreamerMmrGoal = config.showStreamerMmrGoal !== false;
+  config.showStreamerMmrGoalInMenu = config.showStreamerMmrGoalInMenu !== false;
+  config.showStreamerMmrGoalDuringDraft = config.showStreamerMmrGoalDuringDraft !== false;
+  config.showStreamerMmrGoalInGame = config.showStreamerMmrGoalInGame !== false;
   config.showStreamerMmrGoalProgress = config.showStreamerMmrGoalProgress !== false;
   config.showStreamerMmrGoalCurrent = config.showStreamerMmrGoalCurrent !== false;
   config.showStreamerMmrGoalTarget = config.showStreamerMmrGoalTarget !== false;

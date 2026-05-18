@@ -39,6 +39,9 @@ assert.equal(normalizedConfig.streamerWinLossPosition, 'left');
 assert.equal(normalizedConfig.streamerWinLossMenuPosition, 'left');
 assert.equal(normalizedConfig.streamerWinLossGamePosition, 'left');
 assert.equal(normalizedConfig.showStreamerMmrGoal, true);
+assert.equal(normalizedConfig.showStreamerMmrGoalInMenu, true);
+assert.equal(normalizedConfig.showStreamerMmrGoalDuringDraft, true);
+assert.equal(normalizedConfig.showStreamerMmrGoalInGame, true);
 assert.equal(normalizedConfig.showStreamerMmrGoalCurrent, true);
 assert.equal(normalizedConfig.showStreamerMmrGoalTarget, true);
 assert.equal(normalizedConfig.showStreamerMmrGoalRecord, true);
@@ -74,6 +77,9 @@ const normalizedGoalStyle = {
   streamerMmrGoalDeltaPrefix: 'Left ',
   streamerMmrGoalDeltaSuffix: ' mmr',
   streamerMmrGoalCustomCss: '[data-goal-part="fill"] { animation: pulse 1s infinite; }',
+  showStreamerMmrGoalInMenu: false,
+  showStreamerMmrGoalDuringDraft: false,
+  showStreamerMmrGoalInGame: false,
   showStreamerMmrGoalRecord: false,
   showStreamerMmrGoalWinRate: false,
   showStreamerMmrGoalEta: false
@@ -98,6 +104,9 @@ assert.equal(normalizedGoalStyle.streamerMmrGoalTargetSuffix, ' pts');
 assert.equal(normalizedGoalStyle.streamerMmrGoalDeltaPrefix, 'Left ');
 assert.equal(normalizedGoalStyle.streamerMmrGoalDeltaSuffix, ' mmr');
 assert.equal(normalizedGoalStyle.streamerMmrGoalCustomCss, '[data-goal-part="fill"] { animation: pulse 1s infinite; }');
+assert.equal(normalizedGoalStyle.showStreamerMmrGoalInMenu, false);
+assert.equal(normalizedGoalStyle.showStreamerMmrGoalDuringDraft, false);
+assert.equal(normalizedGoalStyle.showStreamerMmrGoalInGame, false);
 assert.equal(normalizedGoalStyle.showStreamerMmrGoalRecord, false);
 assert.equal(normalizedGoalStyle.showStreamerMmrGoalWinRate, false);
 assert.equal(normalizedGoalStyle.showStreamerMmrGoalEta, false);

@@ -165,6 +165,9 @@ const els = {
   streamerWinLossGamePosition: document.querySelector('#streamerWinLossGamePosition'),
   hideStreamerStatsDuringDraft: document.querySelector('#hideStreamerStatsDuringDraft'),
   showStreamerMmrGoal: document.querySelector('#showStreamerMmrGoal'),
+  showStreamerMmrGoalInMenu: document.querySelector('#showStreamerMmrGoalInMenu'),
+  showStreamerMmrGoalDuringDraft: document.querySelector('#showStreamerMmrGoalDuringDraft'),
+  showStreamerMmrGoalInGame: document.querySelector('#showStreamerMmrGoalInGame'),
   showStreamerMmrGoalProgress: document.querySelector('#showStreamerMmrGoalProgress'),
   showStreamerMmrGoalBackground: document.querySelector('#showStreamerMmrGoalBackground'),
   showStreamerMmrGoalCurrent: document.querySelector('#showStreamerMmrGoalCurrent'),
@@ -864,6 +867,9 @@ const translations = {
     streamerWinLossRight: '\u0421\u043f\u0440\u0430\u0432\u0430',
     streamerWinLossBottom: '\u0421\u043d\u0438\u0437\u0443',
     streamerWinLossTop: '\u0421\u0432\u0435\u0440\u0445\u0443',
+    showStreamerMmrGoalInMenu: '\u041f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u0442\u044c \u0432 \u043c\u0435\u043d\u044e',
+    showStreamerMmrGoalDuringDraft: '\u041f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u0442\u044c \u043d\u0430 \u0434\u0440\u0430\u0444\u0442\u0435',
+    showStreamerMmrGoalInGame: '\u041f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u0442\u044c \u0432\u043e \u0432\u0440\u0435\u043c\u044f \u043c\u0430\u0442\u0447\u0430',
     hideStreamerStatsDuringDraft: 'Скрывать на драфте',
     showStreamerMmrGoal: 'Цель MMR в overlay',
     showStreamerMmrGoalProgress: 'Полоска прогресса цели',
@@ -1291,6 +1297,9 @@ const translations = {
     streamerWinLossTop: 'Top',
     hideStreamerStatsDuringDraft: 'Hide during draft',
     showStreamerMmrGoal: 'MMR goal overlay',
+    showStreamerMmrGoalInMenu: 'Show in menu',
+    showStreamerMmrGoalDuringDraft: 'Show during draft',
+    showStreamerMmrGoalInGame: 'Show during match',
     showStreamerMmrGoalProgress: 'Goal progress bar',
     showStreamerMmrGoalBackground: 'Background and frame',
     showStreamerMmrGoalCurrent: 'Start / current MMR',
@@ -1809,6 +1818,9 @@ function applyLanguage(config) {
   });
   setLabelText(els.hideStreamerStatsDuringDraft.closest('label'), t('hideStreamerStatsDuringDraft'));
   setLabelText(els.showStreamerMmrGoal.closest('label'), t('showStreamerMmrGoal'));
+  setLabelText(els.showStreamerMmrGoalInMenu.closest('label'), t('showStreamerMmrGoalInMenu'));
+  setLabelText(els.showStreamerMmrGoalDuringDraft.closest('label'), t('showStreamerMmrGoalDuringDraft'));
+  setLabelText(els.showStreamerMmrGoalInGame.closest('label'), t('showStreamerMmrGoalInGame'));
   setLabelText(els.showStreamerMmrGoalProgress.closest('label'), t('showStreamerMmrGoalProgress'));
   setLabelText(els.showStreamerMmrGoalBackground.closest('label'), t('showStreamerMmrGoalBackground'));
   setLabelText(els.showStreamerMmrGoalCurrent.closest('label'), t('showStreamerMmrGoalCurrent'));
@@ -2291,6 +2303,9 @@ function render(data) {
   els.streamerWinLossGamePosition.value = normalizeStreamerWinLossPosition(matchIntel.streamerWinLossGamePosition, legacyWinLossPosition);
   els.hideStreamerStatsDuringDraft.checked = matchIntel.hideStreamerStatsDuringDraft !== false;
   els.showStreamerMmrGoal.checked = matchIntel.showStreamerMmrGoal !== false;
+  els.showStreamerMmrGoalInMenu.checked = matchIntel.showStreamerMmrGoalInMenu !== false;
+  els.showStreamerMmrGoalDuringDraft.checked = matchIntel.showStreamerMmrGoalDuringDraft !== false;
+  els.showStreamerMmrGoalInGame.checked = matchIntel.showStreamerMmrGoalInGame !== false;
   els.showStreamerMmrGoalProgress.checked = matchIntel.showStreamerMmrGoalProgress !== false;
   els.showStreamerMmrGoalBackground.checked = matchIntel.showStreamerMmrGoalBackground !== false;
   els.showStreamerMmrGoalCurrent.checked = matchIntel.showStreamerMmrGoalCurrent !== false;
@@ -3859,6 +3874,9 @@ function scheduleOverlayPositionSave() {
 function streamerGoalMatchIntelPatchFromForm() {
   return {
     showStreamerMmrGoal: els.showStreamerMmrGoal.checked,
+    showStreamerMmrGoalInMenu: els.showStreamerMmrGoalInMenu.checked,
+    showStreamerMmrGoalDuringDraft: els.showStreamerMmrGoalDuringDraft.checked,
+    showStreamerMmrGoalInGame: els.showStreamerMmrGoalInGame.checked,
     showStreamerMmrGoalProgress: els.showStreamerMmrGoalProgress.checked,
     showStreamerMmrGoalBackground: els.showStreamerMmrGoalBackground.checked,
     showStreamerMmrGoalCurrent: els.showStreamerMmrGoalCurrent.checked,
@@ -4052,6 +4070,9 @@ els.spectatorGameLabelTemplate?.addEventListener('change', () => saveProtection(
 
 [
   els.showStreamerMmrGoal,
+  els.showStreamerMmrGoalInMenu,
+  els.showStreamerMmrGoalDuringDraft,
+  els.showStreamerMmrGoalInGame,
   els.showStreamerMmrGoalProgress,
   els.showStreamerMmrGoalBackground,
   els.showStreamerMmrGoalCurrent,
@@ -4271,6 +4292,9 @@ function protectionMatchIntelFromForm() {
     streamerWinLossGamePosition: els.streamerWinLossGamePosition.value,
     hideStreamerStatsDuringDraft: els.hideStreamerStatsDuringDraft.checked,
     showStreamerMmrGoal: els.showStreamerMmrGoal.checked,
+    showStreamerMmrGoalInMenu: els.showStreamerMmrGoalInMenu.checked,
+    showStreamerMmrGoalDuringDraft: els.showStreamerMmrGoalDuringDraft.checked,
+    showStreamerMmrGoalInGame: els.showStreamerMmrGoalInGame.checked,
     showStreamerMmrGoalProgress: els.showStreamerMmrGoalProgress.checked,
     showStreamerMmrGoalCurrent: els.showStreamerMmrGoalCurrent.checked,
     showStreamerMmrGoalTarget: els.showStreamerMmrGoalTarget.checked,
@@ -4338,6 +4362,9 @@ function updateMatchIntelFieldVisibility() {
   els.streamerWinLossGamePositionWrap.hidden = !streamerStatsEnabled || !els.showStreamerWinLoss.checked;
   els.hideStreamerStatsDuringDraft.closest('label').hidden = !streamerStatsEnabled;
   els.showStreamerMmrGoal.closest('label').hidden = !streamerStatsEnabled;
+  els.showStreamerMmrGoalInMenu.closest('label').hidden = !streamerGoalEnabled;
+  els.showStreamerMmrGoalDuringDraft.closest('label').hidden = !streamerGoalEnabled;
+  els.showStreamerMmrGoalInGame.closest('label').hidden = !streamerGoalEnabled;
   els.showStreamerMmrGoalProgress.closest('label').hidden = !streamerGoalEnabled;
   els.showStreamerMmrGoalBackground.closest('label').hidden = !streamerGoalEnabled;
   els.showStreamerMmrGoalCurrent.closest('label').hidden = !streamerGoalEnabled;
