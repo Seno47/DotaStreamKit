@@ -318,6 +318,7 @@ const defaultConfig = {
       showStreamerRankMedal: true,
       showStreamerMmr: true,
       showStreamerWinLoss: true,
+      streamerWinLossPosition: 'left',
       hideStreamerStatsDuringDraft: true,
       showStreamerMmrGoal: true,
       showStreamerMmrGoalProgress: true,

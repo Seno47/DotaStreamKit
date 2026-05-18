@@ -901,6 +901,10 @@ function applyStreamerStats(reference, protection, state) {
 
   const nodes = ensureStreamerStatsNodes();
   const medal = stats.medal;
+  const winLossPosition = normalizeStreamerWinLossPosition(settings.streamerWinLossPosition);
+  ['left', 'right', 'bottom', 'top'].forEach((position) => {
+    streamerStatsEl.classList.toggle(`winLossPosition-${position}`, winLossPosition === position);
+  });
   const calibrationMedal = String(medal?.id || '') === 'calibration';
   streamerStatsEl.classList.toggle('calibrationMedal', calibrationMedal);
   const hideDraftSummary = settings.hideStreamerStatsDuringDraft !== false
@@ -964,9 +968,10 @@ function applyStreamerStats(reference, protection, state) {
   const left = inLiveGame
     ? minimapSide === 'right' ? 302 : 1390
     : minimapSide === 'right' ? 1500 : 1276;
+  const size = streamerStatsBoxSize(winLossPosition, inLiveGame);
   const box = inLiveGame
-    ? { left, bottom: 8, width: 260, height: 150 }
-    : { left, top: 18, width: 170, height: 116 };
+    ? { left, bottom: 8, width: size.width, height: size.height }
+    : { left, top: 18, width: size.width, height: size.height };
   const offset = inLiveGame
     ? settings.overlayPositions?.streamerStatsGame
     : settings.overlayPositions?.streamerStatsMenu;
@@ -1088,6 +1093,20 @@ function streamerMedalGapOffset(medalId) {
     calibration: 0
   };
   return Math.max(0, (transparentBottomByMedal[String(medalId)] || 0) - 16);
+}
+
+function normalizeStreamerWinLossPosition(value) {
+  return ['left', 'right', 'bottom', 'top'].includes(value) ? value : 'left';
+}
+
+function streamerStatsBoxSize(winLossPosition, inLiveGame) {
+  if (winLossPosition === 'right') {
+    return inLiveGame ? { width: 330, height: 150 } : { width: 250, height: 116 };
+  }
+  if (winLossPosition === 'top' || winLossPosition === 'bottom') {
+    return inLiveGame ? { width: 260, height: 178 } : { width: 170, height: 150 };
+  }
+  return inLiveGame ? { width: 260, height: 150 } : { width: 170, height: 116 };
 }
 
 function ensureStreamerStatsNodes() {

@@ -159,6 +159,8 @@ const els = {
   showStreamerRankMedal: document.querySelector('#showStreamerRankMedal'),
   showStreamerMmr: document.querySelector('#showStreamerMmr'),
   showStreamerWinLoss: document.querySelector('#showStreamerWinLoss'),
+  streamerWinLossPositionWrap: document.querySelector('#streamerWinLossPositionWrap'),
+  streamerWinLossPosition: document.querySelector('#streamerWinLossPosition'),
   hideStreamerStatsDuringDraft: document.querySelector('#hideStreamerStatsDuringDraft'),
   showStreamerMmrGoal: document.querySelector('#showStreamerMmrGoal'),
   showStreamerMmrGoalProgress: document.querySelector('#showStreamerMmrGoalProgress'),
@@ -854,6 +856,11 @@ const translations = {
     showStreamerRankMedal: 'Медаль ранга',
     showStreamerMmr: 'MMR',
     showStreamerWinLoss: 'Win-Lose',
+    streamerWinLossPosition: '\u041f\u043e\u043b\u043e\u0436\u0435\u043d\u0438\u0435 Win-Lose',
+    streamerWinLossLeft: '\u0421\u043b\u0435\u0432\u0430',
+    streamerWinLossRight: '\u0421\u043f\u0440\u0430\u0432\u0430',
+    streamerWinLossBottom: '\u0421\u043d\u0438\u0437\u0443',
+    streamerWinLossTop: '\u0421\u0432\u0435\u0440\u0445\u0443',
     hideStreamerStatsDuringDraft: 'Скрывать на драфте',
     showStreamerMmrGoal: 'Цель MMR в overlay',
     showStreamerMmrGoalProgress: 'Полоска прогресса цели',
@@ -1273,6 +1280,11 @@ const translations = {
     showStreamerRankMedal: 'Rank medal',
     showStreamerMmr: 'MMR',
     showStreamerWinLoss: 'Win-Lose',
+    streamerWinLossPosition: 'Win-Lose position',
+    streamerWinLossLeft: 'Left',
+    streamerWinLossRight: 'Right',
+    streamerWinLossBottom: 'Bottom',
+    streamerWinLossTop: 'Top',
     hideStreamerStatsDuringDraft: 'Hide during draft',
     showStreamerMmrGoal: 'MMR goal overlay',
     showStreamerMmrGoalProgress: 'Goal progress bar',
@@ -1783,6 +1795,11 @@ function applyLanguage(config) {
   setLabelText(els.showStreamerRankMedal.closest('label'), t('showStreamerRankMedal'));
   setLabelText(els.showStreamerMmr.closest('label'), t('showStreamerMmr'));
   setLabelText(els.showStreamerWinLoss.closest('label'), t('showStreamerWinLoss'));
+  setLabelText(els.streamerWinLossPositionWrap, t('streamerWinLossPosition'));
+  setOptionText(els.streamerWinLossPosition, 'left', t('streamerWinLossLeft'));
+  setOptionText(els.streamerWinLossPosition, 'right', t('streamerWinLossRight'));
+  setOptionText(els.streamerWinLossPosition, 'bottom', t('streamerWinLossBottom'));
+  setOptionText(els.streamerWinLossPosition, 'top', t('streamerWinLossTop'));
   setLabelText(els.hideStreamerStatsDuringDraft.closest('label'), t('hideStreamerStatsDuringDraft'));
   setLabelText(els.showStreamerMmrGoal.closest('label'), t('showStreamerMmrGoal'));
   setLabelText(els.showStreamerMmrGoalProgress.closest('label'), t('showStreamerMmrGoalProgress'));
@@ -2262,6 +2279,9 @@ function render(data) {
   els.showStreamerRankMedal.checked = matchIntel.showStreamerRankMedal !== false;
   els.showStreamerMmr.checked = matchIntel.showStreamerMmr !== false;
   els.showStreamerWinLoss.checked = matchIntel.showStreamerWinLoss !== false;
+  els.streamerWinLossPosition.value = ['left', 'right', 'bottom', 'top'].includes(matchIntel.streamerWinLossPosition)
+    ? matchIntel.streamerWinLossPosition
+    : 'left';
   els.hideStreamerStatsDuringDraft.checked = matchIntel.hideStreamerStatsDuringDraft !== false;
   els.showStreamerMmrGoal.checked = matchIntel.showStreamerMmrGoal !== false;
   els.showStreamerMmrGoalProgress.checked = matchIntel.showStreamerMmrGoalProgress !== false;
@@ -3996,6 +4016,7 @@ els.spectatorGameLabelTemplate?.addEventListener('change', () => saveProtection(
   els.showStreamerRankMedal,
   els.showStreamerMmr,
   els.showStreamerWinLoss,
+  els.streamerWinLossPosition,
   els.hideStreamerStatsDuringDraft,
   els.streamerMedalSource,
   els.autoUpdateStreamerMmr
@@ -4222,6 +4243,7 @@ function protectionMatchIntelFromForm() {
     showStreamerRankMedal: els.showStreamerRankMedal.checked,
     showStreamerMmr: els.showStreamerMmr.checked,
     showStreamerWinLoss: els.showStreamerWinLoss.checked,
+    streamerWinLossPosition: els.streamerWinLossPosition.value,
     hideStreamerStatsDuringDraft: els.hideStreamerStatsDuringDraft.checked,
     showStreamerMmrGoal: els.showStreamerMmrGoal.checked,
     showStreamerMmrGoalProgress: els.showStreamerMmrGoalProgress.checked,
@@ -4281,6 +4303,7 @@ function updateMatchIntelFieldVisibility() {
   els.showStreamerRankMedal.closest('label').hidden = !streamerStatsEnabled;
   els.showStreamerMmr.closest('label').hidden = !streamerStatsEnabled;
   els.showStreamerWinLoss.closest('label').hidden = !streamerStatsEnabled;
+  els.streamerWinLossPositionWrap.hidden = !streamerStatsEnabled || !els.showStreamerWinLoss.checked;
   els.hideStreamerStatsDuringDraft.closest('label').hidden = !streamerStatsEnabled;
   els.showStreamerMmrGoal.closest('label').hidden = !streamerStatsEnabled;
   els.showStreamerMmrGoalProgress.closest('label').hidden = !streamerGoalEnabled;

@@ -32,6 +32,7 @@ export function normalizeStreamerStatsConfig(config) {
   config.showStreamerRankMedal = config.showStreamerRankMedal !== false;
   config.showStreamerMmr = config.showStreamerMmr !== false;
   config.showStreamerWinLoss = config.showStreamerWinLoss !== false;
+  if (!['left', 'right', 'bottom', 'top'].includes(config.streamerWinLossPosition)) config.streamerWinLossPosition = 'left';
   config.hideStreamerStatsDuringDraft = config.hideStreamerStatsDuringDraft !== false;
   config.showStreamerMmrGoal = config.showStreamerMmrGoal !== false;
   config.showStreamerMmrGoalProgress = config.showStreamerMmrGoalProgress !== false;

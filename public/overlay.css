@@ -278,6 +278,15 @@ body {
   --streamer-medal-gap-offset: 0px;
 }
 
+#streamerStats.winLossPosition-right {
+  grid-template-columns: auto auto auto;
+}
+
+#streamerStats.winLossPosition-top,
+#streamerStats.winLossPosition-bottom {
+  grid-template-columns: auto;
+}
+
 #streamerMmrGoal {
   --goal-fill-start: #63c9ff;
   --goal-fill-end: #8df0a1;
@@ -891,6 +900,11 @@ body {
   margin-bottom: -18px;
 }
 
+#streamerStats.winLossPosition-top .streamerStatsMedalWrap,
+#streamerStats.winLossPosition-bottom .streamerStatsMedalWrap {
+  grid-column: 1;
+}
+
 .streamerStatsMedal {
   width: 105px;
   height: 105px;
@@ -931,6 +945,11 @@ body {
   margin-bottom: -1px;
 }
 
+#streamerStats.winLossPosition-top .streamerStatsLeaderboard,
+#streamerStats.winLossPosition-bottom .streamerStatsLeaderboard {
+  grid-column: 1;
+}
+
 .streamerStatsMmrLine {
   grid-column: 2;
   grid-row: 3;
@@ -939,6 +958,11 @@ body {
   justify-content: center;
   gap: 5px;
   min-height: 22px;
+}
+
+#streamerStats.winLossPosition-top .streamerStatsMmrLine,
+#streamerStats.winLossPosition-bottom .streamerStatsMmrLine {
+  grid-column: 1;
 }
 
 #streamerStats:not(.hasLeaderboard) .streamerStatsMmrLine,
@@ -966,11 +990,82 @@ body {
   line-height: 1;
 }
 
+#streamerStats.winLossPosition-right .streamerStatsWinLoss {
+  grid-column: 3;
+}
+
+#streamerStats.winLossPosition-top .streamerStatsWinLoss {
+  grid-column: 1;
+  grid-row: 1;
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+
+#streamerStats.winLossPosition-top .streamerStatsMedalWrap {
+  grid-row: 2;
+}
+
+#streamerStats.winLossPosition-top .streamerStatsLeaderboard {
+  grid-row: 3;
+}
+
+#streamerStats.winLossPosition-top .streamerStatsMmrLine {
+  grid-row: 4;
+}
+
+#streamerStats.winLossPosition-bottom .streamerStatsWinLoss {
+  grid-column: 1;
+  grid-row: 4;
+  margin-top: 4px;
+}
+
 #streamerStats.mainMenuScale .streamerStatsWinLoss {
   grid-row: 1;
   align-self: start;
   font-size: 33.25px;
   margin-top: 0;
+}
+
+#streamerStats.mainMenuScale.winLossPosition-right .streamerStatsWinLoss {
+  grid-column: 3;
+}
+
+#streamerStats.mainMenuScale.winLossPosition-top .streamerStatsWinLoss,
+#streamerStats.mainMenuScale.winLossPosition-bottom .streamerStatsWinLoss {
+  grid-column: 1;
+  align-self: center;
+  font-size: 24px;
+}
+
+#streamerStats.mainMenuScale.winLossPosition-top .streamerStatsWinLoss {
+  grid-row: 1;
+  margin-bottom: 4px;
+}
+
+#streamerStats.mainMenuScale.winLossPosition-bottom .streamerStatsWinLoss {
+  grid-row: 4;
+  margin-top: 5px;
+}
+
+#streamerStats.mainMenuScale.winLossPosition-bottom .streamerStatsMedalWrap {
+  grid-row: 1;
+}
+
+#streamerStats.mainMenuScale.winLossPosition-bottom .streamerStatsLeaderboard {
+  grid-row: 2;
+}
+
+#streamerStats.mainMenuScale.winLossPosition-bottom .streamerStatsMmrLine {
+  grid-row: 3;
+}
+
+#streamerStats.winLossPosition-top:not(.hasLeaderboard) .streamerStatsWinLoss,
+#streamerStats.winLossPosition-bottom:not(.hasLeaderboard) .streamerStatsWinLoss {
+  margin-top: 0;
+}
+
+#streamerStats.winLossPosition-bottom:not(.hasLeaderboard) .streamerStatsWinLoss {
+  margin-top: 4px;
 }
 
 .streamerStatsWinNumber,
