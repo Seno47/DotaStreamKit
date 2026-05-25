@@ -26,6 +26,7 @@ import {
   normalizeStreamerStatsConfig,
   normalizeStreamerStatsState,
   repairMojibakeText,
+  resetStreamerGoalRecord,
   resetStreamerSession,
   restorePreviousStreamerSession,
   selectStreamerMedal,
@@ -645,6 +646,7 @@ const server = createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/api/updates/install') return await installUpdateApi(req, res);
     if (req.method === 'POST' && url.pathname === '/api/protection') return await updateProtection(req, res);
     if (req.method === 'POST' && url.pathname === '/api/streamer-stats/reset') return await resetStreamerStatsApi(res);
+    if (req.method === 'POST' && url.pathname === '/api/streamer-stats/goal-reset') return await resetStreamerGoalRecordApi(req, res);
     if (req.method === 'POST' && url.pathname === '/api/streamer-stats/restore') return await restoreStreamerStatsApi(res);
     if (req.method === 'POST' && url.pathname === '/gsi/dota2') return await handleGsi(req, res);
     if (req.method === 'GET' && url.pathname === '/api/dota/detect') return await detectDotaApi(res);
@@ -1535,8 +1537,8 @@ function publicStreamerStats() {
   const accountWins = overlayAccountId ? accountSession?.wins || 0 : stats.wins;
   const accountLosses = overlayAccountId ? accountSession?.losses || 0 : stats.losses;
   const goalRecord = overlayAccountId ? stats.accountGoalRecords?.[String(overlayAccountId)] : null;
-  const goalWins = overlayAccountId ? goalRecord?.wins || 0 : accountWins;
-  const goalLosses = overlayAccountId ? goalRecord?.losses || 0 : accountLosses;
+  const goalWins = overlayAccountId ? goalRecord?.wins || 0 : 0;
+  const goalLosses = overlayAccountId ? goalRecord?.losses || 0 : 0;
   const medalMmr = settings.streamerMedalSource === 'account' && stats.accountRankTier
     ? null
     : Math.max(0, configuredMmr);
@@ -2175,6 +2177,15 @@ async function updateProtection(req, res) {
 
 async function resetStreamerStatsApi(res) {
   const result = resetStreamerSession(runtime.state.streamerStats);
+  runtime.state.streamerStats = result.state;
+  await persistState();
+  broadcast();
+  sendJson(res, publicState());
+}
+
+async function resetStreamerGoalRecordApi(req, res) {
+  const body = await readBody(req);
+  const result = resetStreamerGoalRecord(runtime.state.streamerStats, body.accountId);
   runtime.state.streamerStats = result.state;
   await persistState();
   broadcast();

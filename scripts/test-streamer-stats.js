@@ -5,6 +5,7 @@ import {
   rankMedalFromMmr,
   rankMedalFromRankTier,
   repairMojibakeText,
+  resetStreamerGoalRecord,
   resetStreamerSession,
   restorePreviousStreamerSession,
   updateStreamerSessionPresence
@@ -242,6 +243,11 @@ assert.equal(restored.state.previousSession, null);
 const reset = resetStreamerSession(restored.state, new Date('2026-05-01T11:03:00Z'));
 assert.equal(reset.state.wins, 0);
 assert.equal(reset.state.losses, 0);
-assert.deepEqual(reset.state.accountGoalRecords, {});
+assert.equal(reset.state.accountGoalRecords['456'].wins, 9);
+assert.equal(reset.state.accountGoalRecords['456'].losses, 4);
+
+const goalReset = resetStreamerGoalRecord(reset.state, 456);
+assert.equal(goalReset.state.accountGoalRecords['456'], undefined);
+assert.equal(goalReset.state.previousSession.wins, 2);
 
 console.log('Streamer stats checks passed');

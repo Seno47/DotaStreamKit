@@ -278,7 +278,6 @@ export function resetStreamerSession(state, now = new Date()) {
   next.wins = 0;
   next.losses = 0;
   next.accountSessions = {};
-  next.accountGoalRecords = {};
   next.sessionStartedAt = now.toISOString();
   next.offlineSince = null;
   next.lastMatchId = null;
@@ -286,6 +285,16 @@ export function resetStreamerSession(state, now = new Date()) {
   next.lastMmrChange = 0;
   next.lastResultAt = null;
   return { state: next, changed: true };
+}
+
+export function resetStreamerGoalRecord(state, accountId) {
+  const next = normalizeStreamerStatsState(state);
+  const targetAccountId = normalizePositiveInt(accountId ?? next.streamerAccountId);
+  if (!targetAccountId) return { state: next, changed: false };
+  const key = String(targetAccountId);
+  const hadRecord = Boolean(next.accountGoalRecords[key]);
+  delete next.accountGoalRecords[key];
+  return { state: next, changed: hadRecord };
 }
 
 function normalizePreviousSession(value) {
