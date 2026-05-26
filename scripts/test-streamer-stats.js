@@ -55,7 +55,7 @@ assert.equal(normalizedConfig.streamerMmrGoalPaddingTop, 10);
 assert.equal(normalizedConfig.streamerMmrGoalPaddingRight, 10);
 assert.equal(normalizedConfig.streamerMmrGoalPaddingBottom, 10);
 assert.equal(normalizedConfig.streamerMmrGoalPaddingLeft, 10);
-assert.equal(normalizedConfig.streamerMmrGoalStartPrefix, 'START ');
+assert.equal(normalizedConfig.streamerMmrGoalStartPrefix, '');
 assert.equal(normalizedConfig.streamerMmrGoalStartSuffix, ' → ');
 assert.equal(normalizedConfig.streamerMmrGoalTargetPrefix, '/ ');
 assert.equal(normalizedConfig.streamerMmrGoalDeltaPrefix, '+');

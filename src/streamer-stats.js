@@ -64,7 +64,7 @@ export function normalizeStreamerStatsConfig(config) {
   config.streamerMmrGoalPaddingBottom = clampInt(config.streamerMmrGoalPaddingBottom, 0, 48, 10);
   config.streamerMmrGoalPaddingLeft = clampInt(config.streamerMmrGoalPaddingLeft, 0, 48, 10);
   config.streamerMmrGoalAnimated = config.streamerMmrGoalAnimated !== false;
-  config.streamerMmrGoalStartPrefix = normalizeGoalTextPart(config.streamerMmrGoalStartPrefix, 'START ');
+  config.streamerMmrGoalStartPrefix = normalizeGoalTextPart(config.streamerMmrGoalStartPrefix, '');
   config.streamerMmrGoalStartSuffix = normalizeGoalTextPart(config.streamerMmrGoalStartSuffix, ' → ');
   config.streamerMmrGoalCurrentPrefix = normalizeGoalTextPart(config.streamerMmrGoalCurrentPrefix, '');
   config.streamerMmrGoalCurrentSuffix = normalizeGoalTextPart(config.streamerMmrGoalCurrentSuffix, '');

@@ -492,7 +492,7 @@ const streamerMmrGoalStyleDefaults = {
   paddingBottom: 10,
   paddingLeft: 10,
   animated: true,
-  startPrefix: 'START ',
+  startPrefix: '',
   startSuffix: ' → ',
   currentPrefix: '',
   currentSuffix: '',
