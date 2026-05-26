@@ -55,6 +55,8 @@ assert.equal(normalizedConfig.streamerMmrGoalPaddingTop, 10);
 assert.equal(normalizedConfig.streamerMmrGoalPaddingRight, 10);
 assert.equal(normalizedConfig.streamerMmrGoalPaddingBottom, 10);
 assert.equal(normalizedConfig.streamerMmrGoalPaddingLeft, 10);
+assert.equal(normalizedConfig.streamerMmrGoalStartPrefix, 'START ');
+assert.equal(normalizedConfig.streamerMmrGoalStartSuffix, ' → ');
 assert.equal(normalizedConfig.streamerMmrGoalTargetPrefix, '/ ');
 assert.equal(normalizedConfig.streamerMmrGoalDeltaPrefix, '+');
 assert.equal(normalizedConfig.streamerMmrGoalCustomCss, '');
@@ -72,6 +74,8 @@ const normalizedGoalStyle = {
   streamerMmrGoalPaddingBottom: -5,
   streamerMmrGoalPaddingLeft: 0,
   streamerMmrGoalAnimated: false,
+  streamerMmrGoalStartPrefix: 'FROM ',
+  streamerMmrGoalStartSuffix: ' -> ',
   streamerMmrGoalCurrentPrefix: 'Current ',
   streamerMmrGoalCurrentSuffix: ' MMR',
   streamerMmrGoalTargetPrefix: 'Goal ',
@@ -100,6 +104,8 @@ assert.equal(normalizedGoalStyle.streamerMmrGoalPaddingRight, 22);
 assert.equal(normalizedGoalStyle.streamerMmrGoalPaddingBottom, 0);
 assert.equal(normalizedGoalStyle.streamerMmrGoalPaddingLeft, 0);
 assert.equal(normalizedGoalStyle.streamerMmrGoalAnimated, false);
+assert.equal(normalizedGoalStyle.streamerMmrGoalStartPrefix, 'FROM ');
+assert.equal(normalizedGoalStyle.streamerMmrGoalStartSuffix, ' -> ');
 assert.equal(normalizedGoalStyle.streamerMmrGoalCurrentPrefix, 'Current ');
 assert.equal(normalizedGoalStyle.streamerMmrGoalCurrentSuffix, ' MMR');
 assert.equal(normalizedGoalStyle.streamerMmrGoalTargetPrefix, 'Goal ');

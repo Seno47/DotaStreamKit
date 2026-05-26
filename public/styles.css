@@ -1422,7 +1422,7 @@ dd {
   min-width: 0;
   overflow: hidden;
   color: var(--goal-text);
-  font-size: calc(17px * var(--preview-scale, 1));
+  font-size: calc(16px * var(--preview-scale, 1));
   font-variant-numeric: tabular-nums;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1437,8 +1437,8 @@ dd {
 }
 
 :where(.streamer-goal-preview-meta) :where([data-goal-part="start"]) {
-  opacity: 0.78;
-  font-size: calc(14px * var(--preview-scale, 1));
+  margin-left: 0;
+  opacity: 0.92;
 }
 
 .streamer-goal-preview[data-background-hidden="true"] {

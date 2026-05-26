@@ -351,6 +351,8 @@ const defaultConfig = {
       streamerMmrGoalPaddingBottom: 10,
       streamerMmrGoalPaddingLeft: 10,
       streamerMmrGoalAnimated: true,
+      streamerMmrGoalStartPrefix: 'START ',
+      streamerMmrGoalStartSuffix: ' → ',
       streamerMmrGoalCurrentPrefix: '',
       streamerMmrGoalCurrentSuffix: '',
       streamerMmrGoalTargetPrefix: '/ ',

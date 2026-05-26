@@ -39,6 +39,8 @@ const streamerMmrGoalStyleDefaults = {
   paddingBottom: 10,
   paddingLeft: 10,
   animated: true,
+  startPrefix: 'START ',
+  startSuffix: ' → ',
   currentPrefix: '',
   currentSuffix: '',
   targetPrefix: '/ ',
@@ -1020,7 +1022,7 @@ function applyStreamerMmrGoal(reference, protection, state) {
   nodes.fill.style.width = `${progress}%`;
   setTextContent(nodes.current, formatGoalText(goalStyle.currentPrefix, currentMmr, goalStyle.currentSuffix));
   nodes.current.hidden = settings.showStreamerMmrGoalCurrent === false;
-  setTextContent(nodes.start, `from ${startMmr}`);
+  setTextContent(nodes.start, formatGoalText(goalStyle.startPrefix, startMmr, goalStyle.startSuffix));
   nodes.start.hidden = settings.showStreamerMmrGoalStart !== true;
   setTextContent(nodes.target, formatGoalText(goalStyle.targetPrefix, targetMmr, goalStyle.targetSuffix));
   nodes.target.hidden = settings.showStreamerMmrGoalTarget === false;
@@ -1214,7 +1216,7 @@ function ensureStreamerMmrGoalNodes() {
   winRate.dataset.goalPart = 'winrate';
   eta.dataset.goalPart = 'eta';
   progress.append(fill, percent);
-  meta.append(current, start, target, delta);
+  meta.append(start, current, target, delta);
   kpis.append(record, winRate, eta);
   streamerMmrGoalEl.replaceChildren(progress, meta, kpis);
   streamerMmrGoalNodes = { percent, progress, fill, meta, current, start, target, delta, kpis, record, winRate, eta };
@@ -1265,6 +1267,8 @@ function streamerMmrGoalStyleFromSettings(settings = {}) {
     paddingBottom: clampNumber(settings.streamerMmrGoalPaddingBottom, 0, 48, streamerMmrGoalStyleDefaults.paddingBottom),
     paddingLeft: clampNumber(settings.streamerMmrGoalPaddingLeft, 0, 48, streamerMmrGoalStyleDefaults.paddingLeft),
     animated: settings.streamerMmrGoalAnimated !== false,
+    startPrefix: normalizeGoalTextPart(settings.streamerMmrGoalStartPrefix, streamerMmrGoalStyleDefaults.startPrefix),
+    startSuffix: normalizeGoalTextPart(settings.streamerMmrGoalStartSuffix, streamerMmrGoalStyleDefaults.startSuffix),
     currentPrefix: normalizeGoalTextPart(settings.streamerMmrGoalCurrentPrefix, streamerMmrGoalStyleDefaults.currentPrefix),
     currentSuffix: normalizeGoalTextPart(settings.streamerMmrGoalCurrentSuffix, streamerMmrGoalStyleDefaults.currentSuffix),
     targetPrefix: normalizeGoalTextPart(settings.streamerMmrGoalTargetPrefix, streamerMmrGoalStyleDefaults.targetPrefix),

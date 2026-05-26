@@ -402,14 +402,12 @@ body {
 .streamerMmrGoalStart,
 .streamerMmrGoalTarget {
   color: var(--goal-text);
-  font-size: 17px;
+  font-size: 16px;
   font-variant-numeric: tabular-nums;
 }
 
 .streamerMmrGoalStart {
-  margin-left: 3px;
-  opacity: 0.78;
-  font-size: 14px;
+  opacity: 0.92;
 }
 
 .streamerMmrGoalTarget {

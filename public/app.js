@@ -216,6 +216,10 @@ const els = {
   streamerMmrGoalPaddingLeft: document.querySelector('#streamerMmrGoalPaddingLeft'),
   streamerMmrGoalPaddingLeftValue: document.querySelector('#streamerMmrGoalPaddingLeftValue'),
   streamerMmrGoalAnimated: document.querySelector('#streamerMmrGoalAnimated'),
+  streamerMmrGoalStartPrefixWrap: document.querySelector('#streamerMmrGoalStartPrefixWrap'),
+  streamerMmrGoalStartPrefix: document.querySelector('#streamerMmrGoalStartPrefix'),
+  streamerMmrGoalStartSuffixWrap: document.querySelector('#streamerMmrGoalStartSuffixWrap'),
+  streamerMmrGoalStartSuffix: document.querySelector('#streamerMmrGoalStartSuffix'),
   streamerMmrGoalCurrentPrefixWrap: document.querySelector('#streamerMmrGoalCurrentPrefixWrap'),
   streamerMmrGoalCurrentPrefix: document.querySelector('#streamerMmrGoalCurrentPrefix'),
   streamerMmrGoalCurrentSuffixWrap: document.querySelector('#streamerMmrGoalCurrentSuffixWrap'),
@@ -488,6 +492,8 @@ const streamerMmrGoalStyleDefaults = {
   paddingBottom: 10,
   paddingLeft: 10,
   animated: true,
+  startPrefix: 'START ',
+  startSuffix: ' → ',
   currentPrefix: '',
   currentSuffix: '',
   targetPrefix: '/ ',
@@ -917,6 +923,8 @@ const translations = {
     streamerMmrGoalPaddingBottom: 'Отступ снизу',
     streamerMmrGoalPaddingLeft: 'Отступ слева',
     streamerMmrGoalAnimated: 'Анимация полоски',
+    streamerMmrGoalStartPrefix: 'Текст перед стартовым MMR',
+    streamerMmrGoalStartSuffix: 'Текст после стартового MMR',
     streamerMmrGoalCurrentPrefix: 'Текст перед текущим MMR',
     streamerMmrGoalCurrentSuffix: 'Текст после текущего MMR',
     streamerMmrGoalTargetPrefix: 'Текст перед целью MMR',
@@ -1348,6 +1356,8 @@ const translations = {
     streamerMmrGoalPaddingBottom: 'Bottom padding',
     streamerMmrGoalPaddingLeft: 'Left padding',
     streamerMmrGoalAnimated: 'Animated bar',
+    streamerMmrGoalStartPrefix: 'Text before start MMR',
+    streamerMmrGoalStartSuffix: 'Text after start MMR',
     streamerMmrGoalCurrentPrefix: 'Text before current MMR',
     streamerMmrGoalCurrentSuffix: 'Text after current MMR',
     streamerMmrGoalTargetPrefix: 'Text before goal MMR',
@@ -1872,6 +1882,8 @@ function applyLanguage(config) {
   setLabelText(els.streamerMmrGoalPaddingBottomWrap, t('streamerMmrGoalPaddingBottom'));
   setLabelText(els.streamerMmrGoalPaddingLeftWrap, t('streamerMmrGoalPaddingLeft'));
   setLabelText(els.streamerMmrGoalAnimated.closest('label'), t('streamerMmrGoalAnimated'));
+  setLabelText(els.streamerMmrGoalStartPrefixWrap, t('streamerMmrGoalStartPrefix'));
+  setLabelText(els.streamerMmrGoalStartSuffixWrap, t('streamerMmrGoalStartSuffix'));
   setLabelText(els.streamerMmrGoalCurrentPrefixWrap, t('streamerMmrGoalCurrentPrefix'));
   setLabelText(els.streamerMmrGoalCurrentSuffixWrap, t('streamerMmrGoalCurrentSuffix'));
   setLabelText(els.streamerMmrGoalTargetPrefixWrap, t('streamerMmrGoalTargetPrefix'));
@@ -2342,6 +2354,8 @@ function render(data) {
   setInputValue(els.streamerMmrGoalPaddingBottom, goalStyle.paddingBottom);
   setInputValue(els.streamerMmrGoalPaddingLeft, goalStyle.paddingLeft);
   els.streamerMmrGoalAnimated.checked = goalStyle.animated;
+  setInputValue(els.streamerMmrGoalStartPrefix, goalStyle.startPrefix);
+  setInputValue(els.streamerMmrGoalStartSuffix, goalStyle.startSuffix);
   setInputValue(els.streamerMmrGoalCurrentPrefix, goalStyle.currentPrefix);
   setInputValue(els.streamerMmrGoalCurrentSuffix, goalStyle.currentSuffix);
   setInputValue(els.streamerMmrGoalTargetPrefix, goalStyle.targetPrefix);
@@ -3269,7 +3283,7 @@ function applyStreamerGoalPreview(root, goal, settings) {
   previewRoot.classList.toggle('complete', hasGoal && Number(goal?.remainingMmr || 0) <= 0);
   setTextContent(percent, `${formatGoalPercent(goal?.progress || 0)}%`);
   setTextContent(current, formatGoalText(goalStyle.currentPrefix, formatStreamerMmr(goal?.currentMmr || 0), goalStyle.currentSuffix));
-  setTextContent(start, `from ${formatStreamerMmr(goal?.startMmr || 0)}`);
+  setTextContent(start, formatGoalText(goalStyle.startPrefix, formatStreamerMmr(goal?.startMmr || 0), goalStyle.startSuffix));
   setTextContent(target, formatGoalText(goalStyle.targetPrefix, formatStreamerMmr(goal?.targetMmr || 0), goalStyle.targetSuffix));
   setTextContent(delta, hasGoal
     ? goal.remainingMmr > 0
@@ -3344,6 +3358,8 @@ function streamerMmrGoalStyleFromSettings(settings = {}) {
     paddingBottom: clampGoalInt(settings.streamerMmrGoalPaddingBottom, 0, 48, streamerMmrGoalStyleDefaults.paddingBottom),
     paddingLeft: clampGoalInt(settings.streamerMmrGoalPaddingLeft, 0, 48, streamerMmrGoalStyleDefaults.paddingLeft),
     animated: settings.streamerMmrGoalAnimated !== false,
+    startPrefix: normalizeGoalTextPart(settings.streamerMmrGoalStartPrefix, streamerMmrGoalStyleDefaults.startPrefix),
+    startSuffix: normalizeGoalTextPart(settings.streamerMmrGoalStartSuffix, streamerMmrGoalStyleDefaults.startSuffix),
     currentPrefix: normalizeGoalTextPart(settings.streamerMmrGoalCurrentPrefix, streamerMmrGoalStyleDefaults.currentPrefix),
     currentSuffix: normalizeGoalTextPart(settings.streamerMmrGoalCurrentSuffix, streamerMmrGoalStyleDefaults.currentSuffix),
     targetPrefix: normalizeGoalTextPart(settings.streamerMmrGoalTargetPrefix, streamerMmrGoalStyleDefaults.targetPrefix),
@@ -3932,6 +3948,8 @@ function streamerGoalMatchIntelPatchFromForm() {
     streamerMmrGoalPaddingBottom: Number(els.streamerMmrGoalPaddingBottom.value),
     streamerMmrGoalPaddingLeft: Number(els.streamerMmrGoalPaddingLeft.value),
     streamerMmrGoalAnimated: els.streamerMmrGoalAnimated.checked,
+    streamerMmrGoalStartPrefix: els.streamerMmrGoalStartPrefix.value,
+    streamerMmrGoalStartSuffix: els.streamerMmrGoalStartSuffix.value,
     streamerMmrGoalCurrentPrefix: els.streamerMmrGoalCurrentPrefix.value,
     streamerMmrGoalCurrentSuffix: els.streamerMmrGoalCurrentSuffix.value,
     streamerMmrGoalTargetPrefix: els.streamerMmrGoalTargetPrefix.value,
@@ -4136,6 +4154,8 @@ els.spectatorGameLabelTemplate?.addEventListener('change', () => saveProtection(
   els.streamerMmrGoalPaddingBottom,
   els.streamerMmrGoalPaddingLeft,
   els.streamerMmrGoalAnimated,
+  els.streamerMmrGoalStartPrefix,
+  els.streamerMmrGoalStartSuffix,
   els.streamerMmrGoalCurrentPrefix,
   els.streamerMmrGoalCurrentSuffix,
   els.streamerMmrGoalTargetPrefix,
@@ -4354,6 +4374,8 @@ function protectionMatchIntelFromForm() {
     streamerMmrGoalPaddingBottom: Number(els.streamerMmrGoalPaddingBottom.value),
     streamerMmrGoalPaddingLeft: Number(els.streamerMmrGoalPaddingLeft.value),
     streamerMmrGoalAnimated: els.streamerMmrGoalAnimated.checked,
+    streamerMmrGoalStartPrefix: els.streamerMmrGoalStartPrefix.value,
+    streamerMmrGoalStartSuffix: els.streamerMmrGoalStartSuffix.value,
     streamerMmrGoalCurrentPrefix: els.streamerMmrGoalCurrentPrefix.value,
     streamerMmrGoalCurrentSuffix: els.streamerMmrGoalCurrentSuffix.value,
     streamerMmrGoalTargetPrefix: els.streamerMmrGoalTargetPrefix.value,
@@ -4428,6 +4450,8 @@ function updateMatchIntelFieldVisibility() {
     els.streamerMmrGoalPaddingBottomWrap,
     els.streamerMmrGoalPaddingLeftWrap,
     els.streamerMmrGoalAnimated?.closest('label'),
+    els.streamerMmrGoalStartPrefixWrap,
+    els.streamerMmrGoalStartSuffixWrap,
     els.streamerMmrGoalCurrentPrefixWrap,
     els.streamerMmrGoalCurrentSuffixWrap,
     els.streamerMmrGoalTargetPrefixWrap,
