@@ -399,10 +399,17 @@ body {
 }
 
 .streamerMmrGoalCurrent,
+.streamerMmrGoalStart,
 .streamerMmrGoalTarget {
   color: var(--goal-text);
   font-size: 17px;
   font-variant-numeric: tabular-nums;
+}
+
+.streamerMmrGoalStart {
+  margin-left: 3px;
+  opacity: 0.78;
+  font-size: 14px;
 }
 
 .streamerMmrGoalTarget {

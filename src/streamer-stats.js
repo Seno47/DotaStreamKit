@@ -42,6 +42,7 @@ export function normalizeStreamerStatsConfig(config) {
   config.showStreamerMmrGoalInGame = config.showStreamerMmrGoalInGame !== false;
   config.showStreamerMmrGoalProgress = config.showStreamerMmrGoalProgress !== false;
   config.showStreamerMmrGoalCurrent = config.showStreamerMmrGoalCurrent !== false;
+  config.showStreamerMmrGoalStart = config.showStreamerMmrGoalStart === true;
   config.showStreamerMmrGoalTarget = config.showStreamerMmrGoalTarget !== false;
   config.showStreamerMmrGoalRecord = config.showStreamerMmrGoalRecord !== false;
   config.showStreamerMmrGoalWinRate = config.showStreamerMmrGoalWinRate !== false;

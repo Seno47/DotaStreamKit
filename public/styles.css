@@ -1430,7 +1430,15 @@ dd {
 
 :where(.streamer-goal-preview-meta) :where(span) {
   margin-left: calc(3px * var(--preview-scale, 1));
+}
+
+:where(.streamer-goal-preview-meta) :where([data-goal-part="target"]) {
   margin-right: auto;
+}
+
+:where(.streamer-goal-preview-meta) :where([data-goal-part="start"]) {
+  opacity: 0.78;
+  font-size: calc(14px * var(--preview-scale, 1));
 }
 
 .streamer-goal-preview[data-background-hidden="true"] {

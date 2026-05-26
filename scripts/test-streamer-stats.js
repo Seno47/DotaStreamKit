@@ -44,6 +44,7 @@ assert.equal(normalizedConfig.showStreamerMmrGoalInMenu, true);
 assert.equal(normalizedConfig.showStreamerMmrGoalDuringDraft, true);
 assert.equal(normalizedConfig.showStreamerMmrGoalInGame, true);
 assert.equal(normalizedConfig.showStreamerMmrGoalCurrent, true);
+assert.equal(normalizedConfig.showStreamerMmrGoalStart, false);
 assert.equal(normalizedConfig.showStreamerMmrGoalTarget, true);
 assert.equal(normalizedConfig.showStreamerMmrGoalRecord, true);
 assert.equal(normalizedConfig.showStreamerMmrGoalBackground, true);
@@ -81,6 +82,7 @@ const normalizedGoalStyle = {
   showStreamerMmrGoalInMenu: false,
   showStreamerMmrGoalDuringDraft: false,
   showStreamerMmrGoalInGame: false,
+  showStreamerMmrGoalStart: true,
   showStreamerMmrGoalRecord: false,
   showStreamerMmrGoalWinRate: false,
   showStreamerMmrGoalEta: false
@@ -108,6 +110,7 @@ assert.equal(normalizedGoalStyle.streamerMmrGoalCustomCss, '[data-goal-part="fil
 assert.equal(normalizedGoalStyle.showStreamerMmrGoalInMenu, false);
 assert.equal(normalizedGoalStyle.showStreamerMmrGoalDuringDraft, false);
 assert.equal(normalizedGoalStyle.showStreamerMmrGoalInGame, false);
+assert.equal(normalizedGoalStyle.showStreamerMmrGoalStart, true);
 assert.equal(normalizedGoalStyle.showStreamerMmrGoalRecord, false);
 assert.equal(normalizedGoalStyle.showStreamerMmrGoalWinRate, false);
 assert.equal(normalizedGoalStyle.showStreamerMmrGoalEta, false);

@@ -1007,6 +1007,7 @@ function applyStreamerMmrGoal(reference, protection, state) {
   applyStreamerMmrGoalCustomCss(goalStyle.customCss);
   const progress = clampNumber(goal.progress, 0, 100, 0);
   const currentMmr = formatStreamerMmr(goal.currentMmr);
+  const startMmr = formatStreamerMmr(goal.startMmr);
   const targetMmr = formatStreamerMmr(goal.targetMmr);
   const remainingMmr = Math.max(0, Math.trunc(Number(goal.remainingMmr || 0)));
   const wins = Math.max(0, Math.trunc(Number(goal.wins || 0)));
@@ -1019,6 +1020,8 @@ function applyStreamerMmrGoal(reference, protection, state) {
   nodes.fill.style.width = `${progress}%`;
   setTextContent(nodes.current, formatGoalText(goalStyle.currentPrefix, currentMmr, goalStyle.currentSuffix));
   nodes.current.hidden = settings.showStreamerMmrGoalCurrent === false;
+  setTextContent(nodes.start, `from ${startMmr}`);
+  nodes.start.hidden = settings.showStreamerMmrGoalStart !== true;
   setTextContent(nodes.target, formatGoalText(goalStyle.targetPrefix, targetMmr, goalStyle.targetSuffix));
   nodes.target.hidden = settings.showStreamerMmrGoalTarget === false;
   streamerMmrGoalEl.dataset.backgroundHidden = settings.showStreamerMmrGoalBackground === false ? 'true' : 'false';
@@ -1031,6 +1034,7 @@ function applyStreamerMmrGoal(reference, protection, state) {
   setTextContent(nodes.eta, remainingMmr > 0 ? `${Math.max(0, Number(goal.requiredWins || 0))}W` : 'DONE');
   nodes.eta.hidden = settings.showStreamerMmrGoalEta === false;
   nodes.meta.hidden = settings.showStreamerMmrGoalCurrent === false
+    && settings.showStreamerMmrGoalStart !== true
     && settings.showStreamerMmrGoalTarget === false
     && settings.showStreamerMmrGoalDelta === false;
   nodes.kpis.hidden = settings.showStreamerMmrGoalRecord === false
@@ -1177,6 +1181,7 @@ function ensureStreamerMmrGoalNodes() {
   const fill = document.createElement('span');
   const meta = document.createElement('div');
   const current = document.createElement('b');
+  const start = document.createElement('span');
   const target = document.createElement('span');
   const delta = document.createElement('em');
   const kpis = document.createElement('div');
@@ -1188,6 +1193,7 @@ function ensureStreamerMmrGoalNodes() {
   fill.className = 'streamerMmrGoalFill';
   meta.className = 'streamerMmrGoalMeta';
   current.className = 'streamerMmrGoalCurrent';
+  start.className = 'streamerMmrGoalStart';
   target.className = 'streamerMmrGoalTarget';
   delta.className = 'streamerMmrGoalDelta';
   kpis.className = 'streamerMmrGoalKpis';
@@ -1200,6 +1206,7 @@ function ensureStreamerMmrGoalNodes() {
   percent.dataset.goalPart = 'percent';
   meta.dataset.goalPart = 'meta';
   current.dataset.goalPart = 'current';
+  start.dataset.goalPart = 'start';
   target.dataset.goalPart = 'target';
   delta.dataset.goalPart = 'delta';
   kpis.dataset.goalPart = 'kpis';
@@ -1207,10 +1214,10 @@ function ensureStreamerMmrGoalNodes() {
   winRate.dataset.goalPart = 'winrate';
   eta.dataset.goalPart = 'eta';
   progress.append(fill, percent);
-  meta.append(current, target, delta);
+  meta.append(current, start, target, delta);
   kpis.append(record, winRate, eta);
   streamerMmrGoalEl.replaceChildren(progress, meta, kpis);
-  streamerMmrGoalNodes = { percent, progress, fill, meta, current, target, delta, kpis, record, winRate, eta };
+  streamerMmrGoalNodes = { percent, progress, fill, meta, current, start, target, delta, kpis, record, winRate, eta };
   return streamerMmrGoalNodes;
 }
 

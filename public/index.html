@@ -329,7 +329,7 @@
                 <div class="streamer-goal-live-preview" id="streamerGoalPreview">
                   <div class="streamer-goal-preview" data-goal-part="root">
                     <div class="streamer-goal-preview-bar" id="streamerGoalPreviewBar" data-goal-part="bar"><span id="streamerGoalPreviewFill" data-goal-part="fill"></span><b id="streamerGoalPreviewPercent" data-goal-part="percent">0%</b></div>
-                    <div class="streamer-goal-preview-meta" data-goal-part="meta"><b id="streamerGoalPreviewCurrent" data-goal-part="current">0</b><span id="streamerGoalPreviewTarget" data-goal-part="target">/ 0</span><em id="streamerGoalPreviewDelta" data-goal-part="delta">+0</em></div>
+                    <div class="streamer-goal-preview-meta" data-goal-part="meta"><b id="streamerGoalPreviewCurrent" data-goal-part="current">0</b><span id="streamerGoalPreviewStart" data-goal-part="start">from 0</span><span id="streamerGoalPreviewTarget" data-goal-part="target">/ 0</span><em id="streamerGoalPreviewDelta" data-goal-part="delta">+0</em></div>
                     <div class="streamer-goal-preview-kpis" data-goal-part="kpis"><span id="streamerGoalPreviewRecord" data-goal-part="record">W 0 - L 0</span><span id="streamerGoalPreviewWinRate" data-goal-part="winrate">- WR</span><span id="streamerGoalPreviewEta" data-goal-part="eta">0W</span></div>
                   </div>
                 </div>
@@ -342,7 +342,8 @@
                   <label class="check"><input type="checkbox" id="showStreamerMmrGoalInGame"> Show during match</label>
                   <label class="check"><input type="checkbox" id="showStreamerMmrGoalProgress"> Goal progress bar</label>
                   <label class="check"><input type="checkbox" id="showStreamerMmrGoalBackground"> Background / frame</label>
-                  <label class="check"><input type="checkbox" id="showStreamerMmrGoalCurrent"> Current / start MMR</label>
+                  <label class="check"><input type="checkbox" id="showStreamerMmrGoalCurrent"> Current MMR</label>
+                  <label class="check"><input type="checkbox" id="showStreamerMmrGoalStart"> Start MMR</label>
                   <label class="check"><input type="checkbox" id="showStreamerMmrGoalTarget"> Goal MMR</label>
                   <label class="check"><input type="checkbox" id="showStreamerMmrGoalDelta"> MMR left</label>
                   <label class="check"><input type="checkbox" id="showStreamerMmrGoalRecord"> Win-Lose score</label>
@@ -382,6 +383,7 @@
                         <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssPartPercent" data-goal-css-insert='[data-goal-part="percent"]'>Percent</button>
                         <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssPartMeta" data-goal-css-insert='[data-goal-part="meta"]'>Numbers</button>
                         <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssPartCurrent" data-goal-css-insert='[data-goal-part="current"]'>Current</button>
+                        <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssPartStart" data-goal-css-insert='[data-goal-part="start"]'>Start</button>
                         <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssPartTarget" data-goal-css-insert='[data-goal-part="target"]'>Goal</button>
                         <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssPartDelta" data-goal-css-insert='[data-goal-part="delta"]'>Left</button>
                         <button class="streamer-goal-css-button" type="button" data-goal-css-label="streamerGoalCssPartKpis" data-goal-css-insert='[data-goal-part="kpis"]'>Stats</button>
