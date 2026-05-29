@@ -142,7 +142,7 @@
                 <div>
                   <p class="muted" id="overlayPositionHint">Move grouped overlay blocks.</p>
                 </div>
-                <label id="overlayPositionTargetWrap">Block<select id="overlayPositionTarget"><option value="streamerStatsMenu">Menu medal</option><option value="streamerStatsGame">In-game medal</option><option value="streamerMmrGoal">MMR goal</option><option value="roshanTimer">Roshan timer</option><option value="predictionOverlay">Twitch prediction</option></select></label>
+                <label id="overlayPositionTargetWrap">Block<select id="overlayPositionTarget"><option value="streamerStatsMenu">Menu medal</option><option value="streamerStatsGame">In-game medal</option><option value="streamerMmrGoalMenu">Menu MMR goal</option><option value="streamerMmrGoalGame">In-game MMR goal</option><option value="roshanTimer">Roshan timer</option><option value="predictionOverlay">Twitch prediction</option></select></label>
                 <label id="overlayPreviewBackgroundWrap">Preview background<select id="overlayPreviewBackground"><option value="screenshot">Screenshot</option><option value="black">Black</option><option value="white">White</option></select></label>
               </div>
               <div class="overlay-position-grid">
@@ -182,23 +182,41 @@
                   </div>
                   <button type="button" data-reset-position="streamerStatsGame">Reset</button>
                 </section>
-                <section class="overlay-position-card" data-position-preview="streamerMmrGoal">
-                  <h4 id="streamerMmrGoalPositionTitle">MMR goal</h4>
+                <section class="overlay-position-card" data-position-preview="streamerMmrGoalMenu">
+                  <h4 id="streamerMmrGoalMenuPositionTitle">Menu MMR goal</h4>
+                  <div class="overlay-position-editor">
+                    <div class="overlay-position-main">
+                      <div class="overlay-position-preview">
+                        <img class="overlay-position-bg" src="/assets/game1.png" alt="">
+                        <div class="overlay-position-item streamer-goal-preview" data-goal-part="root">
+                          <div class="streamer-goal-preview-bar" data-goal-part="bar"><span data-goal-part="fill"></span><b data-goal-part="percent">72%</b></div>
+                          <div class="streamer-goal-preview-meta" data-goal-part="meta"><span data-goal-part="start">5000 → </span><b data-goal-part="current">5245</b><span data-goal-part="target">/ 6000</span><em data-goal-part="delta">+755</em></div>
+                          <div class="streamer-goal-preview-kpis" data-goal-part="kpis"><span data-goal-part="record">W 8 - L 5</span><span data-goal-part="winrate">61.5% WR</span><span data-goal-part="eta">31W left</span></div>
+                        </div>
+                      </div>
+                      <label class="overlay-position-x" id="streamerMmrGoalMenuXWrap"><span>Horizontal</span><input id="streamerMmrGoalMenuX" type="range" min="0" max="1920" step="1"><output id="streamerMmrGoalMenuXValue">0</output></label>
+                    </div>
+                    <label class="overlay-position-y" id="streamerMmrGoalMenuYWrap"><span>Vertical</span><input id="streamerMmrGoalMenuY" type="range" min="0" max="1080" step="1"><output id="streamerMmrGoalMenuYValue">0</output></label>
+                  </div>
+                  <button type="button" data-reset-position="streamerMmrGoalMenu">Reset</button>
+                </section>
+                <section class="overlay-position-card" data-position-preview="streamerMmrGoalGame">
+                  <h4 id="streamerMmrGoalGamePositionTitle">In-game MMR goal</h4>
                   <div class="overlay-position-editor">
                     <div class="overlay-position-main">
                       <div class="overlay-position-preview">
                         <img class="overlay-position-bg" src="/assets/game2.png" alt="">
                         <div class="overlay-position-item streamer-goal-preview" data-goal-part="root">
                           <div class="streamer-goal-preview-bar" data-goal-part="bar"><span data-goal-part="fill"></span><b data-goal-part="percent">72%</b></div>
-                          <div class="streamer-goal-preview-meta" data-goal-part="meta"><b data-goal-part="current">5245</b><span data-goal-part="target">/ 6000</span><em data-goal-part="delta">+755</em></div>
+                          <div class="streamer-goal-preview-meta" data-goal-part="meta"><span data-goal-part="start">5000 → </span><b data-goal-part="current">5245</b><span data-goal-part="target">/ 6000</span><em data-goal-part="delta">+755</em></div>
                           <div class="streamer-goal-preview-kpis" data-goal-part="kpis"><span data-goal-part="record">W 8 - L 5</span><span data-goal-part="winrate">61.5% WR</span><span data-goal-part="eta">31W left</span></div>
                         </div>
                       </div>
-                      <label class="overlay-position-x" id="streamerMmrGoalXWrap"><span>Horizontal</span><input id="streamerMmrGoalX" type="range" min="0" max="1920" step="1"><output id="streamerMmrGoalXValue">0</output></label>
+                      <label class="overlay-position-x" id="streamerMmrGoalGameXWrap"><span>Horizontal</span><input id="streamerMmrGoalGameX" type="range" min="0" max="1920" step="1"><output id="streamerMmrGoalGameXValue">0</output></label>
                     </div>
-                    <label class="overlay-position-y" id="streamerMmrGoalYWrap"><span>Vertical</span><input id="streamerMmrGoalY" type="range" min="0" max="1080" step="1"><output id="streamerMmrGoalYValue">0</output></label>
+                    <label class="overlay-position-y" id="streamerMmrGoalGameYWrap"><span>Vertical</span><input id="streamerMmrGoalGameY" type="range" min="0" max="1080" step="1"><output id="streamerMmrGoalGameYValue">0</output></label>
                   </div>
-                  <button type="button" data-reset-position="streamerMmrGoal">Reset</button>
+                  <button type="button" data-reset-position="streamerMmrGoalGame">Reset</button>
                 </section>
                 <section class="overlay-position-card" data-position-preview="roshanTimer">
                   <h4 id="roshanTimerPositionTitle">Roshan timer</h4>

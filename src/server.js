@@ -369,9 +369,12 @@ const defaultConfig = {
       streamerAccounts: [],
       streamerMmrWinDelta: 25,
       streamerMmrLossDelta: 25,
+      streamerMmrGoalSplitPositionsMigrated: false,
       overlayPositions: {
         streamerStatsMenu: { x: 0, y: 0 },
         streamerStatsGame: { x: 0, y: 0 },
+        streamerMmrGoalMenu: { x: 0, y: 0 },
+        streamerMmrGoalGame: { x: 0, y: 0 },
         streamerMmrGoal: { x: 0, y: 0 },
         roshanTimer: { x: 0, y: 0 },
         predictionOverlay: { x: 0, y: 0 }
@@ -3803,17 +3806,26 @@ function normalizeMatchIntelConfig(config, options = {}) {
   delete config.showAegisRoshan;
   if (!['minutes', 'full_game', 'pre_game_only'].includes(config.rankDisplayMode)) config.rankDisplayMode = 'minutes';
   config.rankDisplayMinutes = clampInt(config.rankDisplayMinutes, 1, 30);
-  config.overlayPositions = normalizeOverlayPositions(config.overlayPositions);
+  const migrateMmrGoalSplitPositions = config.streamerMmrGoalSplitPositionsMigrated !== true;
+  config.overlayPositions = normalizeOverlayPositions(config.overlayPositions, { migrateMmrGoalSplitPositions });
+  config.streamerMmrGoalSplitPositionsMigrated = true;
   config.customPlayers = normalizeCustomNotablePlayers(config.customPlayers);
   normalizeStreamerStatsConfig(config);
 }
 
-function normalizeOverlayPositions(value) {
+function normalizeOverlayPositions(value, options = {}) {
   const source = value && typeof value === 'object' ? value : {};
+  const legacyMmrGoal = normalizeOverlayOffset(source.streamerMmrGoal);
+  const menuMmrGoal = normalizeOverlayOffset(source.streamerMmrGoalMenu);
+  const gameMmrGoal = normalizeOverlayOffset(source.streamerMmrGoalGame);
+  const shouldMigrateMmrGoal = options.migrateMmrGoalSplitPositions === true
+    && (legacyMmrGoal.x !== 0 || legacyMmrGoal.y !== 0);
   return {
     streamerStatsMenu: normalizeOverlayOffset(source.streamerStatsMenu),
     streamerStatsGame: normalizeOverlayOffset(source.streamerStatsGame),
-    streamerMmrGoal: normalizeOverlayOffset(source.streamerMmrGoal),
+    streamerMmrGoalMenu: shouldMigrateMmrGoal && menuMmrGoal.x === 0 && menuMmrGoal.y === 0 ? legacyMmrGoal : menuMmrGoal,
+    streamerMmrGoalGame: shouldMigrateMmrGoal && gameMmrGoal.x === 0 && gameMmrGoal.y === 0 ? legacyMmrGoal : gameMmrGoal,
+    streamerMmrGoal: legacyMmrGoal,
     roshanTimer: normalizeOverlayOffset(source.roshanTimer),
     predictionOverlay: normalizeOverlayOffset(source.predictionOverlay)
   };

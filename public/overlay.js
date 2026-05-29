@@ -1065,7 +1065,9 @@ function applyStreamerMmrGoal(reference, protection, state) {
   const box = inLiveGame
     ? { left, bottom: 176, width: boxWidth, height: boxHeight }
     : { left, top: 132, width: boxWidth, height: boxHeight };
-  applyScaledBox(streamerMmrGoalEl, withOverlayOffset(box, settings.overlayPositions?.streamerMmrGoal), reference);
+  const positionKey = inLiveGame ? 'streamerMmrGoalGame' : 'streamerMmrGoalMenu';
+  const offset = settings.overlayPositions?.[positionKey] || settings.overlayPositions?.streamerMmrGoal;
+  applyScaledBox(streamerMmrGoalEl, withOverlayOffset(box, offset), reference);
   setVisible(streamerMmrGoalEl, true);
 }
 

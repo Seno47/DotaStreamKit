@@ -297,11 +297,16 @@ const els = {
   streamerStatsGameY: document.querySelector('#streamerStatsGameY'),
   streamerStatsGameXValue: document.querySelector('#streamerStatsGameXValue'),
   streamerStatsGameYValue: document.querySelector('#streamerStatsGameYValue'),
-  streamerMmrGoalPositionTitle: document.querySelector('#streamerMmrGoalPositionTitle'),
-  streamerMmrGoalX: document.querySelector('#streamerMmrGoalX'),
-  streamerMmrGoalY: document.querySelector('#streamerMmrGoalY'),
-  streamerMmrGoalXValue: document.querySelector('#streamerMmrGoalXValue'),
-  streamerMmrGoalYValue: document.querySelector('#streamerMmrGoalYValue'),
+  streamerMmrGoalMenuPositionTitle: document.querySelector('#streamerMmrGoalMenuPositionTitle'),
+  streamerMmrGoalMenuX: document.querySelector('#streamerMmrGoalMenuX'),
+  streamerMmrGoalMenuY: document.querySelector('#streamerMmrGoalMenuY'),
+  streamerMmrGoalMenuXValue: document.querySelector('#streamerMmrGoalMenuXValue'),
+  streamerMmrGoalMenuYValue: document.querySelector('#streamerMmrGoalMenuYValue'),
+  streamerMmrGoalGamePositionTitle: document.querySelector('#streamerMmrGoalGamePositionTitle'),
+  streamerMmrGoalGameX: document.querySelector('#streamerMmrGoalGameX'),
+  streamerMmrGoalGameY: document.querySelector('#streamerMmrGoalGameY'),
+  streamerMmrGoalGameXValue: document.querySelector('#streamerMmrGoalGameXValue'),
+  streamerMmrGoalGameYValue: document.querySelector('#streamerMmrGoalGameYValue'),
   roshanTimerPositionTitle: document.querySelector('#roshanTimerPositionTitle'),
   roshanTimerX: document.querySelector('#roshanTimerX'),
   roshanTimerY: document.querySelector('#roshanTimerY'),
@@ -473,7 +478,9 @@ const previewRankMedalThresholds = [
   { medal: 8, name: 'Immortal', minMmr: 5620, starStep: 0 }
 ];
 
-const overlayPositionKeys = ['streamerStatsMenu', 'streamerStatsGame', 'streamerMmrGoal', 'roshanTimer', 'predictionOverlay'];
+const overlayPositionKeys = ['streamerStatsMenu', 'streamerStatsGame', 'streamerMmrGoalMenu', 'streamerMmrGoalGame', 'roshanTimer', 'predictionOverlay'];
+if (activeOverlayPositionKey === 'streamerMmrGoal') activeOverlayPositionKey = 'streamerMmrGoalGame';
+if (!overlayPositionKeys.includes(activeOverlayPositionKey)) activeOverlayPositionKey = 'streamerStatsGame';
 const streamerMmrGoalTemplates = ['classic', 'bubbles', 'neon', 'minimal', 'lightning', 'eye', 'scanner', 'shimmer', 'comet', 'aurora', 'pulse', 'segments', 'liquid', 'equalizer', 'heartbeat', 'sparks', 'glitch'];
 const streamerMmrGoalTemplateClasses = streamerMmrGoalTemplates.map((template) => `streamer-goal-template-${template}`);
 const streamerMmrGoalStyleDefaults = {
@@ -711,7 +718,15 @@ const overlayPreviewBoxes = {
     anchor: { x: 52, y: 0 },
     visible: { width: 150, height: 112 }
   },
-  streamerMmrGoal: {
+  streamerMmrGoalMenu: {
+    left: 390,
+    top: 132,
+    width: 420,
+    height: 88,
+    anchor: { x: 0, y: 0 },
+    visible: { width: 420, height: 88 }
+  },
+  streamerMmrGoalGame: {
     left: 1110,
     top: 812,
     width: 420,
@@ -984,7 +999,8 @@ const translations = {
     overlayPreviewWhite: 'Белый',
     streamerStatsMenuPosition: 'Медаль в меню',
     streamerStatsGamePosition: 'Медаль в игре',
-    streamerMmrGoalPosition: 'Цель MMR',
+    streamerMmrGoalMenuPosition: 'Цель MMR в меню',
+    streamerMmrGoalGamePosition: 'Цель MMR в игре',
     roshanTimerPosition: 'Таймер Roshan',
     predictionOverlayPosition: 'Прогноз Twitch',
     overlayPositionX: 'Горизонталь',
@@ -1417,7 +1433,8 @@ const translations = {
     overlayPreviewWhite: 'White',
     streamerStatsMenuPosition: 'Menu medal',
     streamerStatsGamePosition: 'In-game medal',
-    streamerMmrGoalPosition: 'MMR goal',
+    streamerMmrGoalMenuPosition: 'Menu MMR goal',
+    streamerMmrGoalGamePosition: 'In-game MMR goal',
     roshanTimerPosition: 'Roshan timer',
     predictionOverlayPosition: 'Twitch prediction',
     overlayPositionX: 'Horizontal',
@@ -1931,7 +1948,8 @@ function applyLanguage(config) {
   setLabelText(els.overlayPositionTargetWrap, t('overlayPositionTarget'));
   setOptionText(els.overlayPositionTarget, 'streamerStatsMenu', t('streamerStatsMenuPosition'));
   setOptionText(els.overlayPositionTarget, 'streamerStatsGame', t('streamerStatsGamePosition'));
-  setOptionText(els.overlayPositionTarget, 'streamerMmrGoal', t('streamerMmrGoalPosition'));
+  setOptionText(els.overlayPositionTarget, 'streamerMmrGoalMenu', t('streamerMmrGoalMenuPosition'));
+  setOptionText(els.overlayPositionTarget, 'streamerMmrGoalGame', t('streamerMmrGoalGamePosition'));
   setOptionText(els.overlayPositionTarget, 'roshanTimer', t('roshanTimerPosition'));
   setOptionText(els.overlayPositionTarget, 'predictionOverlay', t('predictionOverlayPosition'));
   setLabelText(els.overlayPreviewBackgroundWrap, t('overlayPreviewBackground'));
@@ -1940,7 +1958,8 @@ function applyLanguage(config) {
   setOptionText(els.overlayPreviewBackground, 'white', t('overlayPreviewWhite'));
   els.streamerStatsMenuPositionTitle.textContent = t('streamerStatsMenuPosition');
   els.streamerStatsGamePositionTitle.textContent = t('streamerStatsGamePosition');
-  els.streamerMmrGoalPositionTitle.textContent = t('streamerMmrGoalPosition');
+  els.streamerMmrGoalMenuPositionTitle.textContent = t('streamerMmrGoalMenuPosition');
+  els.streamerMmrGoalGamePositionTitle.textContent = t('streamerMmrGoalGamePosition');
   els.roshanTimerPositionTitle.textContent = t('roshanTimerPosition');
   els.predictionOverlayPositionTitle.textContent = t('predictionOverlayPosition');
   for (const key of overlayPositionKeys) {
@@ -3805,8 +3824,9 @@ function setStatusText(el, templateKey, valueKey) {
 }
 
 function setOverlayPositionControls(positions) {
+  const normalizedPositions = normalizeOverlayPositionsForForm(positions);
   for (const key of overlayPositionKeys) {
-    const offset = normalizeOverlayOffset(positions[key]);
+    const offset = normalizeOverlayOffset(normalizedPositions[key]);
     const box = overlayPreviewBoxes[key];
     const xInput = els[`${key}X`];
     const yInput = els[`${key}Y`];
@@ -3839,6 +3859,16 @@ function overlayPositionsFromForm() {
       y: y - base.top
     }];
   }));
+}
+
+function normalizeOverlayPositionsForForm(positions) {
+  const source = positions && typeof positions === 'object' ? positions : {};
+  const legacyMmrGoal = normalizeOverlayOffset(source.streamerMmrGoal);
+  return {
+    ...source,
+    streamerMmrGoalMenu: source.streamerMmrGoalMenu ? normalizeOverlayOffset(source.streamerMmrGoalMenu) : legacyMmrGoal,
+    streamerMmrGoalGame: source.streamerMmrGoalGame ? normalizeOverlayOffset(source.streamerMmrGoalGame) : legacyMmrGoal
+  };
 }
 
 function overlayVisualBase(box) {
@@ -3881,13 +3911,13 @@ function renderOverlayPositionPreviews() {
     const card = document.querySelector(`[data-position-preview="${key}"]`);
     const preview = card?.querySelector('.overlay-position-preview');
     const item = card?.querySelector('.overlay-position-item');
-    const box = key === 'streamerMmrGoal'
-      ? streamerMmrGoalPreviewBox(protectionMatchIntelFromForm())
+    const box = isStreamerMmrGoalPositionKey(key)
+      ? streamerMmrGoalPreviewBox(protectionMatchIntelFromForm(), key)
       : overlayPreviewBoxes[key];
     if (!preview || !item || !box) continue;
     card.hidden = key !== activeOverlayPositionKey;
     if (card.hidden) continue;
-    if (key === 'streamerMmrGoal') {
+    if (isStreamerMmrGoalPositionKey(key)) {
       renderStreamerGoalPreview(snapshot?.state?.streamerStats || {}, protectionMatchIntelFromForm(), activeStreamerSettingsAccountId);
     }
     const offset = normalizeOverlayOffset(positions[key]);
@@ -3991,8 +4021,12 @@ async function flushStreamerGoalSettingsSave() {
   if (revision === streamerGoalSaveRevision) pendingStreamerGoalMatchIntel = null;
 }
 
-function streamerMmrGoalPreviewBox(settings) {
-  const base = overlayPreviewBoxes.streamerMmrGoal;
+function isStreamerMmrGoalPositionKey(key) {
+  return key === 'streamerMmrGoalMenu' || key === 'streamerMmrGoalGame';
+}
+
+function streamerMmrGoalPreviewBox(settings, key = 'streamerMmrGoalGame') {
+  const base = overlayPreviewBoxes[key] || overlayPreviewBoxes.streamerMmrGoalGame;
   const style = streamerMmrGoalStyleFromSettings(settings || {});
   const width = Math.max(
     300,
