@@ -458,6 +458,13 @@
                 <p class="muted" id="streamerMmrAutomationHint">When enabled, the current account MMR is updated after each scored match.</p>
                 <div class="streamer-mmr-grid">
                   <label class="check"><input type="checkbox" id="autoUpdateStreamerMmr"> Auto update MMR</label>
+                  <div class="streamer-ocr-row" id="streamerOcrControls">
+                    <label class="check" id="menuMmrOcrEnabledWrap">
+                      <input type="checkbox" id="menuMmrOcrEnabled"> Распознавать текущий MMR через OCR
+                    </label>
+                    <button type="button" id="pickMenuMmrOcrRegion">Указать область</button>
+                    <small id="menuMmrOcrRegionStatus" class="muted">Область не задана</small>
+                  </div>
                   <label id="streamerMmrWinDeltaWrap">Win MMR<input id="streamerMmrWinDelta" type="number" min="0" max="200" step="1"></label>
                   <label id="streamerMmrLossDeltaWrap">Loss MMR<input id="streamerMmrLossDelta" type="number" min="0" max="200" step="1"></label>
                 </div>

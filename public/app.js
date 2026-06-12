@@ -156,6 +156,11 @@ const els = {
   streamerStatLosses: document.querySelector('#streamerStatLosses'),
   streamerCurrentAccountLabel: document.querySelector('#streamerCurrentAccountLabel'),
   streamerCurrentAccount: document.querySelector('#streamerCurrentAccount'),
+  menuMmrOcrEnabledWrap: document.querySelector('#menuMmrOcrEnabledWrap'),
+  menuMmrOcrEnabled: document.querySelector('#menuMmrOcrEnabled'),
+  streamerOcrControls: document.querySelector('#streamerOcrControls'),
+  pickMenuMmrOcrRegion: document.querySelector('#pickMenuMmrOcrRegion'),
+  menuMmrOcrRegionStatus: document.querySelector('#menuMmrOcrRegionStatus'),
   showStreamerStats: document.querySelector('#showStreamerStats'),
   showStreamerRankMedal: document.querySelector('#showStreamerRankMedal'),
   showStreamerMmr: document.querySelector('#showStreamerMmr'),
@@ -855,6 +860,13 @@ const translations = {
     streamerStatWins: 'Победы',
     streamerStatLosses: 'Поражения',
     streamerCurrentAccount: 'Текущий Dota аккаунт',
+    menuMmrOcrEnabled: 'Распознавать текущий MMR через OCR',
+    pickMenuMmrOcrRegion: 'Указать область',
+    menuMmrOcrRegionUnset: 'Область не задана',
+    menuMmrOcrRegionSet: 'Область: {width}×{height} @ {x},{y}',
+    menuMmrOcrPickHint: 'Выделите область с числом MMR на экране Dota 2. Esc — отмена.',
+    menuMmrOcrPickFailed: 'Не удалось выбрать область',
+    menuMmrOcrLastRun: 'Последнее чтение: {mmr}',
     streamerAccounts: 'Dota аккаунты стримера',
     streamerAccountsSectionSummary: 'Авто и ручная привязка',
     streamerAccountsHint: 'DotaStreamKit всегда смотрит, какой аккаунт сейчас прислал GSI, и автоматически добавляет новые аккаунты в список.',
@@ -1289,6 +1301,13 @@ const translations = {
     streamerStatWins: 'Wins',
     streamerStatLosses: 'Losses',
     streamerCurrentAccount: 'Current Dota account',
+    menuMmrOcrEnabled: 'Recognize current MMR via OCR',
+    pickMenuMmrOcrRegion: 'Select region',
+    menuMmrOcrRegionUnset: 'Region not set',
+    menuMmrOcrRegionSet: 'Region: {width}×{height} @ {x},{y}',
+    menuMmrOcrPickHint: 'Select the MMR number area on the Dota 2 screen. Esc cancels.',
+    menuMmrOcrPickFailed: 'Failed to select region',
+    menuMmrOcrLastRun: 'Last read: {mmr}',
     streamerAccounts: 'Streamer Dota accounts',
     streamerAccountsSectionSummary: 'Auto and manual binding',
     streamerAccountsHint: 'DotaStreamKit always tracks the account sent by GSI and automatically adds new accounts to this list.',
@@ -1840,6 +1859,8 @@ function applyLanguage(config) {
   els.streamerStatWinsLabel.textContent = t('streamerStatWins');
   els.streamerStatLossesLabel.textContent = t('streamerStatLosses');
   els.streamerCurrentAccountLabel.textContent = t('streamerCurrentAccount');
+  setLabelText(els.menuMmrOcrEnabledWrap, t('menuMmrOcrEnabled'));
+  if (els.pickMenuMmrOcrRegion) els.pickMenuMmrOcrRegion.textContent = t('pickMenuMmrOcrRegion');
   setLabelText(els.showStreamerStats.closest('label'), t('showStreamerStats'));
   setLabelText(els.showStreamerRankMedal.closest('label'), t('showStreamerRankMedal'));
   setLabelText(els.showStreamerMmr.closest('label'), t('showStreamerMmr'));
@@ -2389,6 +2410,8 @@ function render(data) {
   setInputValue(els.streamerGoalMmr, streamerGoalMmrForSettingsAccount(matchIntel, settingsAccountId));
   setInputValue(els.streamerGoalStartMmr, streamerGoalStartMmrForSettingsAccount(matchIntel, settingsAccountId));
   els.autoUpdateStreamerMmr.checked = matchIntel.autoUpdateStreamerMmr !== false;
+  if (els.menuMmrOcrEnabled) els.menuMmrOcrEnabled.checked = matchIntel.menuMmrOcrEnabled === true;
+  updateMenuMmrOcrUi(matchIntel, state.menuMmrOcr || null, data.platform);
   setInputValue(els.streamerMmrWinDelta, matchIntel.streamerMmrWinDelta ?? 25);
   setInputValue(els.streamerMmrLossDelta, matchIntel.streamerMmrLossDelta ?? 25);
   setOverlayPositionControls(matchIntel.overlayPositions || {});
@@ -3178,6 +3201,52 @@ function streamerAccountForSettingsAccount(settings, accountId) {
   return Array.isArray(settings.streamerAccounts) && accountId
     ? settings.streamerAccounts.find((item) => String(item.accountId || '') === String(accountId))
     : null;
+}
+
+function updateMenuMmrOcrUi(matchIntel, ocrState, platform) {
+  const isWindows = platform === 'win32';
+  if (els.streamerOcrControls) els.streamerOcrControls.hidden = !isWindows;
+  if (!els.menuMmrOcrRegionStatus) return;
+
+  const region = matchIntel?.menuMmrOcrRegion;
+  let status = t('menuMmrOcrRegionUnset');
+  if (region && Number.isFinite(Number(region.width)) && Number.isFinite(Number(region.height))) {
+    status = t('menuMmrOcrRegionSet')
+      .replace('{width}', String(region.width))
+      .replace('{height}', String(region.height))
+      .replace('{x}', String(region.x))
+      .replace('{y}', String(region.y));
+  }
+  if (ocrState?.lastMmr) {
+    status += ` · ${t('menuMmrOcrLastRun').replace('{mmr}', String(ocrState.lastMmr))}`;
+  }
+  if (ocrState?.lastError) {
+    status += ` · ${ocrState.lastError}`;
+  }
+  els.menuMmrOcrRegionStatus.textContent = status;
+}
+
+async function pickMenuMmrOcrRegion() {
+  if (!els.pickMenuMmrOcrRegion) return;
+  const button = els.pickMenuMmrOcrRegion;
+  const previousText = button.textContent;
+  button.disabled = true;
+  button.textContent = '...';
+  try {
+    alert(t('menuMmrOcrPickHint'));
+    const response = await api('/api/menu-mmr-ocr/pick-region');
+    if (response?.cancelled) return;
+    if (response?.region) {
+      const next = await fetch('/api/state').then((res) => res.json());
+      snapshot = next;
+      render(snapshot);
+    }
+  } catch (error) {
+    alert(error.message || t('menuMmrOcrPickFailed'));
+  } finally {
+    button.disabled = false;
+    button.textContent = previousText || t('pickMenuMmrOcrRegion');
+  }
 }
 
 function renderStreamerStatsPreview(stats, settings, selectedAccountId = '') {
@@ -4144,13 +4213,18 @@ els.spectatorGameLabelTemplate?.addEventListener('change', () => saveProtection(
   els.streamerWinLossGamePosition,
   els.hideStreamerStatsDuringDraft,
   els.streamerMedalSource,
-  els.autoUpdateStreamerMmr
+  els.autoUpdateStreamerMmr,
+  els.menuMmrOcrEnabled
 ].forEach((input) => input?.addEventListener('change', () => {
   if (input === els.streamerMedalSource) markStreamerSettingsAccountInteraction();
   updateMatchIntelFieldVisibility();
   renderStreamerGoalPreview(snapshot?.state?.streamerStats || {}, protectionMatchIntelFromForm(), activeStreamerSettingsAccountId);
   saveProtection({ matchIntel: protectionMatchIntelFromForm() }).catch(alert);
 }));
+
+els.pickMenuMmrOcrRegion?.addEventListener('click', () => {
+  pickMenuMmrOcrRegion().catch(alert);
+});
 
 [
   els.showStreamerMmrGoal,
@@ -4426,6 +4500,7 @@ function protectionMatchIntelFromForm() {
       ? Number(snapshot?.config?.protection?.matchIntel?.streamerGoalStartMmr || 0)
       : Number(els.streamerGoalStartMmr.value),
     autoUpdateStreamerMmr: els.autoUpdateStreamerMmr.checked,
+    menuMmrOcrEnabled: els.menuMmrOcrEnabled?.checked === true,
     autoBindStreamerAccounts: true,
     streamerMmrWinDelta: Number(els.streamerMmrWinDelta.value),
     streamerMmrLossDelta: Number(els.streamerMmrLossDelta.value),

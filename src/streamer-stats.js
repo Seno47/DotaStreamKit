@@ -74,6 +74,8 @@ export function normalizeStreamerStatsConfig(config) {
   config.streamerMmrGoalDeltaSuffix = normalizeGoalTextPart(config.streamerMmrGoalDeltaSuffix, '');
   config.streamerMmrGoalCustomCss = normalizeGoalCustomCss(config.streamerMmrGoalCustomCss);
   config.autoUpdateStreamerMmr = config.autoUpdateStreamerMmr !== false;
+  config.menuMmrOcrEnabled = config.menuMmrOcrEnabled === true;
+  config.menuMmrOcrRegion = normalizeMenuMmrOcrRegion(config.menuMmrOcrRegion);
   config.autoBindStreamerAccounts = true;
   if (!['auto', 'account', 'mmr'].includes(config.streamerMedalSource)) config.streamerMedalSource = 'auto';
   config.streamerMmr = clampInt(config.streamerMmr, 0, 99999, 0);
@@ -484,6 +486,16 @@ function normalizeGoalTextPart(value, fallback = '') {
 
 function normalizeGoalCustomCss(value) {
   return String(value || '').slice(0, 8000);
+}
+
+function normalizeMenuMmrOcrRegion(value) {
+  if (!value || typeof value !== 'object') return null;
+  const x = clampInt(value.x, 0, 10000, null);
+  const y = clampInt(value.y, 0, 10000, null);
+  const width = clampInt(value.width, 10, 2000, null);
+  const height = clampInt(value.height, 10, 2000, null);
+  if (x === null || y === null || width === null || height === null) return null;
+  return { x, y, width, height };
 }
 
 function clampInt(value, min, max, fallback) {

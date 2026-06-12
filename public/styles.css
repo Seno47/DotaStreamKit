@@ -785,6 +785,28 @@ dd {
   grid-column: 1 / -1;
 }
 
+.streamer-ocr-row {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.streamer-ocr-row .check {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.streamer-ocr-row button {
+  flex: 0 0 auto;
+}
+
+.streamer-ocr-row small {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .streamer-stat-kpi strong {
   overflow: hidden;
   color: #f2f4f8;

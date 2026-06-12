@@ -33,6 +33,7 @@ import {
   updateStreamerSessionPresence
 } from './streamer-stats.js';
 import { merge } from './safe-merge.js';
+import { explainMenuOcrSkip, pickScreenRegion, recognizeMenuMmr } from './menu-mmr-ocr.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const execFileAsync = promisify(execFile);
@@ -365,6 +366,8 @@ const defaultConfig = {
       streamerGoalMmr: 0,
       streamerGoalStartMmr: 0,
       autoUpdateStreamerMmr: true,
+      menuMmrOcrEnabled: false,
+      menuMmrOcrRegion: null,
       autoBindStreamerAccounts: true,
       streamerAccounts: [],
       streamerMmrWinDelta: 25,
@@ -464,6 +467,7 @@ const runtime = {
   twitchStreamStatus: { broadcasterId: null, checkedAt: 0, isLive: null, streamId: null, gameName: null, title: null },
   playerRankCache: new Map(),
   pendingPlayerRankFetches: new Map(),
+  menuMmrOcrInFlight: false,
   config: structuredClone(defaultConfig),
   state: {
     startedAt: new Date().toISOString(),
@@ -632,6 +636,9 @@ runtime.state.lastAutoPredictionAttempt = null;
 runtime.state.autoPredictionCreatedKey = null;
 runtime.state.autoPredictionSuppressedKey = null;
 runtime.state.activePredictionSyncedAt = null;
+runtime.state.menuMmrOcr = runtime.state.menuMmrOcr && typeof runtime.state.menuMmrOcr === 'object'
+  ? runtime.state.menuMmrOcr
+  : { lastRunAt: null, lastMmr: null, lastRawText: null, lastError: null };
 await refreshDotaProcessState();
 runtime.state.protection = computeProtection(runtime.config, runtime.state.gsi);
 await restoreTwitchStatus();
@@ -654,6 +661,8 @@ const server = createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/api/streamer-stats/reset') return await resetStreamerStatsApi(res);
     if (req.method === 'POST' && url.pathname === '/api/streamer-stats/goal-reset') return await resetStreamerGoalRecordApi(req, res);
     if (req.method === 'POST' && url.pathname === '/api/streamer-stats/restore') return await restoreStreamerStatsApi(res);
+    if (req.method === 'POST' && url.pathname === '/api/menu-mmr-ocr/pick-region') return await pickMenuMmrOcrRegionApi(res);
+    if (req.method === 'POST' && url.pathname === '/api/menu-mmr-ocr/clear-region') return await clearMenuMmrOcrRegionApi(res);
     if (req.method === 'POST' && url.pathname === '/gsi/dota2') return await handleGsi(req, res);
     if (req.method === 'GET' && url.pathname === '/api/dota/detect') return await detectDotaApi(res);
     if (req.method === 'POST' && url.pathname === '/api/install-gsi') return await installGsi(req, res);
@@ -763,6 +772,10 @@ async function isDotaProcessRunning() {
 setInterval(() => {
   refreshTwitchStreamStatus().catch((error) => logEvent('twitch', `Stream status check failed: ${error.message}`));
 }, 60000);
+
+setInterval(() => {
+  maybeRunMenuMmrOcr().catch((error) => logEvent('system', `Menu MMR OCR failed: ${error.message}`));
+}, 10_000);
 
 refreshTwitchStreamStatus().catch((error) => logEvent('twitch', `Stream status check failed: ${error.message}`));
 
@@ -1523,6 +1536,7 @@ function publicState() {
   const streamerStats = publicStreamerStats();
   return {
     version: appVersion,
+    platform: process.platform,
     config: sanitizeConfig(runtime.config),
     state: {
       ...safeRuntimeState,
@@ -1607,6 +1621,90 @@ function streamerMmrForAccount(settings, accountId) {
   const value = account ? account.mmr : settings.streamerMmr;
   const number = Number(value || 0);
   return Number.isFinite(number) && number > 0 ? Math.trunc(number) : 0;
+}
+
+async function pickMenuMmrOcrRegionApi(res) {
+  if (process.platform !== 'win32') {
+    return sendJson(res, { error: 'Screen region picker is only available on Windows' }, 400);
+  }
+  const region = await pickScreenRegion();
+  if (!region) return sendJson(res, { cancelled: true });
+  runtime.config.protection.matchIntel.menuMmrOcrRegion = region;
+  normalizeMatchIntelConfig(runtime.config.protection.matchIntel);
+  await persistConfig();
+  broadcast();
+  return sendJson(res, { region });
+}
+
+async function clearMenuMmrOcrRegionApi(res) {
+  runtime.config.protection.matchIntel.menuMmrOcrRegion = null;
+  normalizeMatchIntelConfig(runtime.config.protection.matchIntel);
+  await persistConfig();
+  broadcast();
+  return sendJson(res, { ok: true });
+}
+
+async function maybeRunMenuMmrOcr() {
+  const settings = runtime.config.protection.matchIntel || {};
+  const skipReason = explainMenuOcrSkip(
+    settings,
+    runtime.state.gsi,
+    runtime.dotaProcess,
+    runtime.menuMmrOcrInFlight
+  );
+  if (skipReason) return;
+
+  runtime.menuMmrOcrInFlight = true;
+  try {
+    const result = await recognizeMenuMmr(settings.menuMmrOcrRegion);
+    runtime.state.menuMmrOcr = {
+      lastRunAt: new Date().toISOString(),
+      lastMmr: result?.mmr ?? null,
+      lastRawText: result?.rawText ?? null,
+      lastError: null
+    };
+
+    if (result?.mmr) {
+      const accountId = streamerOverlayAccountId(settings, runtime.state.streamerStats);
+      const currentMmr = streamerMmrForAccount(settings, accountId);
+      if (result.mmr !== currentMmr) {
+        applyMenuMmrOcrResult(result.mmr, accountId);
+        await persistConfig();
+        logEvent('system', `Menu OCR MMR updated: from ${currentMmr} to ${result.mmr}`);
+        broadcast();
+      }
+    }
+    persistState();
+  } catch (error) {
+    runtime.state.menuMmrOcr = {
+      ...(runtime.state.menuMmrOcr || {}),
+      lastRunAt: new Date().toISOString(),
+      lastError: error.message
+    };
+    persistState();
+    throw error;
+  } finally {
+    runtime.menuMmrOcrInFlight = false;
+  }
+}
+
+function applyMenuMmrOcrResult(mmr, accountId) {
+  const settings = runtime.config.protection.matchIntel;
+  const accounts = Array.isArray(settings.streamerAccounts) ? [...settings.streamerAccounts] : [];
+  const accountIndex = accountId
+    ? accounts.findIndex((item) => String(item?.accountId || '') === String(accountId))
+    : -1;
+
+  if (accountIndex >= 0) {
+    accounts[accountIndex] = { ...accounts[accountIndex], mmr };
+    settings.streamerAccounts = accounts;
+  } else if (accounts.length === 1) {
+    accounts[0] = { ...accounts[0], mmr };
+    settings.streamerAccounts = accounts;
+  } else {
+    settings.streamerMmr = mmr;
+  }
+  normalizeMatchIntelConfig(settings);
 }
 
 function streamerMmrGoalState({ account, accountId, currentMmr, wins, losses, winDelta }) {

@@ -1,6 +1,6 @@
 {
   "name": "dotastreamkit",
-  "version": "1.5.6",
+  "version": "1.5.7",
   "private": true,
   "description": "Local Dota 2 stream protection and Twitch Channel Points prediction automation.",
   "type": "module",
@@ -13,6 +13,7 @@
     "test:prediction-safety": "node scripts/test-prediction-safety.js",
     "test:game-intel": "node scripts/test-game-intel.js",
     "test:streamer-stats": "node scripts/test-streamer-stats.js",
+    "test:menu-mmr-ocr": "node scripts/test-menu-mmr-ocr.js",
     "optimize:assets": "node scripts/optimize-assets.js",
     "extract:dota-assets": "powershell -ExecutionPolicy Bypass -File scripts/extract-dota-assets.ps1",
     "install:gsi": "powershell -ExecutionPolicy Bypass -File scripts/install-gsi.ps1",
@@ -26,6 +27,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "sharp": "^0.34.5"
+    "sharp": "^0.34.5",
+    "tesseract.js": "^7.0.0"
   }
 }
