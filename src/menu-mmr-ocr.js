@@ -15,6 +15,11 @@ const execFileAsync = promisify(execFile);
 const inGameStatePattern = /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS|POST_GAME/i;
 
 let workerPromise = null;
+let tesseractCachePath = join(rootDir, 'data', 'tesseract-cache');
+
+export function setMenuMmrOcrCachePath(cachePath) {
+  if (cachePath) tesseractCachePath = cachePath;
+}
 
 export function explainMenuOcrSkip(settings, gsi, dotaProcess, inFlight = false) {
   if (process.platform !== 'win32') return 'platform is not win32';
@@ -157,7 +162,7 @@ async function getWorker() {
   if (!workerPromise) {
     workerPromise = (async () => {
       const worker = await createWorker('eng+rus', 1, {
-        cachePath: join(rootDir, 'data', 'tesseract-cache')
+        cachePath: tesseractCachePath
       });
       await worker.setParameters({
         tessedit_pageseg_mode: String(PSM.SINGLE_BLOCK)

@@ -33,7 +33,7 @@ import {
   updateStreamerSessionPresence
 } from './streamer-stats.js';
 import { merge } from './safe-merge.js';
-import { explainMenuOcrSkip, pickScreenRegion, recognizeMenuMmr } from './menu-mmr-ocr.js';
+import { explainMenuOcrSkip, pickScreenRegion, recognizeMenuMmr, setMenuMmrOcrCachePath } from './menu-mmr-ocr.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const execFileAsync = promisify(execFile);
@@ -47,6 +47,7 @@ const statePath = join(dataDir, 'state.json');
 const twitchTokenPath = join(dataDir, 'twitch-token.json');
 const appPackage = JSON.parse(await readFile(join(rootDir, 'package.json'), 'utf8'));
 const appVersion = String(appPackage.version || '0.0.0');
+setMenuMmrOcrCachePath(join(dataDir, 'tesseract-cache'));
 
 const port = Number(process.env.PORT || 37273);
 const githubRepoOwner = 'Seno47';
