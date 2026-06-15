@@ -807,6 +807,24 @@ dd {
   line-height: 1.35;
 }
 
+.streamer-ocr-manual {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px 12px;
+}
+
+.streamer-ocr-manual label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.streamer-ocr-manual input {
+  width: 88px;
+}
+
 .streamer-stat-kpi strong {
   overflow: hidden;
   color: #f2f4f8;

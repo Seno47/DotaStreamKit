@@ -463,7 +463,15 @@
                       <input type="checkbox" id="menuMmrOcrEnabled"> Распознавать текущий MMR через OCR
                     </label>
                     <button type="button" id="pickMenuMmrOcrRegion">Указать область</button>
+                    <button type="button" id="clearMenuMmrOcrRegion">Очистить область</button>
                     <small id="menuMmrOcrRegionStatus" class="muted">Область не задана</small>
+                  </div>
+                  <div class="streamer-ocr-manual" id="menuMmrOcrManualRegion" hidden>
+                    <label id="menuMmrOcrRegionXWrap">X<input id="menuMmrOcrRegionX" type="number" min="0" max="10000" step="1"></label>
+                    <label id="menuMmrOcrRegionYWrap">Y<input id="menuMmrOcrRegionY" type="number" min="0" max="10000" step="1"></label>
+                    <label id="menuMmrOcrRegionWidthWrap">Width<input id="menuMmrOcrRegionWidth" type="number" min="10" max="2000" step="1"></label>
+                    <label id="menuMmrOcrRegionHeightWrap">Height<input id="menuMmrOcrRegionHeight" type="number" min="10" max="2000" step="1"></label>
+                    <button type="button" id="saveMenuMmrOcrRegion">Сохранить область</button>
                   </div>
                   <label id="streamerMmrWinDeltaWrap">Win MMR<input id="streamerMmrWinDelta" type="number" min="0" max="200" step="1"></label>
                   <label id="streamerMmrLossDeltaWrap">Loss MMR<input id="streamerMmrLossDelta" type="number" min="0" max="200" step="1"></label>
