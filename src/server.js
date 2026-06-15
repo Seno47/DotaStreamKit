@@ -34,6 +34,7 @@ import {
 } from './streamer-stats.js';
 import { merge } from './safe-merge.js';
 import { explainMenuOcrSkip, pickScreenRegion, recognizeMenuMmr, setMenuMmrOcrCachePath } from './menu-mmr-ocr.js';
+import { getScreenCaptureSupport, normalizeRegion } from './screen-capture.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const execFileAsync = promisify(execFile);
@@ -663,6 +664,7 @@ const server = createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/api/streamer-stats/goal-reset') return await resetStreamerGoalRecordApi(req, res);
     if (req.method === 'POST' && url.pathname === '/api/streamer-stats/restore') return await restoreStreamerStatsApi(res);
     if (req.method === 'POST' && url.pathname === '/api/menu-mmr-ocr/pick-region') return await pickMenuMmrOcrRegionApi(res);
+    if (req.method === 'POST' && url.pathname === '/api/menu-mmr-ocr/set-region') return await setMenuMmrOcrRegionApi(req, res);
     if (req.method === 'POST' && url.pathname === '/api/menu-mmr-ocr/clear-region') return await clearMenuMmrOcrRegionApi(res);
     if (req.method === 'POST' && url.pathname === '/gsi/dota2') return await handleGsi(req, res);
     if (req.method === 'GET' && url.pathname === '/api/dota/detect') return await detectDotaApi(res);
@@ -1538,6 +1540,7 @@ function publicState() {
   return {
     version: appVersion,
     platform: process.platform,
+    menuMmrOcrSupport: getScreenCaptureSupport(),
     config: sanitizeConfig(runtime.config),
     state: {
       ...safeRuntimeState,
@@ -1625,11 +1628,26 @@ function streamerMmrForAccount(settings, accountId) {
 }
 
 async function pickMenuMmrOcrRegionApi(res) {
-  if (process.platform !== 'win32') {
-    return sendJson(res, { error: 'Screen region picker is only available on Windows' }, 400);
+  const support = getScreenCaptureSupport();
+  if (!support.supported) {
+    return sendJson(res, { error: support.reason || 'Screen capture is not available' }, 400);
+  }
+  if (support.picker === 'manual') {
+    return sendJson(res, { error: 'Interactive region picker is not available. Enter coordinates manually.' }, 400);
   }
   const region = await pickScreenRegion();
   if (!region) return sendJson(res, { cancelled: true });
+  runtime.config.protection.matchIntel.menuMmrOcrRegion = region;
+  normalizeMatchIntelConfig(runtime.config.protection.matchIntel);
+  await persistConfig();
+  broadcast();
+  return sendJson(res, { region });
+}
+
+async function setMenuMmrOcrRegionApi(req, res) {
+  const body = await readJson(req);
+  const region = normalizeRegion(body);
+  if (!region) return sendJson(res, { error: 'Invalid screen region' }, 400);
   runtime.config.protection.matchIntel.menuMmrOcrRegion = region;
   normalizeMatchIntelConfig(runtime.config.protection.matchIntel);
   await persistConfig();

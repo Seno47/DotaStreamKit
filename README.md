@@ -287,6 +287,18 @@ Match Intel добавляет на OBS-оверлей небольшие игр
 
 MMR можно вести вручную или обновлять автоматически после победы/поражения. Авто-обновление применяет заданные `Win MMR` и `Loss MMR`, но не выходит за диапазон `1..99999`. Если поставить MMR `0`, программа считает аккаунт на калибровке: показывает calibration-медаль и не трогает MMR после матчей.
 
+#### Menu MMR OCR (Linux)
+
+В Match Intel можно включить `Распознавать текущий MMR через OCR`. Программа читает число MMR из заданной области экрана, когда Dota 2 открыта в главном меню.
+
+Зависимости:
+
+- системные библиотеки для `node-screenshots`: `libxcb1`, `libxrandr2`, `libdbus-1-3`;
+- **X11:** `slop` для выбора области (`sudo apt install slop`);
+- **Wayland (Sway/Hyprland и др.):** `slurp` для выбора области и `grim` как fallback захвата (`sudo apt install slurp grim`).
+
+Если `slop`/`slurp` не установлены, координаты области можно ввести вручную в панели. После смены масштаба экрана (HiDPI) область может потребовать перенастройки.
+
 Цель MMR настраивается отдельно для аккаунтов стримера. Можно указать стартовый MMR для расчёта прогресса, целевой MMR и выбрать, какие части показывать: текущий MMR, старт, цель, сколько MMR осталось, счёт W-L, winrate и количество побед до цели. Если нужен минимальный вид для OBS, можно убрать общий фон/рамку и оставить только хотбар, цифры и текст.
 
 Внешний вид цели MMR можно собрать без ручного CSS: есть пресеты полоски, готовые анимации, настройка скорости, высоты прогресс-бара, скругления, свечения, цветов и отдельных отступов сверху/снизу/слева/справа. Для тонкой доработки остаётся поле custom CSS.
@@ -659,6 +671,18 @@ Notable players come from two places. DotaStreamKit can use OpenDota data for hi
 Streamer stats are configured separately from notable players. You can show only the medal, only MMR, only W-L, or any combination. The rank medal source can be the Dota account, manual MMR, or automatic fallback from account to manual MMR.
 
 Manual MMR can be updated automatically after wins and losses. The configured `Win MMR` and `Loss MMR` values are applied after the match, clamped to `1..99999`. If MMR is set to `0`, DotaStreamKit treats the account as calibrating: it shows the calibration medal and does not change MMR after matches.
+
+#### Menu MMR OCR (Linux)
+
+In Match Intel, enable `Recognize current MMR via OCR`. DotaStreamKit reads the MMR number from a screen region while Dota 2 is in the main menu.
+
+Dependencies:
+
+- system libraries for `node-screenshots`: `libxcb1`, `libxrandr2`, `libdbus-1-3`;
+- **X11:** `slop` for region selection (`sudo apt install slop`);
+- **Wayland (Sway/Hyprland, etc.):** `slurp` for region selection and `grim` as capture fallback (`sudo apt install slurp grim`).
+
+If `slop`/`slurp` are not installed, enter region coordinates manually in the dashboard. After changing display scaling (HiDPI), you may need to reconfigure the region.
 
 The MMR goal block is configured per streamer account. You can set the start MMR used for progress calculation, the target MMR, and choose which parts are visible: current MMR, start, target, remaining MMR, W-L record, winrate, and wins needed to reach the target. For a clean OBS-only look, the panel background/frame can be hidden while the bar, numbers, and text stay visible.
 

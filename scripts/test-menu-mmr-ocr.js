@@ -3,8 +3,10 @@ import { isDotaMainMenu, parseMmrFromOcrText } from '../src/menu-mmr-ocr.js';
 
 assert.equal(parseMmrFromOcrText('2 869\nРейтинг'), 2869);
 assert.equal(parseMmrFromOcrText('2,869\nMMR'), 2869);
-assert.equal(parseMmrFromOcrText('2869'), 2869);
-assert.equal(parseMmrFromOcrText('2,869'), 2869);
+assert.equal(parseMmrFromOcrText('MMR 2869'), 2869);
+assert.equal(parseMmrFromOcrText('рейтинг: 1234'), 1234);
+assert.equal(parseMmrFromOcrText('2869'), null);
+assert.equal(parseMmrFromOcrText('2,869'), null);
 assert.equal(parseMmrFromOcrText('hello world'), null);
 assert.equal(parseMmrFromOcrText(''), null);
 
