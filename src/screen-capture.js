@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { readFile, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
@@ -102,7 +102,7 @@ export function getScreenCaptureSupport() {
   if (platform === 'darwin') {
     return {
       supported: hasScreenshots,
-      picker: hasScreenshots ? 'native' : 'manual',
+      picker: 'manual',
       capture: hasScreenshots ? 'node-screenshots' : 'none',
       displayServer: 'darwin',
       reason: hasScreenshots ? undefined : (screenshotsLoadError?.message || 'node-screenshots is not available')

@@ -9,12 +9,7 @@ pick_with_slurp() {
     echo '{"cancelled":true}'
     return 0
   fi
-  geometry="$(echo "$geometry" | tr -d '[:space:]')"
-  if [[ "$geometry" =~ ^(-?[0-9]+),(-?[0-9]+)([0-9]+)x([0-9]+)$ ]]; then
-    printf '{"x":%s,"y":%s,"width":%s,"height":%s}\n' \
-      "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" "${BASH_REMATCH[3]}" "${BASH_REMATCH[4]}"
-    return 0
-  fi
+  geometry="$(echo "$geometry" | xargs)"
   if [[ "$geometry" =~ ^(-?[0-9]+),(-?[0-9]+)[[:space:]]+([0-9]+)x([0-9]+)$ ]]; then
     printf '{"x":%s,"y":%s,"width":%s,"height":%s}\n' \
       "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" "${BASH_REMATCH[3]}" "${BASH_REMATCH[4]}"

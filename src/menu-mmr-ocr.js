@@ -1,6 +1,6 @@
 import sharp from 'sharp';
 import { createWorker, PSM } from 'tesseract.js';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   captureScreenRegion,
@@ -148,14 +148,6 @@ export async function recognizeMenuMmr(region) {
     Number.isFinite(dimResult.confidence) ? dimResult.confidence : 0
   );
   const mmr = parseMmrFromOcrText(rawText);
-
-  // console.log('[Menu MMR OCR] recognition result:');
-  // console.log(`  bright pass: ${JSON.stringify(brightResult.rawText)}`);
-  // console.log(`  dim pass: ${JSON.stringify(dimResult.rawText)}`);
-  // console.log(`  merged raw text: ${JSON.stringify(rawText)}`);
-  // console.log(`  confidence: ${Number.isFinite(confidence) ? confidence.toFixed(1) : '-'}`);
-  // console.log(`  marker (mmr/рейтинг): ${mmrMarkerPattern.test(rawText) ? 'yes' : 'no'}`);
-  // console.log(`  parsed MMR: ${mmr ?? 'null'}`);
 
   if (mmr === null) return { mmr: null, rawText, confidence };
   return { mmr, rawText, confidence };
