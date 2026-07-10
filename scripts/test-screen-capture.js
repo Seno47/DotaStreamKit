@@ -12,6 +12,7 @@ assert.equal(parseSlopOutput('invalid'), null);
 
 assert.deepEqual(parseSlurpOutput('100,200 120x30'), { x: 100, y: 200, width: 120, height: 30 });
 assert.deepEqual(parseSlurpOutput('0,0 1920x1080'), { x: 0, y: 0, width: 1920, height: 1080 });
+assert.deepEqual(parseSlurpOutput('-1920,-200 120x30'), { x: -1920, y: -200, width: 120, height: 30 });
 assert.equal(parseSlurpOutput(''), null);
 
 const monitor = {
@@ -27,6 +28,12 @@ assert.deepEqual(
 assert.deepEqual(normalizeRegion({ x: 10, y: 20, width: 100, height: 30 }), {
   x: 10,
   y: 20,
+  width: 100,
+  height: 30
+});
+assert.deepEqual(normalizeRegion({ x: -1920, y: -200, width: 100, height: 30 }), {
+  x: -1920,
+  y: -200,
   width: 100,
   height: 30
 });

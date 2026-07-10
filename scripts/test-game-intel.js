@@ -1,9 +1,15 @@
 import assert from 'node:assert/strict';
 import {
   collectMatchPlayers,
+  normalizeAccountId,
   notablePlayersFromRankCache,
   updateMatchIntel
 } from '../src/game-intel.js';
+
+assert.equal(normalizeAccountId('76561198083722517'), 123456789);
+assert.equal(normalizeAccountId('123456789'), 123456789);
+assert.equal(normalizeAccountId(123456789), 123456789);
+assert.equal(normalizeAccountId(76561198083722517), null);
 
 const payload = {
   map: { clock_time: 1200 },
@@ -94,6 +100,25 @@ const staleAegisDoesNotRestart = updateMatchIntel(expiredStaleAegis, {}, { clock
 )));
 assert.equal(staleAegisDoesNotRestart.aegis, null);
 
+const sparseAfterExpiredAegis = updateMatchIntel(expiredStaleAegis, {}, { clockTime: 2110, activeMatchId: 43 }, []);
+const staleAegisAfterSparsePayload = updateMatchIntel(sparseAfterExpiredAegis, {}, { clockTime: 2120, activeMatchId: 43 }, teammateAegisPlayers.map((player) => (
+  player.slot === 7 ? { ...player, hasAegis: true } : player
+)));
+assert.equal(staleAegisAfterSparsePayload.aegis, null);
+
+const confirmedAegisAbsence = updateMatchIntel(staleAegisAfterSparsePayload, {}, { clockTime: 2200, activeMatchId: 43 }, teammateAegisPlayers.map((player) => (
+  player.slot === 7 ? { ...player, hasItemData: true, hasAegis: false } : player
+)));
+assert.equal(confirmedAegisAbsence.aegis, null);
+assert.equal(confirmedAegisAbsence.aegisHolderAbsenceConfirmed, true);
+const secondAegisForSameHolder = updateMatchIntel(confirmedAegisAbsence, {}, { clockTime: 2300, activeMatchId: 43 }, teammateAegisPlayers.map((player) => (
+  player.slot === 7 ? { ...player, hasItemData: true, hasAegis: true } : player
+)));
+assert.equal(secondAegisForSameHolder.aegis.accountId, 777);
+assert.equal(secondAegisForSameHolder.aegis.pickedAt, 2300);
+assert.equal(secondAegisForSameHolder.aegis.expiresAt, 2600);
+assert.equal(secondAegisForSameHolder.roshan.killedAt, 2295);
+
 const ignoredDeniedEvent = updateMatchIntel(teammateAegis, {
   events: [{ event_type: 'aegis_denied', player_id: 7, game_time: 1815 }]
 }, { clockTime: 1815, activeMatchId: 43 }, teammateAegisPlayers);
@@ -124,14 +149,63 @@ const newRoshanKill = updateMatchIntel(respawnIntel, { events: { roshan_killed: 
 assert.equal(newRoshanKill.roshan.killedAt, 1710);
 assert.equal(newRoshanKill.roshanStatus.phase, 'waiting');
 
+const combinedRoshanSignals = updateMatchIntel(respawnIntel, {
+  events: { roshan_respawned: true, roshan_killed: true }
+}, { clockTime: 1710, activeMatchId: 42 }, players);
+assert.equal(combinedRoshanSignals.roshan.killedAt, 1710);
+
+const clearedRoshanSignal = updateMatchIntel(newRoshanKill, {}, { clockTime: 2200, activeMatchId: 42 }, players);
+const secondBooleanRoshanKill = updateMatchIntel(clearedRoshanSignal, { events: { roshan_killed: true } }, { clockTime: 2400, activeMatchId: 42 }, players);
+assert.equal(secondBooleanRoshanKill.roshan.killedAt, 2400);
+
 const repeatedRoshanEvent = updateMatchIntel(intel, { events: { roshan_killed: true } }, { clockTime: 1205, activeMatchId: 42 }, players);
-assert.equal(repeatedRoshanEvent.roshan.killedAt, 1195);
+assert.equal(repeatedRoshanEvent.roshan.killedAt, 1205);
+
+const persistedLateRoshanEvent = updateMatchIntel(repeatedRoshanEvent, { events: { roshan_killed: true } }, { clockTime: 1900, activeMatchId: 42 }, players);
+assert.equal(persistedLateRoshanEvent.roshan.killedAt, 1205);
+
+const genuinelyNewRoshanEvent = updateMatchIntel(persistedLateRoshanEvent, {
+  events: [{ event_type: 'roshan_killed', game_time: 1900 }]
+}, { clockTime: 1900, activeMatchId: 42 }, players);
+assert.equal(genuinelyNewRoshanEvent.roshan.killedAt, 1900);
+
+const fastSecondRoshanKill = updateMatchIntel(intel, {
+  events: [{ event_type: 'roshan_killed', event_id: 2, game_time: 1681 }]
+}, { clockTime: 1681, activeMatchId: 42 }, players);
+assert.equal(fastSecondRoshanKill.roshan.killedAt, 1681);
+
+const staleTimestampedRoshan = updateMatchIntel(null, {
+  events: [{ event_type: 'roshan_killed', game_time: 100 }]
+}, { clockTime: 1000, activeMatchId: 45 }, []);
+assert.equal(staleTimestampedRoshan.roshan, null);
+
+const recentTimestampedRoshan = updateMatchIntel(null, {
+  events: [{ event_type: 'roshan_killed', game_time: 100 }]
+}, { clockTime: 500, activeMatchId: 45 }, []);
+assert.equal(recentTimestampedRoshan.roshan.killedAt, 100);
+assert.equal(recentTimestampedRoshan.roshanStatus.earliestRemaining, 80);
 
 const hiddenAegisItems = updateMatchIntel(intel, {}, { clockTime: 1230, activeMatchId: 42 }, players.map((player) => ({ ...player, hasAegis: false })));
-assert.equal(hiddenAegisItems.aegis.slot, 5);
+assert.equal(hiddenAegisItems.aegis, null);
 
 const sparseAegisItems = updateMatchIntel(intel, {}, { clockTime: 1230, activeMatchId: 42 }, players.map((player) => ({ ...player, hasAegis: false, hasItemData: false })));
 assert.equal(sparseAegisItems.aegis.slot, 5);
+
+const persistedPickupAfterDeath = updateMatchIntel(teammateAegis, {
+  events: [{ event_type: 'aegis_picked_up', player_id: 7, game_time: 1800 }]
+}, { clockTime: 1815, activeMatchId: 43 }, teammateAegisPlayers.map((player) => (
+  player.slot === 7 ? { ...player, deaths: 1 } : player
+)));
+assert.equal(persistedPickupAfterDeath.aegis, null);
+
+const anonymousAegisPickup = updateMatchIntel(null, {
+  events: [{ event_type: 'aegis_picked_up', player_id: 7 }]
+}, { clockTime: 2500, activeMatchId: 44 }, teammateAegisPlayers);
+const clearedAegisSignal = updateMatchIntel(anonymousAegisPickup, {}, { clockTime: 2801, activeMatchId: 44 }, teammateAegisPlayers);
+const secondAnonymousAegisPickup = updateMatchIntel(clearedAegisSignal, {
+  events: [{ event_type: 'aegis_picked_up', player_id: 7 }]
+}, { clockTime: 3000, activeMatchId: 44 }, teammateAegisPlayers);
+assert.equal(secondAnonymousAegisPickup.aegis.pickedAt, 3000);
 
 const notable = notablePlayersFromRankCache(players, (accountId) => accountId === '111'
   ? { leaderboardRank: 123, rankTier: 80, name: 'Top Mid', countryCode: 'ua' }

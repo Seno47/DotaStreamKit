@@ -84,13 +84,13 @@ http://localhost:37273/overlay.html
 - автоматическое закрытие, отмена и ручное управление прогнозами;
 - оверлей Twitch-прогноза: название, таймер закрытия, баллы канала, проценты и анимированная полоса исходов;
 - отдельные настройки просмотра чужих игр: свои шаблоны прогнозов, переменные команд/героев и отдельный Match Intel без масок драфта или миникарты;
-- поддержка личного Twitch-аккаунта или отдельного аккаунта-модератора;
+- поддержка личного Twitch-канала или канала стримера по нику с OAuth от имени выбранного broadcaster;
 - установщик Windows с выбором папки, ярлыками и нормальным отображением в поиске Windows;
 - проверка обновлений из опубликованных GitHub Releases, без установки сырого кода из ветки;
 - экспорт и импорт настроек с выбором разделов: можно перенести всё сразу или только нужные части;
 - локальная установка Dota Game State Integration.
 
-Серверный режим в интерфейсе есть, но эта инструкция пока описывает только локальное использование. Для публичного сервера проект ещё не считается готовым сценарием.
+Серверный режим в интерфейсе есть, но эта инструкция пока описывает только локальное использование. Для публичного сервера проект ещё не считается готовым сценарием. Чтобы процесс вообще слушал внешний интерфейс, перед запуском нужно задать `DOTASTREAMKIT_SERVER_PASSWORD`; без него даже выбранный серверный режим безопасно остаётся на loopback. Удалённый HTTP-доступ использует Basic Auth (любое имя пользователя и этот пароль).
 
 ### Быстрый старт через релиз
 
@@ -160,14 +160,14 @@ DotaStreamKit нужен Twitch app, чтобы получить `Client ID` и 
 
 - `Client Secret` нельзя публиковать и нельзя показывать зрителям.
 - Если Twitch показывает `reconnect`, нажми `Подключить Twitch` ещё раз и подтверди новые права.
-- Для управления прогнозами чужого канала OAuth-аккаунт должен иметь права управлять Predictions этого канала.
+- Twitch требует, чтобы для управления Predictions OAuth был выполнен именно от имени выбранного broadcaster. Одних прав модератора недостаточно.
 
-#### Личный аккаунт или отдельный модератор
+#### Личный аккаунт или канал стримера
 
 В блоке Twitch есть поле `Канал для прогнозов`.
 
 - `Личный Twitch аккаунт` - прогнозы создаются на канале аккаунта, через который ты авторизовался.
-- `Отдельный аккаунт / канал стримера по нику` - авторизуется отдельный аккаунт, а канал для прогнозов выбирается по нику стримера. Программа сохраняет broadcaster ID, поэтому смена ника стримера не должна ломать привязку.
+- `Канал стримера по нику` - канал выбирается по нику, после чего Twitch OAuth нужно пройти, войдя именно в этот broadcaster-аккаунт. Программа сохраняет broadcaster ID, поэтому смена ника стримера не должна ломать привязку. Отдельный модераторский OAuth можно использовать только для поддерживаемых действий чата, но не для Predictions.
 
 ### Настройка Dota GSI
 
@@ -486,13 +486,13 @@ Main features:
 - supports manual prediction controls and automatic lock/resolve/cancel flows;
 - Twitch prediction overlay: title, close timer, channel points, percentages, and animated outcome bar;
 - separate spectator settings for watched games: independent prediction templates, team/hero variables, and Match Intel without draft or minimap masks;
-- supports personal Twitch account mode and separate moderator account mode;
+- supports a personal Twitch channel or a streamer channel selected by login, with OAuth from that broadcaster;
 - Windows installer with install path selection, shortcuts, and Windows search/start menu integration;
 - update checks from published GitHub Releases only, never from raw branch commits;
 - settings export/import with section selection, from one section to the full local setup;
 - installs Dota Game State Integration locally.
 
-The dashboard contains a server mode, but this README intentionally covers only local usage for now. Public server deployment is not documented as a stable path yet.
+The dashboard contains a server mode, but this README intentionally covers only local usage for now. Public server deployment is not documented as a stable path yet. To listen on an external interface at all, set `DOTASTREAMKIT_SERVER_PASSWORD` before startup; without it, server mode safely stays on loopback. Remote HTTP access uses Basic Auth (any username and that password).
 
 ### Quick Start With a Release
 
@@ -562,7 +562,12 @@ Important:
 
 - Do not publish your `Client Secret`.
 - If the dashboard shows `reconnect`, click `Connect Twitch` again and approve the updated permissions.
-- To manage predictions on another channel, the OAuth account must have permission to manage Predictions for that broadcaster.
+- Twitch requires Prediction OAuth to belong to the selected broadcaster; moderator status alone is not sufficient.
+
+#### Personal account or streamer channel
+
+- `Personal Twitch account` manages predictions on the channel used for OAuth.
+- `Streamer channel by login` resolves the channel by login, then OAuth must be completed while signed in as that broadcaster. A separate moderator OAuth may be used only for supported chat actions, not for Predictions.
 
 ### Dota GSI Setup
 

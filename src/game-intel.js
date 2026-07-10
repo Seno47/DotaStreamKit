@@ -7,6 +7,8 @@ const aegisItemIds = new Set([117]);
 const aegisPickupPattern = /aegis.*pick|pick.*aegis|aegis_picked_up/i;
 const roshanKillPattern = /roshan.*(kill|death|dead|slain)|(?:kill|death|dead|slain).*roshan|roshan_killed/i;
 const roshanRespawnPattern = /roshan.*(respawn|spawn|alive|up)|(?:respawn|spawn|alive).*roshan/i;
+const steamId64AccountOffset = 76561197960265728n;
+const maxDotaAccountId = 4294967295n;
 
 export function collectMatchPlayers(payload) {
   const source = payload?.allplayers || payload?.players || {};
@@ -22,39 +24,74 @@ export function updateMatchIntel(previousIntel, payload, gsi, players) {
   const previous = previousIntel && typeof previousIntel === 'object' ? previousIntel : {};
   const clockTime = normalizedClock(gsi?.clockTime);
   const activeMatchId = gsi?.activeMatchId || gsi?.matchId || null;
-  const matchChanged = previous.matchId && activeMatchId && String(previous.matchId) !== String(activeMatchId);
+  const activeContextKey = gsi?.matchContextKey || (activeMatchId ? `match:${activeMatchId}` : null);
+  const matchChanged = Boolean(
+    (previous.contextKey && activeContextKey && String(previous.contextKey) !== String(activeContextKey))
+    || (previous.matchId && activeMatchId && String(previous.matchId) !== String(activeMatchId))
+  );
   const base = matchChanged ? {} : previous;
   const aegisEvent = extractLatestAegisEvent(payload, players, clockTime);
+  const freshAegisEvent = Boolean(aegisEvent?.key && (
+    aegisEvent.key !== base.lastAegisPickupEventKey
+    || (!aegisEvent.stable && base.aegisPickupSignalActive !== true)
+  ));
   const rosterAegisHolder = players.find((player) => player.source === 'roster' && player.hasAegis) || null;
-  const eventAegisHolder = aegisEvent?.holder || null;
+  const eventAegisHolder = freshAegisEvent ? aegisEvent.holder : null;
   const aegisHolder = eventAegisHolder || rosterAegisHolder || players.find((player) => player.hasAegis) || null;
-  const roshanKilled = hasRoshanKillEvent(payload);
-  const roshanRespawned = hasRoshanRespawnEvent(payload);
+  const roshanEvent = extractLatestRoshanLifecycleEvent(payload, clockTime);
+  const freshRoshanEvent = Boolean(roshanEvent?.key && (
+    roshanEvent.key !== base.lastRoshanEventKey
+    || (!roshanEvent.stable && base.roshanSignalActive !== true)
+  ));
+  const roshanKilled = freshRoshanEvent && roshanEvent.kind === 'killed';
+  const roshanRespawned = freshRoshanEvent && roshanEvent.kind === 'respawned';
   let roshan = base.roshan ? { ...base.roshan } : null;
   let aegis = base.aegis ? { ...base.aegis } : null;
-  let expiredAegisHolderKey = aegisHolder ? String(base.expiredAegisHolderKey || '') : '';
+  let expiredAegisHolderKey = String(base.expiredAegisHolderKey || '');
+  let aegisHolderAbsenceConfirmed = Boolean(expiredAegisHolderKey && base.aegisHolderAbsenceConfirmed);
   const currentAegisHolderKey = aegisHolder ? aegisHolderKey(aegisHolder) : '';
   const aegisEventPickedAt = optionalNumber(aegisHolder?.pickedAt);
   const hasFreshAegisPickupEvent = Number.isFinite(aegisEventPickedAt);
+  const expiredHolderRosterEntry = expiredAegisHolderKey
+    ? players.find((player) => aegisHolderKey(player) === expiredAegisHolderKey && player.hasItemData)
+    : null;
+  if (expiredHolderRosterEntry && !expiredHolderRosterEntry.hasAegis) {
+    aegisHolderAbsenceConfirmed = true;
+  }
+  const inferredNewAegisPickup = Boolean(
+    aegisHolder
+    && currentAegisHolderKey
+    && expiredAegisHolderKey
+    && (
+      currentAegisHolderKey !== expiredAegisHolderKey
+      || aegisHolderAbsenceConfirmed
+    )
+  );
+  const newAegisPickup = freshAegisEvent || inferredNewAegisPickup;
   const suppressStaleAegisHolder = Boolean(
     aegisHolder
+    && !freshAegisEvent
     && !hasFreshAegisPickupEvent
     && currentAegisHolderKey
     && expiredAegisHolderKey === currentAegisHolderKey
+    && !aegisHolderAbsenceConfirmed
   );
 
-  if (roshanRespawned && !roshanKilled) {
+  if (roshanRespawned) {
     roshan = null;
   }
 
   if (Number.isFinite(clockTime) && shouldStartRoshanTimer({
     roshan,
     roshanKilled,
+    newAegisPickup,
     aegisHolder: suppressStaleAegisHolder ? null : aegisHolder,
     aegis,
     clockTime
   })) {
-    const killedAt = roshanKilled ? clockTime : Math.max(0, clockTime - 5);
+    const killedAt = roshanKilled && Number.isFinite(roshanEvent?.eventTime)
+      ? roshanEvent.eventTime
+      : roshanKilled ? clockTime : Math.max(0, clockTime - 5);
     roshan = {
       killedAt,
       earliestRespawnAt: killedAt + roshanRespawnMinSeconds,
@@ -73,9 +110,18 @@ export function updateMatchIntel(previousIntel, payload, gsi, players) {
       aegis = null;
     } else if (clockTime >= expiresAt) {
       expiredAegisHolderKey = currentHolderKey;
+      aegisHolderAbsenceConfirmed = false;
+      aegis = null;
+    } else if (!freshAegisEvent && (
+      isPlayerDeadOrRespawning(aegisHolder)
+      || (aegis && didAegisHolderDieOrRespawn(aegis, players))
+    )) {
+      expiredAegisHolderKey = currentHolderKey;
+      aegisHolderAbsenceConfirmed = false;
       aegis = null;
     } else {
       expiredAegisHolderKey = '';
+      aegisHolderAbsenceConfirmed = false;
       aegis = {
         slot: aegisHolder.slot,
         accountId: aegisHolder.accountId,
@@ -88,8 +134,12 @@ export function updateMatchIntel(previousIntel, payload, gsi, players) {
       };
     }
   } else if (aegis && Number.isFinite(clockTime)) {
-    if (clockTime >= Number(aegis.expiresAt || 0) || didAegisHolderDieOrRespawn(aegis, players)) {
+    const holderLostItem = didAegisHolderLoseItem(aegis, players);
+    if (clockTime >= Number(aegis.expiresAt || 0)
+      || didAegisHolderDieOrRespawn(aegis, players)
+      || holderLostItem) {
       expiredAegisHolderKey = aegisHolderKey(aegis);
+      aegisHolderAbsenceConfirmed = holderLostItem;
       aegis = null;
     }
   }
@@ -99,13 +149,19 @@ export function updateMatchIntel(previousIntel, payload, gsi, players) {
     : null;
 
   return {
+    contextKey: activeContextKey,
     matchId: activeMatchId,
     players,
     notablePlayers: Array.isArray(base.notablePlayers) ? base.notablePlayers : [],
     roshan,
     roshanStatus,
     aegis,
-    expiredAegisHolderKey
+    expiredAegisHolderKey,
+    aegisHolderAbsenceConfirmed,
+    lastAegisPickupEventKey: aegisEvent?.key || base.lastAegisPickupEventKey || null,
+    aegisPickupSignalActive: Boolean(aegisEvent && !aegisEvent.stable),
+    lastRoshanEventKey: roshanEvent?.key || base.lastRoshanEventKey || null,
+    roshanSignalActive: Boolean(roshanEvent && !roshanEvent.stable)
   };
 }
 
@@ -116,16 +172,15 @@ function aegisHolderKey(holder) {
   return Number.isFinite(slot) ? `slot:${Math.trunc(slot)}` : '';
 }
 
-function shouldStartRoshanTimer({ roshan, roshanKilled, aegisHolder, aegis, clockTime }) {
-  if (roshanKilled) {
-    const killedAt = Number(roshan?.killedAt);
-    const latestRespawnAt = Number(roshan?.latestRespawnAt);
-    return !roshan
-      || !Number.isFinite(killedAt)
-      || clockTime < killedAt - 30
-      || (Number.isFinite(latestRespawnAt) && clockTime > latestRespawnAt + 30);
-  }
+function shouldStartRoshanTimer({ roshan, roshanKilled, newAegisPickup, aegisHolder, aegis, clockTime }) {
+  if (roshanKilled || newAegisPickup) return true;
   return Boolean(aegisHolder && !aegis && !roshan);
+}
+
+function isPlayerDeadOrRespawning(player) {
+  if (player?.alive === false) return true;
+  const respawnSeconds = Number(player?.respawnSeconds);
+  return Number.isFinite(respawnSeconds) && respawnSeconds > 0;
 }
 
 function didAegisHolderDieOrRespawn(aegis, players) {
@@ -142,6 +197,11 @@ function didAegisHolderDieOrRespawn(aegis, players) {
   if (Number.isFinite(respawnSeconds) && respawnSeconds > 0) return true;
 
   return false;
+}
+
+function didAegisHolderLoseItem(aegis, players) {
+  const holder = findPlayerForAegis(aegis, players);
+  return Boolean(holder?.hasItemData && !holder.hasAegis);
 }
 
 function findPlayerForAegis(aegis, players) {
@@ -195,10 +255,21 @@ function normalizeCountryCode(value) {
 }
 
 export function normalizeAccountId(value) {
-  const number = Number(value);
-  if (!Number.isFinite(number) || number <= 0) return null;
-  if (number > 76561197960265728) return Math.trunc(number - 76561197960265728);
-  return Math.trunc(number);
+  if (typeof value === 'number') {
+    if (!Number.isSafeInteger(value) || value <= 0) return null;
+    return value <= Number(maxDotaAccountId) ? value : null;
+  }
+
+  const raw = String(value ?? '').trim();
+  if (!/^\d{1,20}$/.test(raw)) return null;
+  try {
+    const parsed = BigInt(raw);
+    const accountId = parsed > steamId64AccountOffset ? parsed - steamId64AccountOffset : parsed;
+    if (accountId <= 0n || accountId > maxDotaAccountId) return null;
+    return Number(accountId);
+  } catch {
+    return null;
+  }
 }
 
 function normalizeMatchPlayer(key, player) {
@@ -435,6 +506,8 @@ function extractLatestAegisEvent(payload, players, clockTime = null) {
       const pickedAt = normalizeAegisEventTime(event, clockTime);
       if (pickedAt === false) continue;
       return {
+        key: eventFingerprint('aegis_pickup', event, eventText, holder),
+        stable: hasStableEventIdentity(event),
         holder: {
           ...holder,
           pickedAt
@@ -442,6 +515,64 @@ function extractLatestAegisEvent(payload, players, clockTime = null) {
       };
     }
   }
+  return null;
+}
+
+function eventFingerprint(kind, event, eventText = '', holder = null) {
+  const eventId = event?.event_id ?? event?.eventId ?? event?.id ?? event?.sequence ?? event?.seq ?? '';
+  const eventTime = normalizeEventTime(event);
+  const actor = holder
+    ? aegisHolderKey(holder)
+    : String(event?.player_id ?? event?.playerId ?? event?.accountid ?? event?.accountId ?? '');
+  const normalizedType = String(eventText || event?.key || kind).trim().toLowerCase().replace(/\s+/g, '_');
+  return [kind, normalizedType, eventId, eventTime ?? '', actor].join('|');
+}
+
+function hasStableEventIdentity(event) {
+  const eventId = event?.event_id ?? event?.eventId ?? event?.id ?? event?.sequence ?? event?.seq;
+  return (eventId !== undefined && eventId !== null && eventId !== '')
+    || Number.isFinite(normalizeEventTime(event));
+}
+
+function extractLatestRoshanLifecycleEvent(payload, clockTime = null) {
+  const events = collectEventEntries(payload);
+  const current = normalizedClock(clockTime);
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = expandEventData(events[index]);
+    const eventText = [
+      event.event_type,
+      event.eventType,
+      event.type,
+      event.name,
+      event.key,
+      typeof event.data === 'string' ? event.data : ''
+    ].filter(Boolean).join(' ');
+    const kind = roshanRespawnPattern.test(eventText)
+      ? 'respawned'
+      : roshanKillPattern.test(eventText)
+        ? 'killed'
+        : null;
+    if (kind) {
+      const rawEventTime = normalizeEventTime(event);
+      const eventTime = Number.isFinite(rawEventTime) && (!Number.isFinite(current) || rawEventTime <= current + 5)
+        ? rawEventTime
+        : null;
+      const stale = Number.isFinite(current)
+        && Number.isFinite(eventTime)
+        && current - eventTime > roshanRespawnMaxSeconds;
+      return {
+        kind: stale ? 'stale' : kind,
+        key: eventFingerprint(`roshan_${kind}`, event, eventText),
+        stable: hasStableEventIdentity(event),
+        eventTime
+      };
+    }
+  }
+
+  const respawned = hasRoshanRespawnEvent(payload);
+  const killed = hasRoshanKillEvent(payload);
+  if (killed) return { kind: 'killed', key: 'roshan_killed|signal', stable: false };
+  if (respawned) return { kind: 'respawned', key: 'roshan_respawned|signal', stable: false };
   return null;
 }
 
@@ -549,6 +680,7 @@ function normalizeEventTime(event) {
 }
 
 function normalizedClock(value) {
+  if (value === null || value === undefined || value === '') return null;
   const number = Number(value);
   return Number.isFinite(number) ? Math.max(0, number) : null;
 }

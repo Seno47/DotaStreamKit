@@ -111,7 +111,7 @@
             <div><dt>Время</dt><dd id="clockTime">-</dd></div>
             <div><dt>Матч</dt><dd id="matchId">-</dd></div>
           </dl>
-          <p class="muted">OBS Browser Source: <code>http://localhost:37273/overlay.html</code></p>
+          <p class="muted">OBS Browser Source: <code id="overlaySourceUrl">http://localhost:37273/overlay.html</code></p>
         </article>
 
         <article class="panel wide" data-page="intel">
@@ -467,8 +467,8 @@
                     <small id="menuMmrOcrRegionStatus" class="muted">Область не задана</small>
                   </div>
                   <div class="streamer-ocr-manual" id="menuMmrOcrManualRegion" hidden>
-                    <label id="menuMmrOcrRegionXWrap">X<input id="menuMmrOcrRegionX" type="number" min="0" max="10000" step="1"></label>
-                    <label id="menuMmrOcrRegionYWrap">Y<input id="menuMmrOcrRegionY" type="number" min="0" max="10000" step="1"></label>
+                    <label id="menuMmrOcrRegionXWrap">X<input id="menuMmrOcrRegionX" type="number" min="-10000" max="10000" step="1"></label>
+                    <label id="menuMmrOcrRegionYWrap">Y<input id="menuMmrOcrRegionY" type="number" min="-10000" max="10000" step="1"></label>
                     <label id="menuMmrOcrRegionWidthWrap">Width<input id="menuMmrOcrRegionWidth" type="number" min="10" max="2000" step="1"></label>
                     <label id="menuMmrOcrRegionHeightWrap">Height<input id="menuMmrOcrRegionHeight" type="number" min="10" max="2000" step="1"></label>
                     <button type="button" id="saveMenuMmrOcrRegion">Сохранить область</button>
@@ -488,7 +488,7 @@
             <label data-visible-for="server">Public URL сервера<input id="publicBaseUrl" autocomplete="off" placeholder="https://example.com"></label>
             <label>Client ID<input id="clientId" autocomplete="off"></label>
             <label>Client Secret<input id="clientSecret" type="password" autocomplete="off" placeholder="не менять, если уже сохранен"></label>
-            <label>Канал для прогнозов<select id="twitchChannelMode"><option value="personal">Личный Twitch аккаунт</option><option value="separate">Отдельный аккаунт / канал стримера по нику</option></select></label>
+            <label>Канал для прогнозов<select id="twitchChannelMode"><option value="personal">Личный Twitch аккаунт</option><option value="separate">Канал стримера по нику (OAuth от его имени)</option></select></label>
             <label data-visible-for="separate-channel">Ник стримера<input id="targetChannelLogin" autocomplete="off" placeholder="senodoto"></label>
           </div>
           <div class="button-row">

@@ -64,8 +64,8 @@ export function regionToMonitorCrop(region, monitor) {
 
 export function normalizeRegion(value) {
   if (!value || typeof value !== 'object') return null;
-  const x = toInt(value.x, 0, 10000);
-  const y = toInt(value.y, 0, 10000);
+  const x = toInt(value.x, -10000, 10000);
+  const y = toInt(value.y, -10000, 10000);
   const width = toInt(value.width, 10, 2000);
   const height = toInt(value.height, 10, 2000);
   if (x === null || y === null || width === null || height === null) return null;
@@ -89,13 +89,21 @@ export function getScreenCaptureSupport() {
 
   if (platform === 'linux') {
     const picker = cliAvailability.slop || cliAvailability.slurp ? 'cli' : 'manual';
-    const capture = hasScreenshots ? 'node-screenshots' : (cliAvailability.grim ? 'grim' : 'grim');
+    const hasGrimFallback = wayland && cliAvailability.grim === true;
+    const capture = hasScreenshots ? 'node-screenshots' : hasGrimFallback ? 'grim' : 'none';
+    const supported = hasDisplay && (hasScreenshots || hasGrimFallback);
     return {
-      supported: hasDisplay,
+      supported,
       picker,
       capture,
       displayServer: wayland ? 'wayland' : 'x11',
-      reason: hasDisplay ? undefined : 'No display server detected (set DISPLAY or WAYLAND_DISPLAY)'
+      reason: !hasDisplay
+        ? 'No display server detected (set DISPLAY or WAYLAND_DISPLAY)'
+        : supported
+          ? undefined
+          : wayland
+            ? 'Screen capture is unavailable (node-screenshots failed and grim is not installed)'
+            : 'Screen capture is unavailable (node-screenshots failed on X11)'
     };
   }
 

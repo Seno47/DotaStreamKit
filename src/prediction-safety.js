@@ -41,3 +41,20 @@ export function isLeftActiveGameViewCancelSignal(previous, gsi) {
   if (!wasInActiveGameView) return false;
   return Boolean(gsi?.leftGameView || !gsi?.inGameScreen);
 }
+
+export function shouldContinueLeftGameViewCancelCandidate(candidate, gsi) {
+  const isLeftViewCandidate = candidate?.kind === 'left_game_view'
+    || candidate?.reason === 'streamer left the active game view before prediction was resolved';
+  if (!isLeftViewCandidate) return false;
+  const state = String(gsi?.gameState || '');
+  if (/POST_GAME|DISCONNECT/i.test(state)) return false;
+  return Boolean(gsi?.leftGameView || !gsi?.inGameScreen);
+}
+
+export function isPredictionProfileCompatibleWithActivity(profile, playerActivity) {
+  const normalizedProfile = profile === 'spectator' ? 'spectator' : 'own';
+  const activity = String(playerActivity || '').trim().toLowerCase();
+  if (activity === 'spectating') return normalizedProfile === 'spectator';
+  if (activity === 'playing') return normalizedProfile === 'own';
+  return true;
+}

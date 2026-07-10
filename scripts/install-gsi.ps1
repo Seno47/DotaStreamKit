@@ -1,11 +1,29 @@
 param(
   [string]$DotaCfgDir = "C:\Program Files (x86)\Steam\steamapps\common\dota 2 beta\game\dota\cfg\gamestate_integration",
-  [int]$Port = 37273
+  [int]$Port = 37273,
+  [string]$Token = ""
 )
 
 $ErrorActionPreference = "Stop"
 
 New-Item -ItemType Directory -Force -Path $DotaCfgDir | Out-Null
+
+if (-not $Token) {
+  $repoRoot = Split-Path -Parent $PSScriptRoot
+  $dataDir = if ([string]::IsNullOrWhiteSpace($env:DOTASTREAMKIT_DATA_DIR)) {
+    Join-Path $repoRoot "data"
+  } else {
+    [Environment]::ExpandEnvironmentVariables($env:DOTASTREAMKIT_DATA_DIR)
+  }
+  $configPath = Join-Path $dataDir "config.json"
+  if (Test-Path -LiteralPath $configPath) {
+    $config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
+    $Token = [string]$config.dota.gsiToken
+  }
+}
+if ($Token -notmatch '^[a-fA-F0-9]{64}$') {
+  throw "Dota GSI token is missing. Start DotaStreamKit once, then use the Setup page or pass -Token explicitly."
+}
 
 $cfg = @"
 "DotaStreamKit"
@@ -15,6 +33,10 @@ $cfg = @"
   "buffer" "0.1"
   "throttle" "0.1"
   "heartbeat" "30.0"
+  "auth"
+  {
+    "token" "$Token"
+  }
   "data"
   {
     "provider" "1"

@@ -223,6 +223,7 @@ let session = updateStreamerSessionPresence(
   {
     wins: 2,
     losses: 1,
+    lastMatchId: 'offline-repeat-post-game',
     sessionStartedAt: '2026-05-01T08:00:00Z',
     accountGoalRecords: {
       456: { accountId: 456, wins: 9, losses: 4 }
@@ -241,6 +242,17 @@ assert.deepEqual(session.state.accountSessions, {});
 assert.equal(session.state.accountGoalRecords['456'].wins, 9);
 assert.equal(session.state.accountGoalRecords['456'].losses, 4);
 assert.equal(session.state.previousSession.wins, 2);
+assert.equal(session.state.lastMatchId, 'offline-repeat-post-game');
+
+const repeatedAfterOfflineReset = applyStreamerMatchResult(
+  session.state,
+  config,
+  'win',
+  'offline-repeat-post-game',
+  new Date('2026-05-01T11:01:30Z')
+);
+assert.equal(repeatedAfterOfflineReset.changed, false);
+assert.equal(repeatedAfterOfflineReset.state.wins, 0);
 
 const restored = restorePreviousStreamerSession(session.state, new Date('2026-05-01T11:02:00Z'));
 assert.equal(restored.state.wins, 2);
@@ -254,6 +266,19 @@ assert.equal(reset.state.wins, 0);
 assert.equal(reset.state.losses, 0);
 assert.equal(reset.state.accountGoalRecords['456'].wins, 9);
 assert.equal(reset.state.accountGoalRecords['456'].losses, 4);
+
+const completedBeforeReset = applyStreamerMatchResult({}, config, 'win', 'repeat-post-game', new Date('2026-05-01T11:04:00Z'));
+const resetDuringPostGame = resetStreamerSession(completedBeforeReset.state, new Date('2026-05-01T11:05:00Z'));
+assert.equal(resetDuringPostGame.state.lastMatchId, 'repeat-post-game');
+const repeatedPostGame = applyStreamerMatchResult(
+  resetDuringPostGame.state,
+  completedBeforeReset.config,
+  'win',
+  'repeat-post-game',
+  new Date('2026-05-01T11:06:00Z')
+);
+assert.equal(repeatedPostGame.changed, false);
+assert.equal(repeatedPostGame.state.wins, 0);
 
 const goalReset = resetStreamerGoalRecord(reset.state, 456);
 assert.equal(goalReset.state.accountGoalRecords['456'], undefined);

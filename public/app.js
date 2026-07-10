@@ -355,6 +355,7 @@ const els = {
   heroState: document.querySelector('#heroState'),
   clockTime: document.querySelector('#clockTime'),
   matchId: document.querySelector('#matchId'),
+  overlaySourceUrl: document.querySelector('#overlaySourceUrl'),
   deploymentMode: document.querySelector('#deploymentMode'),
   publicBaseUrl: document.querySelector('#publicBaseUrl'),
   clientId: document.querySelector('#clientId'),
@@ -871,7 +872,7 @@ const translations = {
     pickMenuMmrOcrRegion: 'Указать область',
     menuMmrOcrRegionUnset: 'Область не задана',
     menuMmrOcrRegionSet: 'Область: {width}×{height} @ {x},{y}',
-    menuMmrOcrPickHint: 'Выделите область с числом MMR на экране Dota 2. Esc — отмена.',
+    menuMmrOcrPickHint: 'Выделите область с числом MMR и подписью MMR/Рейтинг. Esc — отмена.',
     menuMmrOcrPickFailed: 'Не удалось выбрать область',
     menuMmrOcrLastRun: 'Последнее чтение: {mmr}',
     clearMenuMmrOcrRegion: 'Очистить область',
@@ -1055,6 +1056,7 @@ const translations = {
     deploymentMode: 'Режим запуска',
     local: 'Локально',
     server: 'Сервер',
+    deploymentRestartRequired: 'Режим запуска сохранён. Перезапустите DotaStreamKit, чтобы изменить сетевой адрес прослушивания.',
     publicUrl: 'Public URL сервера',
     clientId: 'Client ID',
     clientSecret: 'Client Secret',
@@ -1062,7 +1064,7 @@ const translations = {
     redirectUri: 'Redirect URI в Twitch app:',
     channelMode: 'Канал для прогнозов',
     personalAccount: 'Личный Twitch аккаунт',
-    separateAccount: 'Отдельный аккаунт / канал стримера по нику',
+    separateAccount: 'Канал стримера по нику (OAuth от его имени)',
     streamerLogin: 'Ник стримера',
     connectTwitch: 'Подключить Twitch',
     disconnect: 'Отключить',
@@ -1221,7 +1223,7 @@ const translations = {
     channelNotSelected: 'Канал прогнозов не выбран.',
     channelStatusUnknown: 'статус не проверен',
     checkedAt: 'проверено',
-    separateOauth: 'отдельный от OAuth аккаунта',
+    separateOauth: 'для прогнозов переподключите OAuth от имени этого канала',
     neededImage: 'Нужен PNG, JPEG или WebP',
     noActivePredictionAlert: 'Нет активной ставки',
     noOutcomeAlert: 'Не найден исход для закрытия',
@@ -1317,7 +1319,7 @@ const translations = {
     pickMenuMmrOcrRegion: 'Select region',
     menuMmrOcrRegionUnset: 'Region not set',
     menuMmrOcrRegionSet: 'Region: {width}×{height} @ {x},{y}',
-    menuMmrOcrPickHint: 'Select the MMR number area on the Dota 2 screen. Esc cancels.',
+    menuMmrOcrPickHint: 'Select the area containing the MMR number and its MMR/Rating label. Esc cancels.',
     menuMmrOcrPickFailed: 'Failed to select region',
     menuMmrOcrLastRun: 'Last read: {mmr}',
     clearMenuMmrOcrRegion: 'Clear region',
@@ -1501,6 +1503,7 @@ const translations = {
     deploymentMode: 'Run mode',
     local: 'Local',
     server: 'Server',
+    deploymentRestartRequired: 'Run mode saved. Restart DotaStreamKit to change the network listening address.',
     publicUrl: 'Server public URL',
     clientId: 'Client ID',
     clientSecret: 'Client Secret',
@@ -1508,7 +1511,7 @@ const translations = {
     redirectUri: 'Redirect URI in Twitch app:',
     channelMode: 'Prediction channel',
     personalAccount: 'Personal Twitch account',
-    separateAccount: 'Separate account / streamer channel by login',
+    separateAccount: 'Streamer channel by login (OAuth as that channel)',
     streamerLogin: 'Streamer login',
     connectTwitch: 'Connect Twitch',
     disconnect: 'Disconnect',
@@ -1667,7 +1670,7 @@ const translations = {
     channelNotSelected: 'Prediction channel is not selected.',
     channelStatusUnknown: 'status not checked',
     checkedAt: 'checked',
-    separateOauth: 'separate from OAuth account',
+    separateOauth: 'reconnect OAuth as this channel to manage predictions',
     neededImage: 'PNG, JPEG or WebP is required',
     noActivePredictionAlert: 'No active prediction',
     noOutcomeAlert: 'No outcome found for resolving',
@@ -2453,6 +2456,12 @@ function render(data) {
   els.heroState.textContent = state.gsi.playerHeroPicked ? `${state.gsi.heroName || state.gsi.heroId || t('picked')}${state.gsi.ownPickPhaseEnded ? ` / ${t('topbarOnly')}` : ''}` : '-';
   els.clockTime.textContent = state.gsi.clockTime ?? '-';
   els.matchId.textContent = state.gsi.matchId || '-';
+  if (els.overlaySourceUrl) {
+    const configuredBase = data.serverNetworkingEnabled && config.deployment?.mode === 'server'
+      ? String(config.deployment?.publicBaseUrl || '').replace(/\/+$/, '')
+      : '';
+    els.overlaySourceUrl.textContent = `${configuredBase || window.location.origin}/overlay.html`;
+  }
 
   els.deploymentMode.value = config.deployment?.mode || 'local';
   els.publicBaseUrl.value = config.deployment?.publicBaseUrl || '';
@@ -4690,9 +4699,11 @@ async function saveUiConfig() {
 }
 
 async function saveTwitchAppConfig() {
+  const previousMode = snapshot?.config?.deployment?.mode || 'local';
+  const nextMode = els.deploymentMode.value;
   await api('/api/config', {
     deployment: {
-      mode: els.deploymentMode.value,
+      mode: nextMode,
       publicBaseUrl: els.publicBaseUrl.value.trim()
     },
     twitch: {
@@ -4702,6 +4713,7 @@ async function saveTwitchAppConfig() {
       targetChannelLogin: els.targetChannelLogin.value.trim()
     }
   });
+  if (previousMode !== nextMode) alert(t('deploymentRestartRequired'));
 }
 
 async function saveDotaConfig() {
@@ -4959,10 +4971,11 @@ async function importBackup() {
   const backup = JSON.parse(await file.text());
   const sections = selectedBackupSections();
   if (!sections.length) return alert(t('backupHelp'));
-  await api('/api/backup/import', { backup, sections });
+  const result = await api('/api/backup/import', { backup, sections });
   els.importBackupFile.value = '';
   els.backupStatus.dataset.custom = 'true';
   els.backupStatus.textContent = t('backupImported');
+  if (result.restartRequired) alert(t('deploymentRestartRequired'));
 }
 
 function withPrediction(fn) {

@@ -204,6 +204,7 @@ export function applyStreamerMatchResult(state, config, result, matchId, now = n
 
 export function updateStreamerSessionPresence(state, effectiveOnline, now = new Date(), graceMs = streamOfflineGraceMs) {
   const next = normalizeStreamerStatsState(state);
+  const completedMatchId = next.lastMatchId;
   const timestamp = now.getTime();
   const iso = now.toISOString();
 
@@ -244,7 +245,9 @@ export function updateStreamerSessionPresence(state, effectiveOnline, now = new 
   next.accountSessions = {};
   next.sessionStartedAt = null;
   next.offlineSince = iso;
-  next.lastMatchId = null;
+  // The same POST_GAME payload may keep arriving while the stream is offline.
+  // Preserve it as a dedupe barrier across the automatic session reset.
+  next.lastMatchId = completedMatchId;
   next.lastResult = null;
   next.lastMmrChange = 0;
   next.lastResultAt = null;
@@ -268,6 +271,7 @@ export function restorePreviousStreamerSession(state, now = new Date()) {
 
 export function resetStreamerSession(state, now = new Date()) {
   const next = normalizeStreamerStatsState(state);
+  const completedMatchId = next.lastMatchId;
   if (next.wins > 0 || next.losses > 0 || next.sessionStartedAt) {
     next.previousSession = {
       wins: next.wins,
@@ -285,7 +289,9 @@ export function resetStreamerSession(state, now = new Date()) {
   next.accountSessions = {};
   next.sessionStartedAt = now.toISOString();
   next.offlineSince = null;
-  next.lastMatchId = null;
+  // Keep the last completed match as a dedupe barrier. Dota can continue sending
+  // the same POST_GAME snapshot after the user resets W-L.
+  next.lastMatchId = completedMatchId;
   next.lastResult = null;
   next.lastMmrChange = 0;
   next.lastResultAt = null;
@@ -490,8 +496,8 @@ function normalizeGoalCustomCss(value) {
 
 function normalizeMenuMmrOcrRegion(value) {
   if (!value || typeof value !== 'object') return null;
-  const x = clampInt(value.x, 0, 10000, null);
-  const y = clampInt(value.y, 0, 10000, null);
+  const x = clampInt(value.x, -10000, 10000, null);
+  const y = clampInt(value.y, -10000, 10000, null);
   const width = clampInt(value.width, 10, 2000, null);
   const height = clampInt(value.height, 10, 2000, null);
   if (x === null || y === null || width === null || height === null) return null;

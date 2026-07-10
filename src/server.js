@@ -1,10 +1,10 @@
 import { createServer } from 'node:http';
-import { copyFile, readFile, writeFile, mkdir, stat, rm, readdir } from 'node:fs/promises';
-import { createReadStream } from 'node:fs';
-import { basename, dirname, extname, join, normalize } from 'node:path';
+import { chmod, copyFile, open, readFile, writeFile, mkdir, stat, rm, readdir, rename } from 'node:fs/promises';
+import { createReadStream, rmSync } from 'node:fs';
+import { basename, dirname, extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { tmpdir } from 'node:os';
-import { randomBytes } from 'node:crypto';
+import { homedir, tmpdir } from 'node:os';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import sharp from 'sharp';
@@ -12,7 +12,9 @@ import {
   hasCompletePredictionOutcomePoints,
   hasPointsOnEveryPredictionOutcome,
   isLeftActiveGameViewCancelSignal,
-  isPredictionUncontested
+  isPredictionProfileCompatibleWithActivity,
+  isPredictionUncontested,
+  shouldContinueLeftGameViewCancelCandidate
 } from './prediction-safety.js';
 import {
   collectMatchPlayers,
@@ -35,6 +37,10 @@ import {
 import { merge } from './safe-merge.js';
 import { explainMenuOcrSkip, pickScreenRegion, recognizeMenuMmr, setMenuMmrOcrCachePath } from './menu-mmr-ocr.js';
 import { getScreenCaptureSupport, normalizeRegion } from './screen-capture.js';
+import {
+  inferPredictionResult as inferPredictionResultForMeta,
+  latchPredictionResult
+} from './prediction-result.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const execFileAsync = promisify(execFile);
@@ -57,6 +63,7 @@ const githubLatestReleaseApi = `https://api.github.com/repos/${githubRepoOwner}/
 const twitchApi = 'https://api.twitch.tv/helix';
 const twitchId = 'https://id.twitch.tv/oauth2';
 const twitchScopes = ['channel:manage:predictions', 'user:write:chat'];
+const serverAuthPassword = String(process.env.DOTASTREAMKIT_SERVER_PASSWORD || '');
 
 function resolveDataDir() {
   if (process.env.DOTASTREAMKIT_DATA_DIR) return normalize(process.env.DOTASTREAMKIT_DATA_DIR);
@@ -82,6 +89,9 @@ const queueAutoStaleKeepMs = 10 * 60 * 1000;
 const gsiConnectedTimeoutMs = 60 * 1000;
 const autoPredictionRetryMs = 30000;
 const activePredictionSyncMs = 15000;
+const twitchRequestTimeoutMs = 10000;
+const twitchValidationIntervalMs = 60 * 60 * 1000;
+const oauthStateTtlMs = 10 * 60 * 1000;
 const leftGameViewPredictionCancelDelaySeconds = 15;
 const playerRankCacheTtlMs = 12 * 60 * 60 * 1000;
 const playerRankFailureTtlMs = 15 * 60 * 1000;
@@ -213,6 +223,7 @@ const dotaHeroNamesById = {
   104: 'Legion Commander',
   105: 'Techies',
   106: 'Ember Spirit',
+  107: 'Earth Spirit',
   108: 'Underlord',
   109: 'Terrorblade',
   110: 'Phoenix',
@@ -274,7 +285,8 @@ const defaultConfig = {
   dota: {
     installPath: '',
     cfgDir: '',
-    detectionSource: ''
+    detectionSource: '',
+    gsiToken: ''
   },
   updates: {
     autoCheck: true,
@@ -462,13 +474,22 @@ defaultConfig.protection.spectatorMatchIntel = {
 
 const runtime = {
   clients: new Set(),
-  oauthStates: new Set(),
+  oauthStates: new Map(),
   queueAuto: { active: false, desired: false, desiredSince: 0 },
   dotaProcess: { running: null, checkedAt: null },
   updateInstallStarted: false,
   twitchStreamStatus: { broadcasterId: null, checkedAt: 0, isLive: null, streamId: null, gameName: null, title: null },
+  twitchStreamStatusPromise: null,
+  twitchTokenRefreshPromise: null,
+  twitchLastValidatedAt: 0,
+  twitchAuthGeneration: 0,
+  twitchAuthMutation: null,
   playerRankCache: new Map(),
   pendingPlayerRankFetches: new Map(),
+  predictionActionAttempts: new Map(),
+  predictionCreation: null,
+  predictionAutomationRunning: false,
+  predictionAutomationQueue: [],
   menuMmrOcrInFlight: false,
   config: structuredClone(defaultConfig),
   state: {
@@ -480,6 +501,7 @@ const runtime = {
       clockTime: null,
       matchId: null,
       activeMatchId: null,
+      matchContextKey: null,
       playerActivity: null,
       playerActivitySource: null,
       activityDebug: null,
@@ -518,18 +540,23 @@ const runtime = {
       ownPickPhaseTargetCount: null,
       ownPickPhaseSource: null,
       draftCycle: 0,
+      spectatorCycle: 0,
       queueSearchSignal: false,
       inGameScreen: false,
       leftGameView: false,
-      heroDemoMode: false
+      heroDemoMode: false,
+      lifecycleSeed: null
     },
     matchIntel: {
+      contextKey: null,
       matchId: null,
       players: [],
       notablePlayers: [],
       roshan: null,
       roshanStatus: null,
-      aegis: null
+      aegis: null,
+      expiredAegisHolderKey: '',
+      aegisHolderAbsenceConfirmed: false
     },
     streamerStats: normalizeStreamerStatsState({}),
     dota: {
@@ -560,15 +587,43 @@ const runtime = {
   }
 };
 
-await mkdir(dataDir, { recursive: true });
+let configWriteQueue = Promise.resolve();
+let stateWriteQueue = Promise.resolve();
+let twitchTokenWriteQueue = Promise.resolve();
+let scheduledStatePersist = null;
+let instanceLockHandle = null;
+let effectiveServerNetworking = false;
+const instanceLockPath = join(dataDir, '.instance.lock');
+
+await mkdir(dataDir, { recursive: true, mode: 0o700 });
+if (process.platform !== 'win32') await chmod(dataDir, 0o700);
+await acquireInstanceLock();
 await mkdir(assetDir, { recursive: true });
 await migrateLegacyLocalDataDir();
-await ensureGeneratedAssets();
 runtime.config = await loadJson(configPath, defaultConfig);
 await migrateConfig(runtime.config);
+effectiveServerNetworking = runtime.config.deployment?.mode === 'server' && Boolean(serverAuthPassword);
 runtime.state = { ...runtime.state, ...(await loadJson(statePath, {})) };
-runtime.state.twitchToken = runtime.state.twitchToken || await loadTwitchTokenBackup();
+const legacyStateTwitchToken = runtime.state.twitchToken || null;
+const dedicatedTwitchToken = await loadTwitchTokenBackup();
+runtime.state.twitchToken = dedicatedTwitchToken || legacyStateTwitchToken;
+if (legacyStateTwitchToken) {
+  if (!dedicatedTwitchToken) await persistTwitchTokenBackup();
+  await persistState({ backup: false });
+  await rm(`${statePath}.bak`, { force: true });
+}
 runtime.state.startedAt = new Date().toISOString();
+const persistedGsi = runtime.state.gsi && typeof runtime.state.gsi === 'object' ? runtime.state.gsi : {};
+const persistedGsiLifecycleSeed = persistedGsi.lifecycleSeed && typeof persistedGsi.lifecycleSeed === 'object'
+  ? persistedGsi.lifecycleSeed
+  : {
+      gameState: persistedGsi.gameState || null,
+      playerActivity: persistedGsi.playerActivity || null,
+      clockTime: Number.isFinite(Number(persistedGsi.clockTime)) ? Number(persistedGsi.clockTime) : null,
+      matchId: persistedGsi.matchId || null,
+      activeMatchId: persistedGsi.activeMatchId || null,
+      lastSeenAt: persistedGsi.lastSeenAt || null
+    };
 runtime.state.gsi = {
   connected: false,
   lastSeenAt: null,
@@ -576,6 +631,7 @@ runtime.state.gsi = {
   clockTime: null,
   matchId: null,
   activeMatchId: null,
+  matchContextKey: null,
   playerActivity: null,
   playerActivitySource: null,
   activityDebug: null,
@@ -613,41 +669,59 @@ runtime.state.gsi = {
   enemyTeamPickedHeroCount: null,
   ownPickPhaseTargetCount: null,
   ownPickPhaseSource: null,
-  draftCycle: 0,
+  draftCycle: Math.max(0, Math.trunc(Number(persistedGsi.draftCycle || 0))),
+  spectatorCycle: Math.max(0, Math.trunc(Number(persistedGsi.spectatorCycle || 0))),
   queueSearchSignal: false,
   inGameScreen: false,
   leftGameView: false,
-  heroDemoMode: false
+  heroDemoMode: false,
+  lifecycleSeed: persistedGsiLifecycleSeed
 };
 runtime.state.dota = {
   processRunning: null,
   processCheckedAt: null
 };
 runtime.state.update = normalizeUpdateState(runtime.state.update);
+const persistedMatchIntel = runtime.state.matchIntel && typeof runtime.state.matchIntel === 'object'
+  ? runtime.state.matchIntel
+  : {};
 runtime.state.matchIntel = {
-  matchId: null,
+  contextKey: persistedMatchIntel.contextKey || null,
+  matchId: persistedMatchIntel.matchId || null,
   players: [],
   notablePlayers: [],
   roshan: null,
   roshanStatus: null,
-  aegis: null
+  aegis: null,
+  expiredAegisHolderKey: persistedMatchIntel.expiredAegisHolderKey || '',
+  aegisHolderAbsenceConfirmed: persistedMatchIntel.aegisHolderAbsenceConfirmed === true,
+  lastAegisPickupEventKey: persistedMatchIntel.lastAegisPickupEventKey || null,
+  aegisPickupSignalActive: persistedMatchIntel.aegisPickupSignalActive === true,
+  lastRoshanEventKey: persistedMatchIntel.lastRoshanEventKey || null,
+  roshanSignalActive: persistedMatchIntel.roshanSignalActive === true
 };
 runtime.state.streamerStats = normalizeStreamerStatsState(runtime.state.streamerStats);
 runtime.state.activePredictionRecovery = runtime.state.activePredictionRecovery || null;
 runtime.state.lastAutoPredictionAttempt = null;
-runtime.state.autoPredictionCreatedKey = null;
+runtime.state.autoPredictionCreatedKey = typeof runtime.state.autoPredictionCreatedKey === 'string'
+  ? runtime.state.autoPredictionCreatedKey
+  : null;
 runtime.state.autoPredictionSuppressedKey = null;
 runtime.state.activePredictionSyncedAt = null;
 runtime.state.menuMmrOcr = runtime.state.menuMmrOcr && typeof runtime.state.menuMmrOcr === 'object'
   ? runtime.state.menuMmrOcr
   : { lastRunAt: null, lastMmr: null, lastRawText: null, lastError: null };
+await ensureGeneratedAssets();
+await refreshInstalledGsiConfig();
 await refreshDotaProcessState();
 runtime.state.protection = computeProtection(runtime.config, runtime.state.gsi);
-await restoreTwitchStatus();
+hydrateTwitchStatus();
+restoreTwitchStatus().catch((error) => logEvent('twitch', `Saved Twitch token restore failed: ${error.message}`));
 
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host || `localhost:${port}`}`);
+    enforceRequestSecurity(req, url);
 
     if (req.method === 'GET' && url.pathname === '/api/events') return handleEvents(req, res);
     if (req.method === 'GET' && url.pathname === '/api/state') return sendJson(res, publicState());
@@ -671,7 +745,7 @@ const server = createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/api/install-gsi') return await installGsi(req, res);
     if (req.method === 'GET' && url.pathname === '/auth/twitch') return startTwitchAuth(url, res);
     if (req.method === 'GET' && url.pathname === '/auth/twitch/callback') return await finishTwitchAuth(url, res);
-    if (req.method === 'POST' && url.pathname === '/api/twitch/logout') return await twitchLogout(res);
+    if (req.method === 'POST' && url.pathname === '/api/twitch/logout') return await twitchLogout(req, res);
     if (req.method === 'POST' && url.pathname === '/api/twitch/resolve-channel') return await resolveTwitchChannelApi(req, res);
     if (req.method === 'POST' && url.pathname === '/api/twitch/chat') return await sendChatMessage(req, res);
     if (req.method === 'POST' && url.pathname === '/api/twitch/predictions') return await createPrediction(req, res);
@@ -688,7 +762,10 @@ const server = createServer(async (req, res) => {
     return await serveStatic(url.pathname, res);
   } catch (error) {
     logEvent('error', error.message);
-    return sendJson(res, { error: error.message }, 500);
+    if (error.requireBasicAuth && !res.headersSent) {
+      res.setHeader('www-authenticate', 'Basic realm="DotaStreamKit", charset="UTF-8"');
+    }
+    return sendJson(res, { error: error.message }, Number(error.statusCode) || 500);
   }
 });
 
@@ -701,12 +778,16 @@ server.on('error', (error) => {
   throw error;
 });
 
-const listenHost = runtime.config.deployment?.mode === 'server' ? '0.0.0.0' : '127.0.0.1';
+const listenHost = serverNetworkingEnabled() ? '0.0.0.0' : '127.0.0.1';
 server.listen(port, listenHost, () => {
   const dashboardUrl = effectiveBaseUrl();
   logEvent('system', `DotaStreamKit started on ${dashboardUrl}`);
   console.log(`DotaStreamKit: ${dashboardUrl}`);
   console.log(`OBS overlay:   ${dashboardUrl}/overlay.html`);
+  if (runtime.config.deployment?.mode === 'server' && !serverNetworkingEnabled()) {
+    logEvent('system', 'Server mode stayed on loopback because DOTASTREAMKIT_SERVER_PASSWORD is not set');
+    console.warn('Server mode requires DOTASTREAMKIT_SERVER_PASSWORD; listening on loopback only.');
+  }
   scheduleStartupUpdateCheck();
 });
 
@@ -745,7 +826,8 @@ async function refreshRuntimePresence() {
   const streamerSessionChanged = syncStreamerSessionPresence();
   if (processChanged || connectionChanged || protectionChanged || streamerSessionChanged) {
     runtime.state.protection = protection;
-    persistState();
+    if (streamerSessionChanged) await persistState();
+    else scheduleStatePersist();
     broadcast();
   }
 }
@@ -785,14 +867,131 @@ refreshTwitchStreamStatus().catch((error) => logEvent('twitch', `Stream status c
 async function loadJson(path, fallback) {
   try {
     return merge(structuredClone(fallback), JSON.parse(await readFile(path, 'utf8')));
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      try {
+        const backupContents = await readFile(`${path}.bak`, 'utf8');
+        const recovered = merge(structuredClone(fallback), JSON.parse(backupContents));
+        await writeFileAtomic(path, backupContents, { backup: false });
+        console.warn(`Recovered missing JSON from ${path}.bak`);
+        return recovered;
+      } catch (backupError) {
+        if (!(backupError instanceof SyntaxError) && backupError?.code !== 'ENOENT') throw backupError;
+      }
+      await writeFileAtomic(path, JSON.stringify(fallback, null, 2), { backup: false });
+      return structuredClone(fallback);
+    }
+    if (!(error instanceof SyntaxError)) throw error;
+
+    const backupPath = `${path}.bak`;
+    try {
+      const backupContents = await readFile(backupPath, 'utf8');
+      const recovered = merge(structuredClone(fallback), JSON.parse(backupContents));
+      await preserveCorruptJson(path);
+      await writeFileAtomic(path, backupContents, { backup: false });
+      console.warn(`Recovered invalid JSON from ${backupPath}`);
+      return recovered;
+    } catch (backupError) {
+      if (backupError instanceof SyntaxError || backupError?.code === 'ENOENT') {
+        await preserveCorruptJson(path);
+        await writeFileAtomic(path, JSON.stringify(fallback, null, 2), { backup: false });
+        console.warn(`Invalid JSON was preserved and ${path} was reset to defaults`);
+        return structuredClone(fallback);
+      }
+      throw backupError;
+    }
+  }
+}
+
+async function acquireInstanceLock() {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      instanceLockHandle = await open(instanceLockPath, 'wx', 0o600);
+      await instanceLockHandle.writeFile(JSON.stringify({ pid: process.pid, port, startedAt: new Date().toISOString() }));
+      await instanceLockHandle.sync();
+      await instanceLockHandle.close();
+      instanceLockHandle = null;
+      process.once('exit', releaseInstanceLockSync);
+      return;
+    } catch (error) {
+      if (error?.code !== 'EEXIST') throw error;
+      const owner = await readInstanceLockOwner();
+      if (owner?.pid && isProcessAlive(owner.pid)) {
+        console.error(`DotaStreamKit is already running (PID ${owner.pid}, port ${owner.port || port}).`);
+        process.exit(1);
+      }
+      await rm(instanceLockPath, { force: true });
+    }
+  }
+  throw new Error('Could not acquire the DotaStreamKit instance lock');
+}
+
+async function readInstanceLockOwner() {
+  try {
+    return JSON.parse(await readFile(instanceLockPath, 'utf8'));
   } catch {
-    await writeFile(path, JSON.stringify(fallback, null, 2));
-    return structuredClone(fallback);
+    return null;
+  }
+}
+
+function isProcessAlive(pid) {
+  const numericPid = Number(pid);
+  if (!Number.isInteger(numericPid) || numericPid <= 0) return false;
+  try {
+    process.kill(numericPid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function releaseInstanceLockSync() {
+  try {
+    rmSync(instanceLockPath, { force: true });
+  } catch {}
+}
+
+async function preserveCorruptJson(path) {
+  const suffix = new Date().toISOString().replace(/[:.]/g, '-');
+  await rename(path, `${path}.corrupt-${suffix}`);
+}
+
+async function writeFileAtomic(path, contents, options = {}) {
+  const temporaryPath = `${path}.${process.pid}.${randomBytes(6).toString('hex')}.tmp`;
+  const mode = options.mode ?? 0o600;
+  let handle = null;
+  try {
+    handle = await open(temporaryPath, 'w', mode);
+    await handle.writeFile(contents);
+    await handle.sync();
+    await handle.close();
+    handle = null;
+    if (options.backup !== false) {
+      try {
+        await copyFile(path, `${path}.bak`);
+        if (process.platform !== 'win32') await chmod(`${path}.bak`, mode);
+      } catch (error) {
+        if (error?.code !== 'ENOENT') throw error;
+      }
+    }
+    try {
+      await rename(temporaryPath, path);
+    } catch (error) {
+      if (!['EEXIST', 'EPERM'].includes(error?.code)) throw error;
+      await rm(path, { force: true });
+      await rename(temporaryPath, path);
+    }
+    if (process.platform !== 'win32') await chmod(path, mode);
+  } finally {
+    await handle?.close().catch(() => {});
+    await rm(temporaryPath, { force: true });
   }
 }
 
 async function persistConfig() {
-  await writeFile(configPath, JSON.stringify(runtime.config, null, 2));
+  const contents = JSON.stringify(runtime.config, null, 2);
+  configWriteQueue = configWriteQueue.catch(() => {}).then(() => writeFileAtomic(configPath, contents));
+  return configWriteQueue;
 }
 
 async function migrateConfig(config) {
@@ -806,6 +1005,13 @@ async function migrateConfig(config) {
   config.deployment = merge(structuredClone(defaultConfig.deployment), config.deployment || {});
   normalizeDeploymentConfig(config.deployment);
   if (JSON.stringify(config.deployment) !== beforeDeployment) changed = true;
+
+  const beforeDota = JSON.stringify(config.dota || {});
+  config.dota = merge(structuredClone(defaultConfig.dota), config.dota || {});
+  if (!/^[a-f0-9]{64}$/i.test(String(config.dota.gsiToken || ''))) {
+    config.dota.gsiToken = randomBytes(32).toString('hex');
+  }
+  if (JSON.stringify(config.dota) !== beforeDota) changed = true;
 
   const beforeTwitch = JSON.stringify(config.twitch || {});
   config.twitch = merge(structuredClone(defaultConfig.twitch), config.twitch || {});
@@ -994,27 +1200,49 @@ async function migrateConfig(config) {
   if (changed) await persistConfig();
 }
 
-async function persistState() {
-  const saved = { ...runtime.state, events: runtime.state.events.slice(0, 100) };
-  await writeFile(statePath, JSON.stringify(saved, null, 2));
+async function persistState(options = {}) {
+  const { twitchToken, ...stateWithoutSecrets } = runtime.state;
+  const saved = { ...stateWithoutSecrets, events: runtime.state.events.slice(0, 100) };
+  const contents = JSON.stringify(saved, null, 2);
+  stateWriteQueue = stateWriteQueue.catch(() => {}).then(() => writeFileAtomic(statePath, contents, options));
+  return stateWriteQueue;
+}
+
+function scheduleStatePersist(delayMs = 1000) {
+  if (scheduledStatePersist) return;
+  scheduledStatePersist = setTimeout(() => {
+    scheduledStatePersist = null;
+    persistState().catch((error) => console.error(`State persistence failed: ${error.message}`));
+  }, delayMs);
+  scheduledStatePersist.unref?.();
 }
 
 async function loadTwitchTokenBackup() {
   try {
     return JSON.parse(await readFile(twitchTokenPath, 'utf8'));
   } catch {
-    return null;
+    try {
+      return JSON.parse(await readFile(`${twitchTokenPath}.bak`, 'utf8'));
+    } catch {
+      return null;
+    }
   }
 }
 
 async function persistTwitchTokenBackup() {
   const token = runtime.state.twitchToken;
   if (!token?.accessToken) return;
-  await writeFile(twitchTokenPath, JSON.stringify(token, null, 2));
+  const contents = JSON.stringify(token, null, 2);
+  twitchTokenWriteQueue = twitchTokenWriteQueue.catch(() => {}).then(() => writeFileAtomic(twitchTokenPath, contents));
+  await twitchTokenWriteQueue;
 }
 
 async function deleteTwitchTokenBackup() {
-  await rm(twitchTokenPath, { force: true });
+  twitchTokenWriteQueue = twitchTokenWriteQueue.catch(() => {}).then(async () => {
+    await rm(twitchTokenPath, { force: true });
+    await rm(`${twitchTokenPath}.bak`, { force: true });
+  });
+  await twitchTokenWriteQueue;
 }
 
 async function migrateLegacyLocalDataDir() {
@@ -1079,7 +1307,7 @@ async function ensureGeneratedAssets() {
     await stat(join(assetDir, 'draft-screenshot.png'));
     await buildSlotsFromDraftScreenshot();
   } catch {
-    await copyDefaultAsset('draft-screenshot.png');
+    await copyDefaultAsset('draft-screenshot.png', false);
     await buildSlotsFromDraftScreenshot();
   }
   try {
@@ -1346,15 +1574,115 @@ async function makeDotaMinimapIcon(path, width, height) {
     .toBuffer();
 }
 
-async function readBody(req) {
+async function readBody(req, maxBytes = 2 * 1024 * 1024) {
   const chunks = [];
-  for await (const chunk of req) chunks.push(chunk);
+  let receivedBytes = 0;
+  for await (const chunk of req) {
+    receivedBytes += chunk.length;
+    if (receivedBytes > maxBytes) {
+      const error = new Error('Request body is too large');
+      error.statusCode = 413;
+      throw error;
+    }
+    chunks.push(chunk);
+  }
   const text = Buffer.concat(chunks).toString('utf8');
   if (!text) return {};
   try {
     return JSON.parse(text);
   } catch {
-    throw new Error('Invalid JSON body');
+    const error = new Error('Invalid JSON body');
+    error.statusCode = 400;
+    throw error;
+  }
+}
+
+function enforceRequestSecurity(req, url) {
+  const requestHost = requestHostname(req.headers.host);
+  const socketAddress = String(req.socket?.remoteAddress || '').replace(/^::ffff:/, '');
+  const hasForwardedAddress = Boolean(
+    String(req.headers['x-forwarded-for'] || '').trim()
+    || String(req.headers.forwarded || '').trim()
+    || String(req.headers['x-real-ip'] || '').trim()
+  );
+  const remoteIsLoopback = isLoopbackHostname(socketAddress) && !hasForwardedAddress;
+  if (!serverNetworkingEnabled() && (!isLoopbackHostname(requestHost) || !remoteIsLoopback)) {
+    const error = new Error('Local mode only accepts loopback Host headers');
+    error.statusCode = 403;
+    throw error;
+  }
+  if (serverNetworkingEnabled() && !remoteIsLoopback && !hasValidServerAuthorization(req.headers.authorization)) {
+    const error = new Error('Server authentication is required');
+    error.statusCode = 401;
+    error.requireBasicAuth = true;
+    throw error;
+  }
+
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(String(req.method || '').toUpperCase())) return;
+  if (String(req.headers['sec-fetch-site'] || '').toLowerCase() === 'cross-site') {
+    const error = new Error('Cross-site requests are not allowed');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const origin = String(req.headers.origin || '').trim();
+  if (origin && !isAllowedRequestOrigin(origin, req.headers.host)) {
+    const error = new Error('Request origin is not allowed');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const hasBody = Number(req.headers['content-length'] || 0) > 0 || Boolean(req.headers['transfer-encoding']);
+  const contentType = String(req.headers['content-type'] || '').toLowerCase();
+  if (hasBody && !contentType.startsWith('application/json')) {
+    const error = new Error('JSON requests must use application/json');
+    error.statusCode = 415;
+    throw error;
+  }
+}
+
+function serverNetworkingEnabled() {
+  return effectiveServerNetworking;
+}
+
+function hasValidServerAuthorization(header) {
+  const match = String(header || '').match(/^Basic\s+(.+)$/i);
+  if (!match) return false;
+  try {
+    const decoded = Buffer.from(match[1], 'base64').toString('utf8');
+    const separator = decoded.indexOf(':');
+    const password = separator >= 0 ? decoded.slice(separator + 1) : '';
+    const actual = Buffer.from(password);
+    const expected = Buffer.from(serverAuthPassword);
+    return actual.length === expected.length && timingSafeEqual(actual, expected);
+  } catch {
+    return false;
+  }
+}
+
+function requestHostname(hostHeader) {
+  try {
+    return new URL(`http://${hostHeader || ''}`).hostname;
+  } catch {
+    return '';
+  }
+}
+
+function isLoopbackHostname(hostname) {
+  const normalized = String(hostname || '').toLowerCase().replace(/^\[|\]$/g, '');
+  return normalized === 'localhost' || normalized === '127.0.0.1' || normalized === '::1';
+}
+
+function isAllowedRequestOrigin(origin, hostHeader) {
+  try {
+    const parsed = new URL(origin);
+    if (!serverNetworkingEnabled()) return isLoopbackHostname(parsed.hostname);
+    const configuredOrigin = runtime.config.deployment.publicBaseUrl
+      ? new URL(runtime.config.deployment.publicBaseUrl).origin
+      : '';
+    return parsed.host === String(hostHeader || '') || (configuredOrigin && parsed.origin === configuredOrigin);
+  } catch {
+    return false;
   }
 }
 
@@ -1381,7 +1709,7 @@ function redirect(res, location) {
 async function serveStatic(pathname, res) {
   const path = pathname === '/' ? '/index.html' : pathname;
   const filePath = normalize(join(publicDir, path));
-  if (!filePath.startsWith(publicDir)) return sendText(res, 'Forbidden', 403);
+  if (filePath !== publicDir && !filePath.startsWith(`${publicDir}${sep}`)) return sendText(res, 'Forbidden', 403);
 
   try {
     const fileStat = await stat(filePath);
@@ -1406,7 +1734,7 @@ async function serveStatic(pathname, res) {
     'content-type': types[extname(filePath)] || 'application/octet-stream',
     'cache-control': 'no-store'
   });
-  createReadStream(filePath).pipe(res);
+  pipeFileResponse(filePath, res);
 }
 
 async function serveAsset(pathname, res) {
@@ -1425,7 +1753,17 @@ async function serveAsset(pathname, res) {
     'content-type': 'image/png',
     'cache-control': 'no-store'
   });
-  createReadStream(filePath).pipe(res);
+  pipeFileResponse(filePath, res);
+}
+
+function pipeFileResponse(filePath, res) {
+  const stream = createReadStream(filePath);
+  stream.on('error', (error) => {
+    if (!res.headersSent) sendText(res, 'Not found', 404);
+    else res.destroy(error);
+  });
+  res.on('close', () => stream.destroy());
+  stream.pipe(res);
 }
 
 async function assetStatus(res) {
@@ -1442,7 +1780,7 @@ async function assetStatus(res) {
 }
 
 async function uploadAsset(req, res) {
-  const body = await readBody(req);
+  const body = await readBody(req, 42 * 1024 * 1024);
   if (!['draft-screenshot.png', 'queue-screenshot.png'].includes(body.name)) {
     throw new Error('Only draft-screenshot.png or queue-screenshot.png can be uploaded from the dashboard');
   }
@@ -1540,6 +1878,7 @@ function publicState() {
   return {
     version: appVersion,
     platform: process.platform,
+    serverNetworkingEnabled: serverNetworkingEnabled(),
     menuMmrOcrSupport: getScreenCaptureSupport(),
     config: sanitizeConfig(runtime.config),
     state: {
@@ -1645,7 +1984,7 @@ async function pickMenuMmrOcrRegionApi(res) {
 }
 
 async function setMenuMmrOcrRegionApi(req, res) {
-  const body = await readJson(req);
+  const body = await readBody(req);
   const region = normalizeRegion(body);
   if (!region) return sendJson(res, { error: 'Invalid screen region' }, 400);
   runtime.config.protection.matchIntel.menuMmrOcrRegion = region;
@@ -1693,14 +2032,14 @@ async function maybeRunMenuMmrOcr() {
         broadcast();
       }
     }
-    persistState();
+    await persistState();
   } catch (error) {
     runtime.state.menuMmrOcr = {
       ...(runtime.state.menuMmrOcr || {}),
       lastRunAt: new Date().toISOString(),
       lastError: error.message
     };
-    persistState();
+    await persistState();
     throw error;
   } finally {
     runtime.menuMmrOcrInFlight = false;
@@ -1757,6 +2096,10 @@ function streamerMmrGoalState({ account, accountId, currentMmr, wins, losses, wi
 function sanitizeConfig(config) {
   return {
     ...config,
+    dota: {
+      ...config.dota,
+      gsiToken: config.dota?.gsiToken ? '********' : ''
+    },
     twitch: {
       ...config.twitch,
       clientSecret: config.twitch.clientSecret ? '********' : ''
@@ -1789,12 +2132,9 @@ async function buildBackup(sections) {
   return backup;
 }
 
-async function applyBackup(backup, sections) {
-  const source = backup?.sections && typeof backup.sections === 'object' ? backup.sections : backup;
-  if (!source || typeof source !== 'object') throw new Error('Invalid backup file');
-  const selected = new Set(sections.filter((section) => backupSectionKeys().includes(section)));
+function buildImportedConfig(baseConfig, source, selected) {
   const imported = [];
-  const nextConfig = structuredClone(runtime.config);
+  const nextConfig = structuredClone(baseConfig);
 
   for (const key of ['ui', 'deployment', 'twitch', 'dota', 'updates', 'protection', 'predictions', 'spectatorPredictions']) {
     if (!selected.has(key) || source[key] === undefined) continue;
@@ -1807,12 +2147,84 @@ async function applyBackup(backup, sections) {
   normalizeDeploymentConfig(nextConfig.deployment);
   normalizeUiConfig(nextConfig.ui);
   normalizeTwitchConfig(nextConfig.twitch);
+  if (!/^[a-f0-9]{64}$/i.test(String(nextConfig.dota?.gsiToken || ''))) {
+    nextConfig.dota.gsiToken = baseConfig.dota.gsiToken || randomBytes(32).toString('hex');
+  }
   normalizeUpdateConfig(nextConfig.updates);
   normalizePredictionSettings(nextConfig.predictions, defaultConfig.predictions);
   normalizePredictionSettings(nextConfig.spectatorPredictions, defaultConfig.spectatorPredictions);
   if (nextConfig.protection?.matchIntel) normalizeMatchIntelConfig(nextConfig.protection.matchIntel);
   if (nextConfig.protection?.spectatorMatchIntel) normalizeMatchIntelConfig(nextConfig.protection.spectatorMatchIntel, { spectatorLabel: true });
+  return { nextConfig, imported };
+}
+
+async function applyBackup(backup, sections) {
+  const source = backup?.sections && typeof backup.sections === 'object' ? backup.sections : backup;
+  if (!source || typeof source !== 'object') throw new Error('Invalid backup file');
+  const selected = new Set(sections.filter((section) => backupSectionKeys().includes(section)));
+  const resolvedUsers = new Map();
+  let imported = [];
+  let nextConfig = null;
+  let twitchClientChanged = false;
+  let twitchChannelChanged = false;
+  let deploymentModeChanged = false;
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const current = runtime.config;
+    const currentFingerprint = JSON.stringify(current);
+    const built = buildImportedConfig(current, source, selected);
+    const candidate = built.nextConfig;
+    const changes = twitchConfigChanges(candidate, current);
+    requireMutableTwitchSettings(
+      changes.channelChanged,
+      changes.clientChanged,
+      'Resolve or cancel the active prediction before importing different Twitch settings'
+    );
+
+    if (changes.channelChanged && candidate.twitch.channelMode === 'separate') {
+      candidate.twitch.targetBroadcasterId = '';
+      candidate.twitch.targetBroadcasterLogin = '';
+      if (candidate.twitch.targetChannelLogin && runtime.state.twitchToken?.accessToken && !changes.clientChanged) {
+        const login = candidate.twitch.targetChannelLogin;
+        const user = resolvedUsers.get(login) || await resolveTwitchUserByLogin(login);
+        resolvedUsers.set(login, user);
+        candidate.twitch.targetChannelLogin = user.login;
+        candidate.twitch.targetBroadcasterLogin = user.login;
+        candidate.twitch.targetBroadcasterId = user.id;
+      }
+    } else if (changes.channelChanged && candidate.twitch.channelMode === 'personal') {
+      candidate.twitch.targetChannelLogin = runtime.state.twitchToken?.broadcasterLogin || '';
+      candidate.twitch.targetBroadcasterLogin = runtime.state.twitchToken?.broadcasterLogin || '';
+      candidate.twitch.targetBroadcasterId = runtime.state.twitchToken?.broadcasterId || '';
+    }
+
+    requireMutableTwitchSettings(
+      changes.channelChanged,
+      changes.clientChanged,
+      'A prediction started while Twitch settings were being imported; import was not applied'
+    );
+    if (JSON.stringify(runtime.config) !== currentFingerprint) continue;
+    nextConfig = candidate;
+    imported = built.imported;
+    twitchClientChanged = changes.clientChanged;
+    twitchChannelChanged = changes.channelChanged;
+    deploymentModeChanged = candidate.deployment.mode !== current.deployment.mode;
+    break;
+  }
+
+  if (!nextConfig) {
+    const error = new Error('Settings changed concurrently; retry importing the backup');
+    error.statusCode = 409;
+    throw error;
+  }
+  if (twitchClientChanged || twitchChannelChanged) runtime.twitchAuthGeneration += 1;
   runtime.config = nextConfig;
+  if (twitchClientChanged && runtime.state.twitchToken?.accessToken) {
+    delete runtime.state.twitchToken;
+    runtime.twitchLastValidatedAt = 0;
+    await deleteTwitchTokenBackup();
+  }
+  if (twitchClientChanged || twitchChannelChanged) resetTwitchStreamStatus();
 
   if (selected.has('streamerStats') && source.streamerStats !== undefined) {
     runtime.state.streamerStats = normalizeStreamerStatsState(source.streamerStats);
@@ -1826,9 +2238,11 @@ async function applyBackup(backup, sections) {
 
   hydrateTwitchStatus();
   runtime.state.protection = computeProtection(runtime.config, runtime.state.gsi);
+  syncStreamerSessionPresence();
   await persistConfig();
   await persistState();
-  return { imported };
+  await refreshInstalledGsiConfig();
+  return { imported, restartRequired: deploymentModeChanged };
 }
 
 async function exportCustomAssets() {
@@ -1858,14 +2272,15 @@ async function importCustomAssets(value) {
 }
 
 async function fetchLatestRelease() {
-  const response = await fetch(githubLatestReleaseApi, {
+  return await fetchWithTimeout(githubLatestReleaseApi, {
     headers: {
       'accept': 'application/vnd.github+json',
       'user-agent': `DotaStreamKit/${appVersion}`
     }
+  }, 15000, async (response) => {
+    if (!response.ok) throw new Error(`GitHub update check failed: ${response.status}`);
+    return JSON.parse(await readResponseText(response, 2 * 1024 * 1024));
   });
-  if (!response.ok) throw new Error(`GitHub update check failed: ${response.status}`);
-  return await response.json();
 }
 
 function normalizeUpdateRelease(release) {
@@ -1939,12 +2354,19 @@ async function findUpdaterExecutable() {
 
 function hydrateTwitchStatus() {
   const token = runtime.state.twitchToken;
+  const authenticated = Boolean(token?.accessToken);
   const scopes = normalizeScopes(token?.scopes || []);
   const missingScopes = token?.accessToken ? twitchScopes.filter((scope) => !scopes.includes(scope)) : [];
   const streamStatus = runtime.twitchStreamStatus || {};
   const target = twitchTargetChannel();
+  const streamStatusMatchesTarget = Boolean(
+    authenticated
+    && target.broadcasterId
+    && streamStatus.broadcasterId
+    && String(target.broadcasterId) === String(streamStatus.broadcasterId)
+  );
   runtime.state.twitch = {
-    authenticated: Boolean(token?.accessToken),
+    authenticated,
     broadcasterId: token?.broadcasterId || null,
     broadcasterLogin: token?.broadcasterLogin || null,
     channelMode: runtime.config.twitch.channelMode,
@@ -1958,11 +2380,11 @@ function hydrateTwitchStatus() {
     scopes,
     missingScopes,
     needsReconnect: missingScopes.length > 0,
-    isLive: streamStatus.isLive,
-    streamId: streamStatus.streamId || null,
-    streamGameName: streamStatus.gameName || null,
-    streamTitle: streamStatus.title || null,
-    streamCheckedAt: streamStatus.checkedAt ? new Date(streamStatus.checkedAt).toISOString() : null
+    isLive: streamStatusMatchesTarget ? streamStatus.isLive : null,
+    streamId: streamStatusMatchesTarget ? streamStatus.streamId || null : null,
+    streamGameName: streamStatusMatchesTarget ? streamStatus.gameName || null : null,
+    streamTitle: streamStatusMatchesTarget ? streamStatus.title || null : null,
+    streamCheckedAt: streamStatusMatchesTarget && streamStatus.checkedAt ? new Date(streamStatus.checkedAt).toISOString() : null
   };
 }
 
@@ -1972,43 +2394,19 @@ async function restoreTwitchStatus() {
     hydrateTwitchStatus();
     return;
   }
-
+  const authGeneration = runtime.twitchAuthGeneration;
+  const accessToken = token.accessToken;
   try {
-    if (Date.parse(token.expiresAt || 0) - Date.now() <= 60000) {
-      await refreshTokenIfNeeded();
-      hydrateTwitchStatus();
-      await persistTwitchTokenBackup();
-      await persistState();
-      return;
-    }
-
-    const validation = await validateToken(token.accessToken);
-    runtime.state.twitchToken = {
-      ...token,
-      broadcasterId: validation.user_id || token.broadcasterId,
-      broadcasterLogin: validation.login || token.broadcasterLogin,
-      scopes: validation.scopes || token.scopes || [],
-      expiresAt: validation.expires_in
-        ? new Date(Date.now() + validation.expires_in * 1000).toISOString()
-        : token.expiresAt
-    };
+    await refreshTokenIfNeeded(token.clientId && token.clientId !== runtime.config.twitch.clientId);
+    if (authGeneration !== runtime.twitchAuthGeneration) return;
     hydrateTwitchStatus();
-    await persistTwitchTokenBackup();
-    await persistState();
   } catch (error) {
-    try {
-      await refreshTokenIfNeeded(true);
-      hydrateTwitchStatus();
-      await persistTwitchTokenBackup();
-      await persistState();
-    } catch {
-      hydrateTwitchStatus();
-      runtime.state.twitch.authenticated = false;
-      runtime.state.twitch.needsReconnect = true;
-      runtime.state.twitch.authError = error.message;
-      await persistState();
-      logEvent('twitch', `Saved Twitch token could not be restored: ${error.message}`);
-    }
+    if (authGeneration !== runtime.twitchAuthGeneration
+      || runtime.state.twitchToken?.accessToken !== accessToken) return;
+    hydrateTwitchStatus();
+    runtime.state.twitch.authError = error.message;
+    await persistState();
+    logEvent('twitch', `Saved Twitch token could not be restored: ${error.message}`);
   }
 }
 
@@ -2022,8 +2420,27 @@ function logEvent(type, message, data = null) {
 function broadcast() {
   const payload = `data: ${JSON.stringify(publicState())}\n\n`;
   for (const client of runtime.clients) {
-    client.write(payload);
+    writeSsePayload(client, payload);
   }
+}
+
+function writeSsePayload(client, payload) {
+  if (!client || client.destroyed || client.writableEnded) {
+    runtime.clients.delete(client);
+    return;
+  }
+  if (client.dskWaitingForDrain) {
+    client.dskPendingPayload = payload;
+    return;
+  }
+  if (client.write(payload)) return;
+  client.dskWaitingForDrain = true;
+  client.once('drain', () => {
+    client.dskWaitingForDrain = false;
+    const pending = client.dskPendingPayload;
+    client.dskPendingPayload = null;
+    if (pending) writeSsePayload(client, pending);
+  });
 }
 
 function handleEvents(req, res) {
@@ -2032,16 +2449,16 @@ function handleEvents(req, res) {
     'cache-control': 'no-cache',
     connection: 'keep-alive'
   });
-  res.write(`data: ${JSON.stringify(publicState())}\n\n`);
   runtime.clients.add(res);
+  writeSsePayload(res, `data: ${JSON.stringify(publicState())}\n\n`);
   req.on('close', () => runtime.clients.delete(res));
+  res.on('error', () => runtime.clients.delete(res));
 }
 
-async function updateConfig(req, res) {
-  const body = await readBody(req);
-  const next = merge(structuredClone(runtime.config), body);
+function buildNormalizedConfigUpdate(baseConfig, body) {
+  const next = merge(structuredClone(baseConfig), body);
   if (body.twitch?.clientSecret === '********') {
-    next.twitch.clientSecret = runtime.config.twitch.clientSecret;
+    next.twitch.clientSecret = baseConfig.twitch.clientSecret;
   }
   normalizeDeploymentConfig(next.deployment);
   normalizeUiConfig(next.ui);
@@ -2057,10 +2474,91 @@ async function updateConfig(req, res) {
   normalizePredictionSettings(next.spectatorPredictions, defaultConfig.spectatorPredictions);
   if (next.protection?.matchIntel) normalizeMatchIntelConfig(next.protection.matchIntel);
   if (next.protection?.spectatorMatchIntel) normalizeMatchIntelConfig(next.protection.spectatorMatchIntel, { spectatorLabel: true });
+  return next;
+}
+
+function twitchConfigChanges(next, current) {
+  return {
+    channelChanged: next.twitch.channelMode !== current.twitch.channelMode
+      || next.twitch.targetChannelLogin !== current.twitch.targetChannelLogin,
+    clientChanged: next.twitch.clientId !== current.twitch.clientId
+  };
+}
+
+function requireMutableTwitchSettings(channelChanged, clientChanged, message) {
+  if ((channelChanged || clientChanged)
+    && (runtime.twitchAuthMutation
+      || runtime.predictionCreation
+      || ['ACTIVE', 'LOCKED'].includes(runtime.state.activePrediction?.status))) {
+    const error = new Error(message);
+    error.statusCode = 409;
+    throw error;
+  }
+}
+
+async function updateConfig(req, res) {
+  const body = await readBody(req);
+  const resolvedUsers = new Map();
+  let next = null;
+  let twitchChannelChanged = false;
+  let twitchClientChanged = false;
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const current = runtime.config;
+    const currentFingerprint = JSON.stringify(current);
+    const candidate = buildNormalizedConfigUpdate(current, body);
+    const changes = twitchConfigChanges(candidate, current);
+    requireMutableTwitchSettings(
+      changes.channelChanged,
+      changes.clientChanged,
+      'Resolve or cancel the active prediction before changing Twitch channel or Client ID'
+    );
+
+    if (changes.channelChanged && candidate.twitch.channelMode === 'separate') {
+      candidate.twitch.targetBroadcasterId = '';
+      candidate.twitch.targetBroadcasterLogin = '';
+      if (candidate.twitch.targetChannelLogin && runtime.state.twitchToken?.accessToken && !changes.clientChanged) {
+        const login = candidate.twitch.targetChannelLogin;
+        const user = resolvedUsers.get(login) || await resolveTwitchUserByLogin(login);
+        resolvedUsers.set(login, user);
+        candidate.twitch.targetChannelLogin = user.login;
+        candidate.twitch.targetBroadcasterLogin = user.login;
+        candidate.twitch.targetBroadcasterId = user.id;
+      }
+    } else if (changes.channelChanged && candidate.twitch.channelMode === 'personal') {
+      candidate.twitch.targetChannelLogin = runtime.state.twitchToken?.broadcasterLogin || '';
+      candidate.twitch.targetBroadcasterLogin = runtime.state.twitchToken?.broadcasterLogin || '';
+      candidate.twitch.targetBroadcasterId = runtime.state.twitchToken?.broadcasterId || '';
+    }
+
+    requireMutableTwitchSettings(
+      changes.channelChanged,
+      changes.clientChanged,
+      'A prediction started while Twitch settings were being resolved; settings were not applied'
+    );
+    if (JSON.stringify(runtime.config) !== currentFingerprint) continue;
+    next = candidate;
+    twitchChannelChanged = changes.channelChanged;
+    twitchClientChanged = changes.clientChanged;
+    break;
+  }
+
+  if (!next) {
+    const error = new Error('Settings changed concurrently; retry saving this section');
+    error.statusCode = 409;
+    throw error;
+  }
+  if (twitchChannelChanged || twitchClientChanged) runtime.twitchAuthGeneration += 1;
   runtime.config = next;
-  if (body.twitch?.channelMode || body.twitch?.targetChannelLogin) {
+  if (twitchClientChanged && runtime.state.twitchToken?.accessToken) {
+    delete runtime.state.twitchToken;
+    runtime.twitchLastValidatedAt = 0;
     resetTwitchStreamStatus();
-    await resolveConfiguredTwitchChannel();
+    await deleteTwitchTokenBackup();
+    logEvent('twitch', 'Twitch Client ID changed; reconnect Twitch');
+  }
+  if (twitchChannelChanged) {
+    resetTwitchStreamStatus();
   }
   hydrateTwitchStatus();
   runtime.state.protection = computeProtection(runtime.config, runtime.state.gsi);
@@ -2090,7 +2588,7 @@ async function exportBackupApi(url, res) {
 }
 
 async function importBackupApi(req, res) {
-  const body = await readBody(req);
+  const body = await readBody(req, 100 * 1024 * 1024);
   const backup = body.backup && typeof body.backup === 'object' ? body.backup : body;
   const requestedSections = Array.isArray(body.sections) ? body.sections : backupSectionKeys();
   const sections = requestedSections.includes('all') ? backupSectionKeys() : requestedSections;
@@ -2167,33 +2665,41 @@ async function beginUpdateInstall(status) {
     return { ok: true, status, message: 'Update is already running. DotaStreamKit will restart when the update is installed.' };
   }
 
-  const asset = status.assets.find((item) => item.platform === currentUpdatePlatform());
-  if (!asset) throw new Error('No update asset is available for this platform');
-  const updater = await findUpdaterExecutable();
-  if (!updater) throw new Error('Updater is not available in this build');
-
-  const archivePath = await downloadUpdateAsset(asset);
-  const args = [
-    '--app-root', rootDir,
-    '--download-url', asset.url,
-    '--archive-path', archivePath,
-    '--delete-archive', '1',
-    '--version', status.latestVersion,
-    '--asset-name', asset.name,
-    '--pid', String(process.pid)
-  ];
-  const launcherPid = Number(process.env.DOTASTREAMKIT_LAUNCHER_PID || 0);
-  if (launcherPid > 0) args.push('--launcher-pid', String(launcherPid));
-  const child = spawn(updater, args, {
-    detached: true,
-    stdio: 'ignore',
-    windowsHide: false
-  });
-  child.unref();
   runtime.updateInstallStarted = true;
-  logEvent('system', `Update started: ${status.latestVersion}`);
-  setTimeout(() => process.exit(47), 1000).unref();
-  return { ok: true, status, message: 'Update started. DotaStreamKit will restart when the update is installed.' };
+  try {
+    const asset = status.assets.find((item) => item.platform === currentUpdatePlatform());
+    if (!asset) throw new Error('No update asset is available for this platform');
+    const updater = await findUpdaterExecutable();
+    if (!updater) throw new Error('Updater is not available in this build');
+    const archivePath = await downloadUpdateAsset(asset);
+    const args = [
+      '--app-root', rootDir,
+      '--download-url', asset.url,
+      '--archive-path', archivePath,
+      '--delete-archive', '1',
+      '--version', status.latestVersion,
+      '--asset-name', asset.name,
+      '--pid', String(process.pid)
+    ];
+    const launcherPid = Number(process.env.DOTASTREAMKIT_LAUNCHER_PID || 0);
+    if (launcherPid > 0) args.push('--launcher-pid', String(launcherPid));
+    const child = spawn(updater, args, {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: false
+    });
+    await new Promise((resolve, reject) => {
+      child.once('spawn', resolve);
+      child.once('error', reject);
+    });
+    child.unref();
+    logEvent('system', `Update started: ${status.latestVersion}`);
+    setTimeout(() => process.exit(47), 1000).unref();
+    return { ok: true, status, message: 'Update started. DotaStreamKit will restart when the update is installed.' };
+  } catch (error) {
+    runtime.updateInstallStarted = false;
+    throw error;
+  }
 }
 
 function normalizeUpdateState(value = {}) {
@@ -2230,21 +2736,67 @@ function setUpdateCheckError(error) {
 }
 
 async function downloadUpdateAsset(asset) {
+  if (Number(asset?.size) > 500 * 1024 * 1024) throw new Error('Update archive is unexpectedly large');
   const tempRoot = join(tmpdir(), `DotaStreamKit-update-${randomBytes(8).toString('hex')}`);
   await mkdir(tempRoot, { recursive: true });
   const archivePath = join(tempRoot, basename(asset.name || 'update.zip') || 'update.zip');
-  const response = await fetch(asset.url, {
+  return await fetchWithTimeout(asset.url, {
     headers: {
       'user-agent': `DotaStreamKit/${appVersion}`
     }
+  }, 120000, async (response) => {
+    if (!response.ok) throw new Error(`Update download failed: ${response.status}`);
+    const buffer = await readResponseBuffer(response, 500 * 1024 * 1024);
+    if (!buffer.length) throw new Error('Update download failed: empty archive');
+    await writeFile(archivePath, buffer);
+    return archivePath;
   });
-  if (!response.ok) {
-    throw new Error(`Update download failed: ${response.status}`);
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = twitchRequestTimeoutMs, consumeResponse) {
+  const controller = new AbortController();
+  const externalSignal = options.signal;
+  const forwardAbort = () => controller.abort(externalSignal?.reason);
+  if (externalSignal) {
+    if (externalSignal.aborted) forwardAbort();
+    else externalSignal.addEventListener('abort', forwardAbort, { once: true });
   }
-  const buffer = Buffer.from(await response.arrayBuffer());
-  if (!buffer.length) throw new Error('Update download failed: empty archive');
-  await writeFile(archivePath, buffer);
-  return archivePath;
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort(new Error('Request timed out'));
+  }, timeoutMs);
+  timeout.unref?.();
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    if (typeof consumeResponse !== 'function') throw new Error('A response consumer is required');
+    return await consumeResponse(response);
+  } catch (error) {
+    if (timedOut) {
+      throw new Error(`Request timed out after ${timeoutMs} ms`, { cause: error });
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+    controller.abort();
+    externalSignal?.removeEventListener?.('abort', forwardAbort);
+  }
+}
+
+async function readResponseText(response, maxBytes) {
+  return (await readResponseBuffer(response, maxBytes)).toString('utf8');
+}
+
+async function readResponseBuffer(response, maxBytes) {
+  const chunks = [];
+  let receivedBytes = 0;
+  for await (const chunk of response.body || []) {
+    const buffer = Buffer.from(chunk);
+    receivedBytes += buffer.length;
+    if (receivedBytes > maxBytes) throw new Error('Response body is too large');
+    chunks.push(buffer);
+  }
+  return Buffer.concat(chunks);
 }
 
 async function updateProtection(req, res) {
@@ -2325,26 +2877,38 @@ async function restoreStreamerStatsApi(res) {
 
 async function handleGsi(req, res) {
   const payload = await readBody(req);
+  if (String(payload?.auth?.token || '') !== String(runtime.config.dota?.gsiToken || '')) {
+    const error = new Error('Invalid Dota GSI token; reinstall the GSI config from Setup');
+    error.statusCode = 403;
+    throw error;
+  }
   const previous = { ...runtime.state.gsi };
+  const lifecyclePrevious = gsiLifecyclePrevious(previous);
   const map = payload.map || {};
   const player = payload.player || {};
   const hero = payload.hero || {};
   const draft = payload.draft || {};
   const gameState = map.game_state || null;
   const matchId = map.matchid || map.match_id || null;
-  const lifecycle = inferGsiLifecycle(previous, gameState, matchId);
   const matchPlayers = collectMatchPlayers(payload);
   const localPlayerPayload = hasLocalPlayerPayload(payload);
   const streamerMatchPlayer = findStreamerMatchPlayer(payload, matchPlayers);
   const activitySignal = extractActivitySignal(payload);
   const playerActivity = inferPlayerActivity({
-    previous,
+    previous: lifecyclePrevious,
     activitySignal,
     gameState,
     matchId,
     localPlayerPayload,
     streamerInMatch: Boolean(streamerMatchPlayer)
   });
+  const lifecycle = inferGsiLifecycle(
+    lifecyclePrevious,
+    gameState,
+    matchId,
+    map.clock_time,
+    playerActivity
+  );
   const activityDebug = buildActivityDebug({
     payload,
     activitySignal,
@@ -2354,7 +2918,7 @@ async function handleGsi(req, res) {
     matchPlayers
   });
   const isStreamerPlaying = playerActivity === 'playing';
-  const canInheritPlayerState = shouldInheritPlayerState({ previous, gameState, matchId, playerActivity, localPlayerPayload });
+  const canInheritPlayerState = shouldInheritPlayerState({ previous, gameState, matchId, playerActivity, localPlayerPayload, lifecycle });
   const playerStateLifecycle = {
     ...lifecycle,
     inheritPlayerState: canInheritPlayerState,
@@ -2385,7 +2949,22 @@ async function handleGsi(req, res) {
   const draftActiveTeam = inferDraftActiveTeam(draft);
   const ownPickPhase = inferOwnPickPhase({ previous: previousPlayerState, payload, gameState, playerHeroPicked, playerTeam, lifecycle: playerStateLifecycle });
   const ownPickPhaseEnded = ownPickPhase.ownPickPhaseEnded;
-  const activeMatchId = inferActiveMatchId(previous, gameState, matchId, { ...lifecycle, playerActivity });
+  const spectatorCycle = inferSpectatorCycle(lifecyclePrevious, {
+    playerActivity,
+    gameState,
+    matchId,
+    clockTime: map.clock_time
+  });
+  const activeMatchId = inferActiveMatchId(lifecyclePrevious, gameState, matchId, {
+    ...lifecycle,
+    playerActivity,
+    spectatorCycle
+  });
+  const matchContextKey = activeMatchId || matchId
+    ? `match:${activeMatchId || matchId}`
+    : playerActivity === 'spectating'
+      ? `spectator:${spectatorCycle}`
+      : `draft:${lifecycle.draftCycle}`;
   const queueSearchSignal = inferQueueSearchSignal(payload);
   const inGameScreen = inferInGameScreen(gameState, playerActivity);
   const matchTeams = inferMatchTeams(payload, matchPlayers);
@@ -2431,31 +3010,88 @@ async function handleGsi(req, res) {
     ownPickPhaseTargetCount: ownPickPhase.ownPickPhaseTargetCount,
     ownPickPhaseSource: ownPickPhase.ownPickPhaseSource,
     draftCycle: lifecycle.draftCycle,
+    spectatorCycle,
+    matchContextKey,
     queueSearchSignal,
     inGameScreen,
     leftGameView,
     heroDemoMode,
-    rosterDebug
+    rosterDebug,
+    lifecycleSeed: {
+      gameState: gameState || lifecyclePrevious.gameState || null,
+      playerActivity: playerActivity || (/PRE_GAME|GAME_IN_PROGRESS|HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE/i.test(String(gameState || ''))
+        ? lifecyclePrevious.playerActivity || null
+        : null),
+      clockTime: Number.isFinite(map.clock_time) ? map.clock_time : lifecyclePrevious.clockTime ?? null,
+      matchId: matchId || null,
+      activeMatchId: activeMatchId || null,
+      lastSeenAt: new Date().toISOString()
+    }
   };
 
   runtime.state.gsi = gsi;
+  migrateAutoPredictionContextKey(gsi);
   runtime.state.matchIntel = buildMatchIntel(payload, gsi, matchPlayers);
-  const streamerIdentityUpdate = updateStreamerStatsIdentity(payload);
+  const streamerIdentityUpdate = updateStreamerStatsIdentity(payload, {
+    playerActivity,
+    localPlayerPayload
+  });
   runtime.state.protection = computeProtection(runtime.config, gsi);
   refreshNotablePlayerRanks(matchPlayers).catch((error) => logEvent('system', `Player rank lookup failed: ${error.message}`));
   refreshStreamerAccountRank().catch((error) => logEvent('system', `Streamer rank lookup failed: ${error.message}`));
-  const streamerStatsChangedConfig = applyStreamerStatsMatchResult(previous, gsi);
-  await maybeAutomatePrediction(previous, gsi);
-  if (streamerStatsChangedConfig || streamerIdentityUpdate.configChanged) await persistConfig();
-  await persistState();
+  const streamerStatsUpdate = applyStreamerStatsMatchResult(previous, gsi);
+  schedulePredictionAutomation(previous, gsi);
+  if (streamerStatsUpdate.configChanged || streamerIdentityUpdate.configChanged) await persistConfig();
+  if (streamerStatsUpdate.changed || streamerIdentityUpdate.stateChanged) await persistState();
+  else scheduleStatePersist();
   broadcast();
   sendJson(res, { ok: true });
+}
+
+function schedulePredictionAutomation(previous, gsi) {
+  const entry = {
+    previous: structuredClone(previous),
+    gsi: structuredClone(gsi),
+    predictionId: runtime.state.activePrediction?.id || null,
+    critical: isCriticalPredictionAutomationTransition(previous, gsi)
+  };
+  const queue = runtime.predictionAutomationQueue;
+  if (!entry.critical && queue.length > 0 && queue.at(-1)?.critical !== true) queue[queue.length - 1] = entry;
+  else queue.push(entry);
+  while (queue.length > 32) {
+    const disposableIndex = queue.findIndex((item) => !item.critical);
+    queue.splice(disposableIndex >= 0 ? disposableIndex : 0, 1);
+  }
+  if (runtime.predictionAutomationRunning) return;
+  runtime.predictionAutomationRunning = true;
+  queueMicrotask(async () => {
+    try {
+      while (runtime.predictionAutomationQueue.length > 0) {
+        const next = runtime.predictionAutomationQueue.shift();
+        await maybeAutomatePrediction(next.previous, next.gsi, { expectedPredictionId: next.predictionId });
+      }
+    } catch (error) {
+      logEvent('twitch', `Prediction automation failed: ${error.message}`);
+    } finally {
+      runtime.predictionAutomationRunning = false;
+    }
+  });
+}
+
+function isCriticalPredictionAutomationTransition(previous, gsi) {
+  const previousResult = inferPredictionResultForMeta(runtime.state.activePredictionMeta, previous, inferResult);
+  const nextResult = inferPredictionResultForMeta(runtime.state.activePredictionMeta, gsi, inferResult);
+  if (nextResult && nextResult !== previousResult) return true;
+  if (isLeftActiveGameViewCancelSignal(previous, gsi)) return true;
+  return /POST_GAME/i.test(String(gsi.gameState || ''))
+    && !/POST_GAME/i.test(String(previous.gameState || ''));
 }
 
 function buildMatchIntel(payload, gsi, players) {
   const settings = matchIntelSettingsForGsi(gsi);
   if (!settings?.enabled || isMatchIntelFinished(gsi) || gsi.leftGameView) {
     return {
+      contextKey: gsi.matchContextKey || null,
       matchId: gsi.activeMatchId || gsi.matchId || null,
       players,
       notablePlayers: [],
@@ -2486,7 +3122,10 @@ function buildMatchIntel(payload, gsi, players) {
   return intel;
 }
 
-function updateStreamerStatsIdentity(payload) {
+function updateStreamerStatsIdentity(payload, context = {}) {
+  if (context.playerActivity !== 'playing' || context.localPlayerPayload !== true) {
+    return { stateChanged: false, configChanged: false };
+  }
   const accountId = normalizeAccountId(
     payload?.player?.accountid
     ?? payload?.player?.account_id
@@ -2557,7 +3196,7 @@ function applyStreamerStatsMatchResult(previous, gsi) {
     const mmrText = delta ? `, MMR ${delta > 0 ? '+' : ''}${delta}` : '';
     logEvent('system', `Streamer stats updated: ${result}${mmrText}`);
   }
-  return applied.configChanged;
+  return { changed: applied.changed, configChanged: applied.configChanged };
 }
 
 async function refreshStreamerAccountRank() {
@@ -2566,8 +3205,10 @@ async function refreshStreamerAccountRank() {
   if (!['auto', 'account'].includes(settings.streamerMedalSource || 'auto')) return;
   const accountId = runtime.state.streamerStats?.streamerAccountId;
   if (!accountId) return;
-  const cached = getCachedPlayerRank(String(accountId));
-  if (cached && !shouldRefreshPlayerRank(String(accountId))) {
+  const cacheKey = String(accountId);
+  const cached = getCachedPlayerRank(cacheKey);
+  if (!shouldRefreshPlayerRank(cacheKey)) {
+    if (!cached) return;
     runtime.state.streamerStats = {
       ...normalizeStreamerStatsState(runtime.state.streamerStats),
       accountRankTier: cached.rankTier || null,
@@ -2576,7 +3217,8 @@ async function refreshStreamerAccountRank() {
     };
     return;
   }
-  const rank = await fetchAndCachePlayerRank(String(accountId));
+  const rank = await fetchAndCachePlayerRank(cacheKey);
+  if (String(runtime.state.streamerStats?.streamerAccountId || '') !== String(accountId)) return;
   runtime.state.streamerStats = {
     ...normalizeStreamerStatsState(runtime.state.streamerStats),
     accountRankTier: rank?.rankTier || null,
@@ -2597,13 +3239,18 @@ function syncStreamerSessionPresence() {
 function effectiveStreamerStreamOnline() {
   if (runtime.config.predictions?.forceStreamOnline) return true;
   if (typeof runtime.state.twitch?.isLive === 'boolean') return runtime.state.twitch.isLive;
-  if (typeof runtime.twitchStreamStatus?.isLive === 'boolean') return runtime.twitchStreamStatus.isLive;
+  const targetBroadcasterId = twitchTargetChannel().broadcasterId;
+  if (targetBroadcasterId
+    && String(runtime.twitchStreamStatus?.broadcasterId || '') === String(targetBroadcasterId)
+    && typeof runtime.twitchStreamStatus?.isLive === 'boolean') {
+    return runtime.twitchStreamStatus.isLive;
+  }
   return null;
 }
 
 function buildRosterDebug(payload) {
   return Object.entries(payload?.allplayers || payload?.players || {})
-    .filter(([key, player]) => key !== '0' && key !== 'player0' && player && typeof player === 'object')
+    .filter(([key, player]) => !isIgnoredGsiPlayerKey(key) && player && typeof player === 'object')
     .map(([key, player]) => ({
       key,
       accountId: normalizeAccountId(player.accountid ?? player.account_id ?? player.accountId ?? player.steamid ?? player.steam_id),
@@ -2625,7 +3272,8 @@ function findStreamerMatchPlayer(payload, players) {
   if (normalizedPlayer) return normalizedPlayer;
 
   const source = payload?.allplayers || payload?.players || {};
-  for (const player of Object.values(source)) {
+  for (const [key, player] of Object.entries(source)) {
+    if (isIgnoredGsiPlayerKey(key)) continue;
     if (!player || typeof player !== 'object') continue;
     const accountId = normalizeAccountId(player.accountid ?? player.account_id ?? player.accountId ?? player.steamid ?? player.steam_id);
     if (String(accountId || '') !== String(streamerAccountId)) continue;
@@ -2723,6 +3371,8 @@ function shouldRefreshPlayerRank(accountId) {
 }
 
 async function fetchAndCachePlayerRank(accountId) {
+  const pending = runtime.pendingPlayerRankFetches.get(accountId);
+  if (pending) return pending;
   const request = fetchOpenDotaPlayer(accountId)
     .then((data) => {
       const leaderboardRank = Number(data?.leaderboard_rank);
@@ -2765,18 +3415,17 @@ async function fetchAndCachePlayerRank(accountId) {
 async function fetchOpenDotaPlayer(accountId) {
   const normalized = normalizeAccountId(accountId);
   if (!normalized) throw new Error(`Invalid Dota account id: ${accountId}`);
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 7000);
-  try {
-    const response = await fetch(`https://api.opendota.com/api/players/${encodeURIComponent(normalized)}`, {
-      signal: controller.signal,
+  return await fetchWithTimeout(
+    `https://api.opendota.com/api/players/${encodeURIComponent(normalized)}`,
+    {
       headers: { 'User-Agent': 'DotaStreamKit/1.0' }
-    });
-    if (!response.ok) throw new Error(`OpenDota ${response.status}`);
-    return await response.json();
-  } finally {
-    clearTimeout(timeout);
-  }
+    },
+    7000,
+    async (response) => {
+      if (!response.ok) throw new Error(`OpenDota ${response.status}`);
+      return JSON.parse(await readResponseText(response, 2 * 1024 * 1024));
+    }
+  );
 }
 
 function sameJson(left, right) {
@@ -2910,14 +3559,49 @@ function inferHeroDemoMode(payload) {
   return candidates.some((value) => heroDemoPattern.test(String(value || '')));
 }
 
-function inferGsiLifecycle(previous, gameState, matchId) {
+function gsiLifecyclePrevious(previous) {
+  const seed = previous?.lifecycleSeed && typeof previous.lifecycleSeed === 'object'
+    ? previous.lifecycleSeed
+    : {};
+  const currentClockTime = optionalGsiNumber(previous?.clockTime);
+  const seededClockTime = optionalGsiNumber(seed.clockTime);
+  return {
+    ...previous,
+    connected: previous?.connected === true || Boolean(seed.lastSeenAt),
+    gameState: previous?.gameState || seed.gameState || null,
+    playerActivity: previous?.playerActivity || seed.playerActivity || null,
+    clockTime: Number.isFinite(currentClockTime)
+      ? currentClockTime
+      : Number.isFinite(seededClockTime) ? seededClockTime : null,
+    matchId: previous?.matchId || seed.matchId || null,
+    activeMatchId: previous?.activeMatchId || seed.activeMatchId || null
+  };
+}
+
+function inferGsiLifecycle(previous, gameState, matchId, clockTime, playerActivity) {
   const previousState = String(previous.gameState || '');
   const state = String(gameState || '');
   const heroSelection = /HERO_SELECTION/i.test(state);
   const wasHeroSelection = /HERO_SELECTION/i.test(previousState);
-  const matchChanged = Boolean(matchId && previous.activeMatchId && String(matchId) !== String(previous.activeMatchId));
+  const previousMatchId = previous?.activeMatchId || previous?.matchId || null;
+  const matchChanged = Boolean(matchId && previousMatchId && String(matchId) !== String(previousMatchId));
   const returnedToDraft = heroSelection && !wasHeroSelection;
-  const newDraft = heroSelection && (returnedToDraft || matchChanged || !previous.connected);
+  const currentClockTime = optionalGsiNumber(clockTime);
+  const previousClockTime = optionalGsiNumber(previous?.clockTime);
+  const clockRestarted = Number.isFinite(currentClockTime)
+    && Number.isFinite(previousClockTime)
+    && currentClockTime + 30 < previousClockTime;
+  const currentOwnLive = playerActivity === 'playing'
+    && /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS/i.test(state);
+  const previousOwnLive = previous?.playerActivity === 'playing'
+    && /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS/i.test(previousState);
+  const ownClockRestarted = currentOwnLive
+    && previousOwnLive
+    && clockRestarted
+    && !(matchId && previousMatchId && String(matchId) === String(previousMatchId));
+  const newDraft = (heroSelection && returnedToDraft)
+    || (currentOwnLive && matchChanged)
+    || ownClockRestarted;
   return {
     matchChanged,
     returnedToDraft,
@@ -2951,7 +3635,13 @@ function inferActiveMatchId(previous, gameState, matchId, lifecycle = {}) {
   if (/POST_GAME/i.test(String(gameState || ''))) return null;
   if (matchId) return matchId;
   if (lifecycle.newDraft) return null;
-  if (lifecycle.playerActivity === 'spectating') return null;
+  if (lifecycle.playerActivity === 'spectating') {
+    const sameSpectatorCycle = Number(previous.spectatorCycle || 0) === Number(lifecycle.spectatorCycle || 0);
+    if (sameSpectatorCycle && previous.playerActivity === 'spectating') {
+      return previous.activeMatchId || previous.matchId || null;
+    }
+    return null;
+  }
   if (!previous.connected) return null;
   return previous.activeMatchId || previous.matchId || null;
 }
@@ -3059,13 +3749,44 @@ function pickDebugFields(source, keys) {
   return result;
 }
 
-function shouldInheritPlayerState({ previous, gameState, matchId, playerActivity, localPlayerPayload }) {
+function shouldInheritPlayerState({ previous, gameState, matchId, playerActivity, localPlayerPayload, lifecycle = {} }) {
   if (playerActivity !== 'playing') return false;
+  const previousMatchId = previous?.activeMatchId || previous?.matchId || null;
+  if (lifecycle.matchChanged || lifecycle.newDraft) return false;
+  if (matchId && previousMatchId && String(matchId) !== String(previousMatchId)) return false;
   if (localPlayerPayload) return true;
   if (!/HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS/i.test(String(gameState || ''))) return false;
-  const previousMatchId = previous?.activeMatchId || previous?.matchId || null;
-  if (matchId && previousMatchId && String(matchId) !== String(previousMatchId)) return false;
   return String(previous?.playerActivity || '').toLowerCase() === 'playing';
+}
+
+function inferSpectatorCycle(previous, current) {
+  const previousCycle = Number(previous?.spectatorCycle || 0);
+  const spectating = current.playerActivity === 'spectating';
+  const liveState = /PRE_GAME|GAME_IN_PROGRESS/i.test(String(current.gameState || ''));
+  if (!spectating || !liveState) return previousCycle;
+
+  const wasSpectating = previous?.playerActivity === 'spectating';
+  const wasLiveState = /PRE_GAME|GAME_IN_PROGRESS/i.test(String(previous?.gameState || ''));
+  const clockTime = optionalGsiNumber(current.clockTime);
+  const previousClockTime = optionalGsiNumber(previous?.clockTime);
+  const clockRestarted = Number.isFinite(clockTime)
+    && Number.isFinite(previousClockTime)
+    && clockTime + 30 < previousClockTime;
+  const previousMatchId = previous?.activeMatchId || previous?.matchId || null;
+  const matchChanged = Boolean(
+    current.matchId
+    && previousMatchId
+    && String(current.matchId) !== String(previousMatchId)
+  );
+  return !wasSpectating || !wasLiveState || clockRestarted || matchChanged
+    ? previousCycle + 1
+    : previousCycle;
+}
+
+function optionalGsiNumber(value) {
+  if (value === null || value === undefined || value === '') return NaN;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : NaN;
 }
 
 function inferLocalPlayerTeam({ player, streamerMatchPlayer, previous, lifecycle = {}, isStreamerPlaying }) {
@@ -3138,7 +3859,9 @@ function hasLocalPlayerPayload(payload) {
 }
 
 function collectTeamStats(payload, playerTeam) {
-  const players = Object.values(payload.allplayers || payload.players || {}).filter((item) => item && typeof item === 'object');
+  const players = Object.entries(payload.allplayers || payload.players || {})
+    .filter(([key, item]) => !isIgnoredGsiPlayerKey(key) && item && typeof item === 'object')
+    .map(([, item]) => item);
   const empty = {
     teamKills: null,
     teamDeaths: null,
@@ -3157,6 +3880,19 @@ function collectTeamStats(payload, playerTeam) {
     totalAssists: null
   };
   if (!players.length) return empty;
+
+  const rosterSlots = players.map(normalizeGsiRosterSlot);
+  const radiantSlots = new Set(rosterSlots.filter((slot) => slot !== null && slot < 5));
+  const direSlots = new Set(rosterSlots.filter((slot) => slot !== null && slot >= 5));
+  const radiantRosterComplete = radiantSlots.size === 5 && players.filter((player) => normalizePlayerTeam(player) === 'radiant').length === 5;
+  const direRosterComplete = direSlots.size === 5 && players.filter((player) => normalizePlayerTeam(player) === 'dire').length === 5;
+  const groupRosterComplete = {
+    radiant: radiantRosterComplete,
+    dire: direRosterComplete,
+    total: radiantRosterComplete && direRosterComplete,
+    team: playerTeam === 'radiant' ? radiantRosterComplete : playerTeam === 'dire' ? direRosterComplete : false,
+    enemy: playerTeam === 'radiant' ? direRosterComplete : playerTeam === 'dire' ? radiantRosterComplete : false
+  };
 
   const totals = {
     teamKills: 0,
@@ -3179,56 +3915,99 @@ function collectTeamStats(payload, playerTeam) {
   let hasEnemy = false;
   let hasRadiant = false;
   let hasDire = false;
+  const expected = { team: 0, enemy: 0, radiant: 0, dire: 0, total: players.length };
+  const known = {
+    teamKills: 0, teamDeaths: 0, teamAssists: 0,
+    enemyKills: 0, enemyDeaths: 0, enemyAssists: 0,
+    radiantKills: 0, radiantDeaths: 0, radiantAssists: 0,
+    direKills: 0, direDeaths: 0, direAssists: 0,
+    totalKills: 0, totalDeaths: 0, totalAssists: 0
+  };
 
   for (const player of players) {
     const team = normalizePlayerTeam(player);
-    const kills = statNumber(player.kills, 0) || 0;
-    const deaths = statNumber(player.deaths, 0) || 0;
-    const assists = statNumber(player.assists, 0) || 0;
-    totals.totalKills += kills;
-    totals.totalDeaths += deaths;
-    totals.totalAssists += assists;
+    const kills = statNumber(player.kills, null);
+    const deaths = statNumber(player.deaths, null);
+    const assists = statNumber(player.assists, null);
+    if (Number.isFinite(kills)) {
+      totals.totalKills += kills;
+      known.totalKills += 1;
+    }
+    if (Number.isFinite(deaths)) {
+      totals.totalDeaths += deaths;
+      known.totalDeaths += 1;
+    }
+    if (Number.isFinite(assists)) {
+      totals.totalAssists += assists;
+      known.totalAssists += 1;
+    }
     if (team === 'radiant') {
-      totals.radiantKills += kills;
-      totals.radiantDeaths += deaths;
-      totals.radiantAssists += assists;
+      expected.radiant += 1;
+      if (Number.isFinite(kills)) { totals.radiantKills += kills; known.radiantKills += 1; }
+      if (Number.isFinite(deaths)) { totals.radiantDeaths += deaths; known.radiantDeaths += 1; }
+      if (Number.isFinite(assists)) { totals.radiantAssists += assists; known.radiantAssists += 1; }
       hasRadiant = true;
     } else if (team === 'dire') {
-      totals.direKills += kills;
-      totals.direDeaths += deaths;
-      totals.direAssists += assists;
+      expected.dire += 1;
+      if (Number.isFinite(kills)) { totals.direKills += kills; known.direKills += 1; }
+      if (Number.isFinite(deaths)) { totals.direDeaths += deaths; known.direDeaths += 1; }
+      if (Number.isFinite(assists)) { totals.direAssists += assists; known.direAssists += 1; }
       hasDire = true;
     }
     if (playerTeam && team === playerTeam) {
-      totals.teamKills += kills;
-      totals.teamDeaths += deaths;
-      totals.teamAssists += assists;
+      expected.team += 1;
+      if (Number.isFinite(kills)) { totals.teamKills += kills; known.teamKills += 1; }
+      if (Number.isFinite(deaths)) { totals.teamDeaths += deaths; known.teamDeaths += 1; }
+      if (Number.isFinite(assists)) { totals.teamAssists += assists; known.teamAssists += 1; }
       hasTeam = true;
     } else if (playerTeam && team && team !== playerTeam) {
-      totals.enemyKills += kills;
-      totals.enemyDeaths += deaths;
-      totals.enemyAssists += assists;
+      expected.enemy += 1;
+      if (Number.isFinite(kills)) { totals.enemyKills += kills; known.enemyKills += 1; }
+      if (Number.isFinite(deaths)) { totals.enemyDeaths += deaths; known.enemyDeaths += 1; }
+      if (Number.isFinite(assists)) { totals.enemyAssists += assists; known.enemyAssists += 1; }
       hasEnemy = true;
     }
   }
 
+  const complete = (name, group) => groupRosterComplete[group]
+    && expected[group] > 0
+    && known[name] === expected[group];
+
   return {
-    teamKills: hasTeam ? totals.teamKills : null,
-    teamDeaths: hasTeam ? totals.teamDeaths : null,
-    teamAssists: hasTeam ? totals.teamAssists : null,
-    enemyKills: hasEnemy ? totals.enemyKills : null,
-    enemyDeaths: hasEnemy ? totals.enemyDeaths : null,
-    enemyAssists: hasEnemy ? totals.enemyAssists : null,
-    radiantKills: hasRadiant ? totals.radiantKills : null,
-    radiantDeaths: hasRadiant ? totals.radiantDeaths : null,
-    radiantAssists: hasRadiant ? totals.radiantAssists : null,
-    direKills: hasDire ? totals.direKills : null,
-    direDeaths: hasDire ? totals.direDeaths : null,
-    direAssists: hasDire ? totals.direAssists : null,
-    totalKills: totals.totalKills,
-    totalDeaths: totals.totalDeaths,
-    totalAssists: totals.totalAssists
+    teamKills: hasTeam && complete('teamKills', 'team') ? totals.teamKills : null,
+    teamDeaths: hasTeam && complete('teamDeaths', 'team') ? totals.teamDeaths : null,
+    teamAssists: hasTeam && complete('teamAssists', 'team') ? totals.teamAssists : null,
+    enemyKills: hasEnemy && complete('enemyKills', 'enemy') ? totals.enemyKills : null,
+    enemyDeaths: hasEnemy && complete('enemyDeaths', 'enemy') ? totals.enemyDeaths : null,
+    enemyAssists: hasEnemy && complete('enemyAssists', 'enemy') ? totals.enemyAssists : null,
+    radiantKills: hasRadiant && complete('radiantKills', 'radiant') ? totals.radiantKills : null,
+    radiantDeaths: hasRadiant && complete('radiantDeaths', 'radiant') ? totals.radiantDeaths : null,
+    radiantAssists: hasRadiant && complete('radiantAssists', 'radiant') ? totals.radiantAssists : null,
+    direKills: hasDire && complete('direKills', 'dire') ? totals.direKills : null,
+    direDeaths: hasDire && complete('direDeaths', 'dire') ? totals.direDeaths : null,
+    direAssists: hasDire && complete('direAssists', 'dire') ? totals.direAssists : null,
+    totalKills: complete('totalKills', 'total') ? totals.totalKills : null,
+    totalDeaths: complete('totalDeaths', 'total') ? totals.totalDeaths : null,
+    totalAssists: complete('totalAssists', 'total') ? totals.totalAssists : null
   };
+}
+
+function normalizeGsiRosterSlot(player) {
+  const teamSlot = Number(player?.team_slot ?? player?.teamSlot);
+  if (Number.isInteger(teamSlot) && teamSlot >= 0 && teamSlot < 5) {
+    return normalizePlayerTeam(player) === 'dire' ? teamSlot + 5 : teamSlot;
+  }
+  if (Number.isInteger(teamSlot) && teamSlot >= 5 && teamSlot < 10) return teamSlot;
+
+  const playerSlot = Number(player?.player_slot ?? player?.playerSlot);
+  if (Number.isInteger(playerSlot) && playerSlot >= 0 && playerSlot < 5) return playerSlot;
+  if (Number.isInteger(playerSlot) && playerSlot >= 128 && playerSlot < 133) return playerSlot - 123;
+  return null;
+}
+
+function isIgnoredGsiPlayerKey(key) {
+  const normalized = String(key || '').trim().toLowerCase();
+  return normalized === '0' || normalized === 'player0';
 }
 
 function inferMatchTeams(payload, players = []) {
@@ -3260,6 +4039,7 @@ function teamNameFromRoster(payload, players, team) {
   const slotTeam = team === 'dire' ? 'dire' : 'radiant';
   const source = payload?.allplayers || payload?.players || {};
   for (const [key, player] of Object.entries(source)) {
+    if (isIgnoredGsiPlayerKey(key)) continue;
     if (!player || typeof player !== 'object') continue;
     const normalized = normalizePlayerTeam(player);
     if (normalized !== slotTeam) continue;
@@ -3295,37 +4075,67 @@ function inferLeftGameView({ connected, activeMatchId, gameState, playerActivity
   return false;
 }
 
-async function maybeAutomatePrediction(previous, gsi) {
+async function maybeAutomatePrediction(previous, gsi, context = {}) {
   const profile = predictionProfileForGsi(gsi);
   const settings = predictionSettingsForProfile(profile);
   if (!runtime.state.twitchToken?.accessToken) return;
+  const expectedPredictionId = context.expectedPredictionId || null;
+  const activeBeforeSync = runtime.state.activePrediction;
+  if (expectedPredictionId
+    ? !samePredictionId(activeBeforeSync, expectedPredictionId)
+    : Boolean(activeBeforeSync)) return;
 
-  syncActivePredictionMatchId(gsi);
+  if (isCurrentGsiAutomationContext(gsi)) syncActivePredictionMatchId(gsi);
   await syncOwnedActivePredictionFromTwitch();
   const active = runtime.state.activePrediction;
   if (active && ['ACTIVE', 'LOCKED'].includes(active.status)) {
+    if (!expectedPredictionId || !samePredictionId(active, expectedPredictionId)) return;
     const activeSettings = predictionSettingsForProfile(predictionProfileFromMeta(runtime.state.activePredictionMeta));
     if (activeSettings.autoCancelInvalidGame) {
-      await maybeCancelPredictionForInvalidGame(previous, gsi);
+      await maybeCancelPredictionForInvalidGame(previous, gsi, expectedPredictionId);
     }
 
     const latestAfterCancel = runtime.state.activePrediction;
     if (latestAfterCancel && ['ACTIVE', 'LOCKED'].includes(latestAfterCancel.status)) {
-      if (latestAfterCancel.status === 'ACTIVE' && activeSettings.autoLockAtGameSeconds > 0 && gsi.clockTime >= activeSettings.autoLockAtGameSeconds) {
+      if (
+        latestAfterCancel.status === 'ACTIVE'
+        && activeSettings.autoLockAtGameSeconds > 0
+        && gsi.clockTime >= activeSettings.autoLockAtGameSeconds
+        && activePredictionMatchesGsi(gsi)
+        && claimPredictionActionAttempt('lock', latestAfterCancel.id)
+      ) {
         try {
-          await twitchEndPrediction(latestAfterCancel.id, 'LOCKED');
+          if (isCurrentOwnedPredictionId(latestAfterCancel.id)) await twitchEndPrediction(latestAfterCancel.id, 'LOCKED');
           logEvent('twitch', 'Prediction locked automatically');
         } catch (error) {
           logEvent('twitch', `Auto lock failed: ${error.message}`);
         }
       }
 
-      const result = inferPredictionResult(gsi);
-      if (activeSettings.autoResolve && result) {
+      let result = null;
+      if (activePredictionMatchesGsi(gsi)) {
+        const evaluatedResult = latchPredictionResult(runtime.state.activePredictionMeta, gsi, inferResult);
+        result = evaluatedResult.result;
+        if (evaluatedResult.changed) {
+          runtime.state.activePredictionMeta = evaluatedResult.meta;
+          rememberOwnedPrediction(runtime.state.activePrediction, evaluatedResult.meta);
+          await persistState();
+        }
+      }
+      if (activeSettings.autoResolve
+        && result
+        && activePredictionMatchesGsi(gsi)
+        && claimPredictionActionAttempt('resolve', latestAfterCancel.id)) {
+        const resolvingPredictionId = latestAfterCancel.id;
         let latestActive = runtime.state.activePrediction || latestAfterCancel;
         if (activeSettings.cancelUncontestedPrediction) {
           try {
             latestActive = await refreshActivePredictionFromTwitch(latestActive);
+            if (!samePredictionId(latestActive, resolvingPredictionId) || !isCurrentOwnedPredictionId(resolvingPredictionId)) return;
+            if (!hasCompletePredictionOutcomePoints(latestActive)) {
+              logEvent('twitch', 'Uncontested prediction check skipped: Twitch returned incomplete channel point totals');
+              return;
+            }
             if (isPredictionUncontested(latestActive)) {
               await twitchEndPrediction(latestActive.id, 'CANCELED');
               logEvent('twitch', 'Prediction canceled automatically: one or more outcomes have no channel points');
@@ -3341,6 +4151,9 @@ async function maybeAutomatePrediction(previous, gsi) {
           || (result === 'no' && item.kind === 'lose'));
         if (outcome) {
           try {
+            if (!samePredictionId(latestActive, resolvingPredictionId)
+              || !isCurrentOwnedPredictionId(resolvingPredictionId)
+              || !activePredictionMatchesGsi(gsi)) return;
             await twitchEndPrediction(latestActive.id, 'RESOLVED', outcome.id);
             logEvent('twitch', `Prediction resolved automatically: ${outcome.title}`);
           } catch (error) {
@@ -3353,10 +4166,13 @@ async function maybeAutomatePrediction(previous, gsi) {
     clearPredictionCancelCandidate();
   }
 
+  if (expectedPredictionId) return;
   if (settings.autoCreate && !runtime.state.activePrediction && shouldAutoCreatePrediction(previous, gsi, profile) && shouldRetryAutoPrediction(gsi, profile)) {
+    if (!isCurrentGsiAutomationContext(gsi)) return;
     markAutoPredictionAttempt(gsi, profile);
     try {
       const isLive = settings.forceStreamOnline || await isBroadcasterLive();
+      if (!isCurrentGsiAutomationContext(gsi)) return;
       if (!isLive) {
         logEvent('twitch', 'Auto prediction skipped: Twitch stream is offline');
       } else {
@@ -3364,7 +4180,13 @@ async function maybeAutomatePrediction(previous, gsi) {
           logEvent('twitch', 'Auto prediction stream status override is enabled');
         }
         if (await suppressAutoPredictionWhenExternalPredictionExists(gsi, profile)) return;
-        await createPredictionFromSettings({}, { automatic: true, profile });
+        if (!isCurrentGsiAutomationContext(gsi)) return;
+        await createPredictionFromSettings({}, {
+          automatic: true,
+          profile,
+          expectedContextKey: predictionOwnershipContextKey(gsi, profile),
+          sourceGsi: structuredClone(gsi)
+        });
       }
     } catch (error) {
       logEvent('twitch', `Auto prediction failed: ${error.message}`);
@@ -3387,117 +4209,74 @@ function predictionSettingsForProfile(profile) {
 }
 
 function inferPredictionResult(gsi) {
+  return inferPredictionResultForMeta(runtime.state.activePredictionMeta, gsi, inferResult);
+}
+
+function predictionAutomationGsiKey(gsi) {
+  const profile = predictionProfileForGsi(gsi);
+  const fallbackCycle = profile === 'spectator'
+    ? `spectator:${Number(gsi?.spectatorCycle || 0)}`
+    : `draft:${Number(gsi?.draftCycle || 0)}`;
+  const matchKey = gsi?.activeMatchId || gsi?.matchId || fallbackCycle;
+  const state = String(gsi?.gameState || '');
+  const eligibility = [
+    state,
+    String(gsi?.playerActivity || ''),
+    gsi?.leftGameView === true ? 'left' : 'present',
+    gsi?.heroDemoMode === true ? 'demo' : 'normal',
+    gsi?.playerHeroPicked === true ? 'hero' : 'nohero',
+    gsi?.ownPickPhaseEnded === true ? 'picked' : 'picking'
+  ].join(':');
+  return `${profile}:${matchKey}:${eligibility}`;
+}
+
+function isCurrentGsiAutomationContext(gsi) {
+  return predictionAutomationGsiKey(gsi) === predictionAutomationGsiKey(runtime.state.gsi);
+}
+
+function activePredictionMatchesGsi(gsi) {
   const meta = runtime.state.activePredictionMeta;
-  if (meta?.type === 'radiant_win') {
-    if (!/POST_GAME/i.test(String(gsi.gameState || '')) || !gsi.winTeam) return null;
-    return gsi.winTeam === 'radiant' ? 'yes' : 'no';
+  if (meta && !predictionMetaMatchesGsiProfile(meta, gsi)) return false;
+  const metaContextKey = meta?.contextKey;
+  if (metaContextKey) {
+    return metaContextKey === predictionOwnershipContextKey(gsi, predictionProfileFromMeta(meta));
   }
-  if (meta?.type === 'dire_win') {
-    if (!/POST_GAME/i.test(String(gsi.gameState || '')) || !gsi.winTeam) return null;
-    return gsi.winTeam === 'dire' ? 'yes' : 'no';
-  }
-  if (meta?.type === 'game_duration_at_least') {
-    if (Number(gsi.clockTime) >= meta.deadlineSeconds) return 'yes';
-    if (/POST_GAME/i.test(String(gsi.gameState || ''))) return 'no';
-    return null;
-  }
-  if (['total_kills_by_minute', 'radiant_kills_by_minute', 'dire_kills_by_minute'].includes(meta?.type)) {
-    if (/POST_GAME/i.test(String(gsi.gameState || '')) && Number(gsi.clockTime || 0) < meta.deadlineSeconds) return 'no';
-    if (Number(gsi.clockTime) < meta.deadlineSeconds) return null;
-    const stat = predictionStatValue(meta.type, gsi);
-    return Number.isFinite(stat) && stat >= meta.target ? 'yes' : 'no';
-  }
-  if (!meta?.type || meta.type === 'win_loss' || meta.type === 'manual') {
-    const result = inferResult(gsi);
-    return result === 'win' ? 'yes' : result === 'lose' ? 'no' : null;
-  }
-
-  if (meta.type === 'custom_condition') {
-    return inferCustomConditionResult(meta, gsi);
-  }
-
-  const stat = predictionStatValue(meta.type, gsi);
-  if (['streamer_kills', 'streamer_deaths', 'streamer_assists'].includes(meta.type)) {
-    if (Number.isFinite(stat) && stat >= meta.target) return 'yes';
-    if (/POST_GAME/i.test(String(gsi.gameState || ''))) return 'no';
-    return null;
-  }
-
-  if (meta.type === 'no_death_until') {
-    if (Number(gsi.deaths || 0) > 0) return 'no';
-    if (Number(gsi.clockTime) >= meta.deadlineSeconds) return 'yes';
-    return null;
-  }
-
-  if (meta.type === 'last_hits_by_minute') {
-    if (Number(gsi.clockTime) < meta.deadlineSeconds) return null;
-    return Number(gsi.lastHits || 0) >= meta.target ? 'yes' : 'no';
-  }
-
-  return null;
+  const predictionMatchId = runtime.state.activePredictionMatchId;
+  const gsiMatchId = gsi?.activeMatchId || gsi?.matchId;
+  return !predictionMatchId || !gsiMatchId || String(predictionMatchId) === String(gsiMatchId);
 }
 
-function predictionStatValue(type, gsi) {
-  if (type === 'streamer_kills') return Number(gsi.kills);
-  if (type === 'streamer_deaths') return Number(gsi.deaths);
-  if (type === 'streamer_assists') return Number(gsi.assists);
-  if (type === 'total_kills_by_minute') return Number(gsi.totalKills);
-  if (type === 'radiant_kills_by_minute') return Number(gsi.radiantKills);
-  if (type === 'dire_kills_by_minute') return Number(gsi.direKills);
-  return NaN;
+function predictionOwnershipContextKey(gsi, profile = predictionProfileForGsi(gsi)) {
+  return autoPredictionKey(gsi || {}, profile);
 }
 
-function inferCustomConditionResult(meta, gsi) {
-  const state = String(gsi.gameState || '');
-  const target = Number(meta.target || 0);
-  const deadlineSeconds = Number(meta.deadlineSeconds || 0);
-  const metricValue = predictionMetricValue(meta.metric, gsi);
-
-  if (meta.condition === 'game_duration_at_least') {
-    if (Number(gsi.clockTime || 0) >= deadlineSeconds) return 'yes';
-    if (/POST_GAME/i.test(state)) return 'no';
-    return null;
-  }
-
-  if (meta.condition === 'metric_reaches_target') {
-    if (Number.isFinite(metricValue) && metricValue >= target) return 'yes';
-    if (/POST_GAME/i.test(state)) return 'no';
-    return null;
-  }
-
-  if (meta.condition === 'metric_by_minute') {
-    if (/POST_GAME/i.test(state) && Number(gsi.clockTime || 0) < deadlineSeconds) return 'no';
-    if (Number(gsi.clockTime || 0) < deadlineSeconds) return null;
-    return Number.isFinite(metricValue) && metricValue >= target ? 'yes' : 'no';
-  }
-
-  return null;
+function predictionMetaMatchesGsiProfile(meta, gsi) {
+  return isPredictionProfileCompatibleWithActivity(
+    predictionProfileFromMeta(meta),
+    gsi?.playerActivity
+  );
 }
 
-function predictionMetricValue(metric, gsi) {
-  if (metric === 'clock_minutes') return Number(gsi.clockTime || 0) / 60;
-  if (metric === 'kills') return Number(gsi.kills);
-  if (metric === 'deaths') return Number(gsi.deaths);
-  if (metric === 'assists') return Number(gsi.assists);
-  if (metric === 'last_hits') return Number(gsi.lastHits);
-  if (metric === 'denies') return Number(gsi.denies);
-  if (metric === 'level') return Number(gsi.level);
-  if (metric === 'team_kills') return Number(gsi.teamKills);
-  if (metric === 'team_deaths') return Number(gsi.teamDeaths);
-  if (metric === 'team_assists') return Number(gsi.teamAssists);
-  if (metric === 'enemy_kills') return Number(gsi.enemyKills);
-  if (metric === 'enemy_deaths') return Number(gsi.enemyDeaths);
-  if (metric === 'enemy_assists') return Number(gsi.enemyAssists);
-  if (metric === 'radiant_kills') return Number(gsi.radiantKills);
-  if (metric === 'radiant_deaths') return Number(gsi.radiantDeaths);
-  if (metric === 'radiant_assists') return Number(gsi.radiantAssists);
-  if (metric === 'dire_kills') return Number(gsi.direKills);
-  if (metric === 'dire_deaths') return Number(gsi.direDeaths);
-  if (metric === 'dire_assists') return Number(gsi.direAssists);
-  if (metric === 'total_kills') return Number(gsi.totalKills);
-  if (metric === 'total_deaths') return Number(gsi.totalDeaths);
-  if (metric === 'total_assists') return Number(gsi.totalAssists);
-  return NaN;
+function matchIdCompatibleWithPredictionMeta(meta, gsi) {
+  const matchId = gsi?.activeMatchId || gsi?.matchId || null;
+  if (!matchId || (meta && !predictionMetaMatchesGsiProfile(meta, gsi))) return null;
+  const contextKey = meta?.contextKey;
+  if (!contextKey) return matchId;
+  const profile = predictionProfileFromMeta(meta);
+  const fallbackContextKey = profile === 'spectator'
+    ? `${profile}:cycle:${Number(gsi?.spectatorCycle || 0)}`
+    : `${profile}:draft:${Number(gsi?.draftCycle || 0)}`;
+  const matchContextKey = `${profile}:match:${matchId}`;
+  return contextKey === fallbackContextKey || contextKey === matchContextKey ? matchId : null;
+}
+
+function predictionContextMatches(expectedContextKey, gsi, profile) {
+  const currentContextKey = predictionOwnershipContextKey(gsi, profile);
+  if (expectedContextKey === currentContextKey) return true;
+  const fallbackContextKey = profile === 'spectator'
+    ? `${profile}:cycle:${Number(gsi?.spectatorCycle || 0)}`
+    : `${profile}:draft:${Number(gsi?.draftCycle || 0)}`;
+  return expectedContextKey === fallbackContextKey && currentContextKey.startsWith(`${profile}:match:`);
 }
 
 function shouldAutoCreatePredictionAfterPick(previous, gsi) {
@@ -3516,7 +4295,7 @@ function shouldAutoCreateSpectatorPrediction(gsi) {
   if (!isSpectatingGsi(gsi) || gsi.leftGameView) return false;
   const state = String(gsi.gameState || '');
   if (!/PRE_GAME|GAME_IN_PROGRESS/i.test(state)) return false;
-  return Boolean(gsi.activeMatchId || gsi.matchId || Number.isFinite(Number(gsi.clockTime)));
+  return Boolean(gsi.activeMatchId || gsi.matchId || Number.isFinite(optionalGsiNumber(gsi.clockTime)));
 }
 
 function shouldRetryAutoPrediction(gsi, profile = predictionProfileForGsi(gsi)) {
@@ -3556,15 +4335,54 @@ function markAutoPredictionCreated(gsi, profile = predictionProfileForGsi(gsi)) 
 function autoPredictionKey(gsi, profile = predictionProfileForGsi(gsi)) {
   const matchId = gsi.activeMatchId || gsi.matchId;
   if (matchId) return `${profile}:match:${matchId}`;
+  if (profile === 'spectator') return `${profile}:cycle:${Number(gsi.spectatorCycle || 0)}`;
   return `${profile}:draft:${Number(gsi.draftCycle || 0)}`;
+}
+
+function migrateAutoPredictionContextKey(gsi) {
+  const matchId = gsi?.activeMatchId || gsi?.matchId;
+  if (!matchId) return false;
+  const profile = predictionProfileForGsi(gsi);
+  const fallbackKey = profile === 'spectator'
+    ? `${profile}:cycle:${Number(gsi?.spectatorCycle || 0)}`
+    : `${profile}:draft:${Number(gsi?.draftCycle || 0)}`;
+  const matchKey = `${profile}:match:${matchId}`;
+  let changed = false;
+  if (runtime.state.autoPredictionCreatedKey === fallbackKey) {
+    runtime.state.autoPredictionCreatedKey = matchKey;
+    changed = true;
+  }
+  if (runtime.state.autoPredictionSuppressedKey === fallbackKey) {
+    runtime.state.autoPredictionSuppressedKey = matchKey;
+    changed = true;
+  }
+  if (runtime.state.lastAutoPredictionAttempt?.key === fallbackKey) {
+    runtime.state.lastAutoPredictionAttempt = {
+      ...runtime.state.lastAutoPredictionAttempt,
+      key: matchKey,
+      matchId
+    };
+    changed = true;
+  }
+  return changed;
 }
 
 function syncActivePredictionMatchId(gsi) {
   if (!runtime.state.activePrediction || runtime.state.activePredictionMatchId) return;
-  const matchId = gsi.activeMatchId || gsi.matchId;
+  const meta = runtime.state.activePredictionMeta;
+  const matchId = matchIdCompatibleWithPredictionMeta(meta, gsi);
   if (matchId) {
+    const profile = predictionProfileFromMeta(meta);
+    const fallbackContextKey = profile === 'spectator'
+      ? `${profile}:cycle:${Number(gsi.spectatorCycle || 0)}`
+      : `${profile}:draft:${Number(gsi.draftCycle || 0)}`;
+    if (meta?.contextKey === fallbackContextKey) {
+      meta.contextKey = `${profile}:match:${matchId}`;
+    }
+    migrateAutoPredictionContextKey(gsi);
     runtime.state.activePredictionMatchId = matchId;
     rememberOwnedPrediction(runtime.state.activePrediction, runtime.state.activePredictionMeta);
+    scheduleStatePersist();
   }
 }
 
@@ -3576,6 +4394,7 @@ async function syncOwnedActivePredictionFromTwitch({ force = false } = {}) {
 
   const lastSync = Date.parse(runtime.state.activePredictionSyncedAt || '');
   if (!force && Number.isFinite(lastSync) && Date.now() - lastSync < activePredictionSyncMs) return active;
+  runtime.state.activePredictionSyncedAt = new Date().toISOString();
 
   let latest;
   try {
@@ -3591,7 +4410,7 @@ async function syncOwnedActivePredictionFromTwitch({ force = false } = {}) {
 
   runtime.state.activePredictionSyncedAt = new Date().toISOString();
   if (!latest) {
-    clearActivePredictionState();
+    clearActivePredictionState({ keepRecovery: false });
     await persistState();
     broadcast();
     logEvent('twitch', `Our prediction disappeared on Twitch: ${active.title || active.id}`);
@@ -3619,7 +4438,12 @@ async function recoverOwnedActivePredictionFromTwitch({ force = false } = {}) {
   const recovery = runtime.state.activePredictionRecovery;
   if (!recovery?.id) return null;
   const rememberedAt = Date.parse(recovery.rememberedAt || recovery.createdAt || '');
-  if (Number.isFinite(rememberedAt) && Date.now() - rememberedAt > 24 * 60 * 60 * 1000) return null;
+  if (Number.isFinite(rememberedAt) && Date.now() - rememberedAt > 24 * 60 * 60 * 1000) {
+    clearActivePredictionState({ keepRecovery: false });
+    await persistState();
+    broadcast();
+    return null;
+  }
 
   const lastSync = Date.parse(runtime.state.activePredictionSyncedAt || '');
   if (!force && Number.isFinite(lastSync) && Date.now() - lastSync < activePredictionSyncMs) return null;
@@ -3636,7 +4460,12 @@ async function recoverOwnedActivePredictionFromTwitch({ force = false } = {}) {
   runtime.state.activePredictionSyncedAt = new Date().toISOString();
   if (!samePredictionId(runtime.state.activePredictionRecovery, recovery.id)) return null;
   if (runtime.state.activePrediction) return runtime.state.activePrediction;
-  if (!latest || !['ACTIVE', 'LOCKED'].includes(latest.status)) return null;
+  if (!latest || !['ACTIVE', 'LOCKED'].includes(latest.status)) {
+    clearActivePredictionState({ keepRecovery: false });
+    await persistState();
+    broadcast();
+    return null;
+  }
 
   const meta = recovery.meta || null;
   const normalized = normalizePrediction(latest, meta?.outcomes?.yesTitle, meta?.outcomes?.noTitle, meta);
@@ -3650,12 +4479,17 @@ async function recoverOwnedActivePredictionFromTwitch({ force = false } = {}) {
   return normalized;
 }
 
-async function maybeCancelPredictionForInvalidGame(previous, gsi) {
-  const candidate = inferPredictionCancelCandidate(previous, gsi);
+async function maybeCancelPredictionForInvalidGame(previous, gsi, expectedPredictionId = null) {
+  if (expectedPredictionId && !isCurrentOwnedPredictionId(expectedPredictionId)) return false;
+  let candidate = inferPredictionCancelCandidate(previous, gsi);
+  if (!candidate && shouldContinueLeftGameViewCancelCandidate(runtime.state.predictionCancelCandidate, gsi)) {
+    candidate = { ...runtime.state.predictionCancelCandidate };
+  }
   if (!candidate) {
     clearPredictionCancelCandidate();
     return false;
   }
+  candidate.predictionId = expectedPredictionId || runtime.state.activePrediction?.id || candidate.predictionId || null;
   return await applyPredictionCancelCandidate(candidate);
 }
 
@@ -3665,6 +4499,7 @@ async function maybeCancelPredictionForGsiTimeout() {
   if (!settings.autoCancelInvalidGame || !active || !['ACTIVE', 'LOCKED'].includes(active.status)) return false;
   if (!runtime.state.gsi.activeMatchId && !runtime.state.activePredictionMatchId) return false;
   const candidate = {
+    predictionId: active.id,
     reason: 'GSI stopped during an active match',
     delaySeconds: settings.autoCancelDisconnectSeconds,
     protectContested: true,
@@ -3677,10 +4512,30 @@ function inferPredictionCancelCandidate(previous, gsi) {
   const active = runtime.state.activePrediction;
   if (!active) return null;
 
-  const settings = predictionSettingsForProfile(predictionProfileFromMeta(runtime.state.activePredictionMeta));
+  const meta = runtime.state.activePredictionMeta;
+  const profile = predictionProfileFromMeta(meta);
+  const settings = predictionSettingsForProfile(profile);
   const state = String(gsi.gameState || '');
   const currentMatchId = gsi.activeMatchId || gsi.matchId || null;
   const predictionMatchId = runtime.state.activePredictionMatchId;
+  const predictionContextKey = meta?.contextKey;
+  if (meta && !predictionMetaMatchesGsiProfile(meta, gsi)) {
+    return {
+      reason: `prediction profile changed before it was closed (${profile} -> ${predictionProfileForGsi(gsi)})`,
+      delaySeconds: 0,
+      protectContested: true,
+      matchId: predictionMatchId
+    };
+  }
+  const currentContextKey = predictionOwnershipContextKey(gsi, profile);
+  if (predictionContextKey && predictionContextKey !== currentContextKey) {
+    return {
+      reason: `new game context started before prediction was closed (${predictionContextKey} -> ${currentContextKey})`,
+      delaySeconds: 0,
+      protectContested: true,
+      matchId: predictionMatchId
+    };
+  }
   if (predictionMatchId && currentMatchId && predictionMatchId !== currentMatchId) {
     return {
       reason: `new match started before prediction was closed (${predictionMatchId} -> ${currentMatchId})`,
@@ -3692,6 +4547,7 @@ function inferPredictionCancelCandidate(previous, gsi) {
 
   if (isLeftActiveGameViewCancelSignal(previous, gsi)) {
     return {
+      kind: 'left_game_view',
       reason: 'streamer left the active game view before prediction was resolved',
       delaySeconds: leftGameViewPredictionCancelDelaySeconds,
       matchId: predictionMatchId || currentMatchId
@@ -3727,17 +4583,22 @@ function wasShortOrUnscoredGame(previous, gsi) {
 async function applyPredictionCancelCandidate(candidate) {
   const active = runtime.state.activePrediction;
   if (!active || !['ACTIVE', 'LOCKED'].includes(active.status)) return false;
+  if (candidate.predictionId && !samePredictionId(active, candidate.predictionId)) return false;
 
   const now = Date.now();
   const existing = runtime.state.predictionCancelCandidate;
   const sameCandidate = existing
+    && String(existing.predictionId || '') === String(candidate.predictionId || '')
     && existing.reason === candidate.reason
     && String(existing.matchId || '') === String(candidate.matchId || '');
   const startedAt = sameCandidate ? Date.parse(existing.since) : now;
   runtime.state.predictionCancelCandidate = {
+    predictionId: candidate.predictionId || active.id,
+    kind: candidate.kind || null,
     reason: candidate.reason,
     matchId: candidate.matchId || null,
     delaySeconds: candidate.delaySeconds,
+    protectContested: candidate.protectContested === true,
     since: sameCandidate ? existing.since : new Date(now).toISOString()
   };
   if (!sameCandidate) {
@@ -3747,10 +4608,12 @@ async function applyPredictionCancelCandidate(candidate) {
 
   const elapsedSeconds = (now - startedAt) / 1000;
   if (elapsedSeconds < candidate.delaySeconds) return false;
+  if (!claimPredictionActionAttempt('cancel', active.id)) return false;
 
   try {
+    const expectedPredictionId = active.id;
     const latestActive = await refreshActivePredictionBeforeAutomaticCancel(active, candidate);
-    if (!latestActive) return false;
+    if (!samePredictionId(latestActive, expectedPredictionId) || !isCurrentOwnedPredictionId(expectedPredictionId)) return false;
     await twitchEndPrediction(latestActive.id, 'CANCELED');
     logEvent('twitch', `Prediction canceled automatically: ${candidate.reason}`);
     return true;
@@ -3772,6 +4635,8 @@ async function refreshActivePredictionBeforeAutomaticCancel(active, candidate) {
     logEvent('twitch', `Auto cancel skipped: could not refresh active prediction (${error.message})`);
     return null;
   }
+
+  if (!isCurrentOwnedPredictionId(active.id)) return null;
 
   if (!latestActive || !['ACTIVE', 'LOCKED'].includes(latestActive.status)) {
     clearActivePredictionState({ keepRecovery: false });
@@ -3803,7 +4668,7 @@ async function refreshActivePredictionFromTwitch(active) {
   if (!active?.id) return active;
   const item = await fetchPredictionById(active.id);
   if (!isCurrentOwnedPredictionId(active.id)) {
-    return runtime.state.activePrediction || null;
+    return null;
   }
   if (!item) throw new Error('Twitch did not return the active prediction');
   const meta = runtime.state.activePredictionMeta;
@@ -3833,6 +4698,7 @@ async function fetchActiveTwitchPrediction() {
 }
 
 function clearActivePredictionState({ keepRecovery = true } = {}) {
+  const clearedPredictionId = runtime.state.activePrediction?.id || runtime.state.activePredictionRecovery?.id || null;
   if (keepRecovery) {
     rememberOwnedPrediction(runtime.state.activePrediction, runtime.state.activePredictionMeta);
   } else {
@@ -3843,6 +4709,21 @@ function clearActivePredictionState({ keepRecovery = true } = {}) {
   runtime.state.activePredictionMeta = null;
   runtime.state.predictionCancelCandidate = null;
   runtime.state.activePredictionSyncedAt = null;
+  if (clearedPredictionId) {
+    for (const key of runtime.predictionActionAttempts.keys()) {
+      if (key.endsWith(`:${clearedPredictionId}`)) runtime.predictionActionAttempts.delete(key);
+    }
+  }
+}
+
+function claimPredictionActionAttempt(action, predictionId, retryAfterMs = activePredictionSyncMs) {
+  if (!predictionId) return false;
+  const key = `${action}:${predictionId}`;
+  const now = Date.now();
+  const previous = Number(runtime.predictionActionAttempts.get(key) || 0);
+  if (previous > 0 && now - previous < retryAfterMs) return false;
+  runtime.predictionActionAttempts.set(key, now);
+  return true;
 }
 
 function rememberOwnedPrediction(prediction, meta = runtime.state.activePredictionMeta) {
@@ -3851,7 +4732,7 @@ function rememberOwnedPrediction(prediction, meta = runtime.state.activePredicti
     id: prediction.id,
     title: prediction.title || null,
     status: prediction.status || null,
-    matchId: runtime.state.activePredictionMatchId || runtime.state.gsi?.activeMatchId || runtime.state.gsi?.matchId || null,
+    matchId: runtime.state.activePredictionMatchId || matchIdCompatibleWithPredictionMeta(meta, runtime.state.gsi),
     createdAt: prediction.createdAt || null,
     rememberedAt: new Date().toISOString(),
     meta: meta || null
@@ -3860,7 +4741,7 @@ function rememberOwnedPrediction(prediction, meta = runtime.state.activePredicti
 
 function inferResult(gsi) {
   if (!gsi.winTeam || !gsi.playerTeam) return null;
-  if (!/POST_GAME/i.test(String(gsi.gameState || '')) && !gsi.winTeam) return null;
+  if (!/POST_GAME/i.test(String(gsi.gameState || ''))) return null;
   return gsi.winTeam === gsi.playerTeam ? 'win' : 'lose';
 }
 
@@ -3904,6 +4785,7 @@ function normalizeUpdateConfig(config) {
     config.autoInstallDefaultVersion = 2;
   }
   config.autoInstall = config.autoInstall !== false;
+  if (process.platform !== 'win32') config.autoInstall = false;
 }
 
 function normalizeMatchIntelConfig(config, options = {}) {
@@ -3986,14 +4868,14 @@ function normalizeBaseUrl(value) {
 }
 
 function effectiveBaseUrl() {
-  if (runtime.config.deployment?.mode === 'server' && runtime.config.deployment.publicBaseUrl) {
+  if (serverNetworkingEnabled() && runtime.config.deployment.publicBaseUrl) {
     return runtime.config.deployment.publicBaseUrl;
   }
   return `http://localhost:${port}`;
 }
 
 function effectiveRedirectUri() {
-  if (runtime.config.deployment?.mode === 'server' && runtime.config.deployment.publicBaseUrl) {
+  if (serverNetworkingEnabled() && runtime.config.deployment.publicBaseUrl) {
     return `${runtime.config.deployment.publicBaseUrl}/auth/twitch/callback`;
   }
   return runtime.config.twitch.redirectUri || `http://localhost:${port}/auth/twitch/callback`;
@@ -4019,8 +4901,14 @@ function resetTwitchStreamStatus() {
 
 function normalizePredictionSettings(settings, defaults = defaultConfig.predictions) {
   if (!['selected', 'random'].includes(settings.selectionMode)) settings.selectionMode = 'selected';
+  settings.autoCreate = settings.autoCreate === true;
   settings.forceStreamOnline = settings.forceStreamOnline === true;
+  settings.autoResolve = settings.autoResolve === true;
   settings.cancelUncontestedPrediction = settings.cancelUncontestedPrediction === true;
+  settings.autoCancelInvalidGame = settings.autoCancelInvalidGame !== false;
+  settings.windowSeconds = normalizePredictionInt(settings.windowSeconds, 30, 1800, defaults.windowSeconds);
+  settings.autoLockAtGameSeconds = normalizePredictionInt(settings.autoLockAtGameSeconds, 0, 3600, defaults.autoLockAtGameSeconds);
+  settings.autoCancelDisconnectSeconds = normalizePredictionInt(settings.autoCancelDisconnectSeconds, 300, 1800, defaults.autoCancelDisconnectSeconds);
   settings.titleTemplate = predictionTextOrDefault(settings.titleTemplate, defaults.titleTemplate, 120);
   settings.winTitle = predictionTextOrDefault(settings.winTitle, defaults.winTitle, 25);
   settings.loseTitle = predictionTextOrDefault(settings.loseTitle, defaults.loseTitle, 25);
@@ -4048,6 +4936,10 @@ function normalizePredictionSettings(settings, defaults = defaultConfig.predicti
     config.yesTitle = predictionTextOrDefault(config.yesTitle, typeDefaults.yesTitle || 'Да', 25);
     config.noTitle = predictionTextOrDefault(config.noTitle, typeDefaults.noTitle || 'Нет', 25);
   }
+}
+
+function normalizePredictionInt(value, min, max, fallback) {
+  return Number.isFinite(Number(value)) ? clampInt(value, min, max) : clampInt(fallback, min, max);
 }
 
 function predictionTextOrDefault(value, fallback, maxLength) {
@@ -4105,6 +4997,7 @@ function normalizeDraftTeam(value) {
 }
 
 function statNumber(value, fallback = null) {
+  if (value === null || value === undefined || value === '') return fallback;
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
 }
@@ -4137,12 +5030,16 @@ async function startTwitchAuth(url, res) {
     return sendText(res, 'Set Twitch Client ID and Client Secret in the local dashboard first.', 400);
   }
   hydrateTwitchStatus();
-  if (runtime.state.twitch.authenticated && !runtime.state.twitch.needsReconnect && url.searchParams.get('force') !== '1') {
+  if (runtime.state.twitch.authenticated
+    && !runtime.state.twitch.needsReconnect
+    && runtime.state.twitch.targetMatchesToken !== false
+    && url.searchParams.get('force') !== '1') {
     return redirect(res, '/?twitch=connected');
   }
 
   const state = randomBytes(16).toString('hex');
-  runtime.oauthStates.add(state);
+  pruneOauthStates();
+  runtime.oauthStates.set(state, Date.now());
   const params = new URLSearchParams({
     client_id: runtime.config.twitch.clientId,
     redirect_uri: effectiveRedirectUri(),
@@ -4159,35 +5056,77 @@ async function finishTwitchAuth(url, res) {
   const code = url.searchParams.get('code');
   const error = url.searchParams.get('error_description') || url.searchParams.get('error');
   if (error) return sendText(res, `Twitch auth error: ${error}`, 400);
-  if (!state || !runtime.oauthStates.has(state)) return sendText(res, 'Invalid OAuth state', 400);
+  pruneOauthStates();
+  if (!state || !runtime.oauthStates.has(state)) return sendText(res, 'Invalid or expired OAuth state', 400);
   runtime.oauthStates.delete(state);
   if (!code) return sendText(res, 'Missing OAuth code', 400);
+  if (runtime.predictionCreation) return sendText(res, 'Wait for the pending prediction creation, then connect Twitch again.', 409);
+  if (runtime.twitchAuthMutation) return sendText(res, 'Another Twitch authentication change is already in progress.', 409);
 
-  const params = new URLSearchParams({
-    client_id: runtime.config.twitch.clientId,
-    client_secret: runtime.config.twitch.clientSecret,
-    code,
-    grant_type: 'authorization_code',
-    redirect_uri: effectiveRedirectUri()
-  });
-  const response = await fetch(`${twitchId}/token`, { method: 'POST', body: params });
-  const token = await parseTwitchResponse(response);
-  await saveToken(token);
-  redirect(res, '/?twitch=connected');
+  const authMutation = { id: randomBytes(12).toString('hex'), startedAt: Date.now() };
+  const expectedGeneration = runtime.twitchAuthGeneration;
+  runtime.twitchAuthMutation = authMutation;
+
+  try {
+    const params = new URLSearchParams({
+      client_id: runtime.config.twitch.clientId,
+      client_secret: runtime.config.twitch.clientSecret,
+      code,
+      grant_type: 'authorization_code',
+      redirect_uri: effectiveRedirectUri()
+    });
+    const token = await fetchWithTimeout(
+      `${twitchId}/token`,
+      { method: 'POST', body: params },
+      twitchRequestTimeoutMs,
+      parseTwitchResponse
+    );
+    await saveToken(token, { expectedGeneration, advanceGeneration: true });
+    redirect(res, '/?twitch=connected');
+  } finally {
+    if (runtime.twitchAuthMutation === authMutation) runtime.twitchAuthMutation = null;
+  }
 }
 
-async function saveToken(token) {
+async function saveToken(token, options = {}) {
   const validation = await validateToken(token.access_token);
+  if (runtime.predictionCreation && options.allowDuringPredictionCreation !== true) {
+    const error = new Error('Wait for the pending prediction creation before reconnecting Twitch');
+    error.statusCode = 409;
+    throw error;
+  }
+  if (options.expectedGeneration !== undefined && options.expectedGeneration !== runtime.twitchAuthGeneration) {
+    throw new Error('Twitch authentication changed while the token was refreshing');
+  }
+  const ownedBroadcasterId = runtime.state.activePredictionMeta?.broadcasterId
+    || runtime.state.activePredictionRecovery?.meta?.broadcasterId
+    || runtime.config.twitch.targetBroadcasterId
+    || null;
+  if (['ACTIVE', 'LOCKED'].includes(runtime.state.activePrediction?.status)
+    && ownedBroadcasterId
+    && String(validation.user_id || '') !== String(ownedBroadcasterId)) {
+    const error = new Error('Resolve or cancel the active prediction before authenticating as a different Twitch broadcaster');
+    error.statusCode = 409;
+    throw error;
+  }
+  if (options.advanceGeneration === true) runtime.twitchAuthGeneration += 1;
+  runtime.twitchLastValidatedAt = Date.now();
   const previous = runtime.state.twitchToken || {};
   runtime.state.twitchToken = {
     accessToken: token.access_token,
     refreshToken: token.refresh_token || previous.refreshToken || null,
+    clientId: runtime.config.twitch.clientId,
     expiresAt: new Date(Date.now() + token.expires_in * 1000).toISOString(),
     broadcasterId: validation.user_id,
     broadcasterLogin: validation.login,
     scopes: normalizeScopes(token.scope || validation.scopes || [])
   };
   if (runtime.config.twitch.channelMode === 'personal') {
+    runtime.config.twitch.targetBroadcasterId = validation.user_id;
+    runtime.config.twitch.targetBroadcasterLogin = validation.login;
+    runtime.config.twitch.targetChannelLogin = validation.login;
+    await persistConfig();
+  } else if (String(runtime.config.twitch.targetChannelLogin || '').toLowerCase() === String(validation.login || '').toLowerCase()) {
     runtime.config.twitch.targetBroadcasterId = validation.user_id;
     runtime.config.twitch.targetBroadcasterLogin = validation.login;
     runtime.config.twitch.targetChannelLogin = validation.login;
@@ -4199,34 +5138,105 @@ async function saveToken(token) {
   logEvent('twitch', `Authenticated as ${validation.login}`);
 }
 
+function pruneOauthStates(now = Date.now()) {
+  for (const [state, createdAt] of runtime.oauthStates) {
+    if (now - Number(createdAt || 0) > oauthStateTtlMs) runtime.oauthStates.delete(state);
+  }
+}
+
 function normalizeScopes(scopes) {
   if (Array.isArray(scopes)) return scopes.map(String).filter(Boolean);
   return String(scopes || '').split(/\s+/).filter(Boolean);
 }
 
 async function validateToken(accessToken) {
-  const response = await fetch(`${twitchId}/validate`, {
-    headers: { Authorization: `OAuth ${accessToken}` }
-  });
-  return parseTwitchResponse(response);
+  const validation = await fetchWithTimeout(
+    `${twitchId}/validate`,
+    { headers: { Authorization: `OAuth ${accessToken}` } },
+    twitchRequestTimeoutMs,
+    parseTwitchResponse
+  );
+  if (validation.client_id && validation.client_id !== runtime.config.twitch.clientId) {
+    throw new Error('Twitch token belongs to a different Client ID');
+  }
+  return validation;
 }
 
 async function refreshTokenIfNeeded(force = false) {
   const token = runtime.state.twitchToken;
   if (!token?.accessToken) throw new Error('Twitch is not authenticated');
-  if (!force && Date.parse(token.expiresAt) - Date.now() > 60000) return token.accessToken;
-  if (!token.refreshToken) throw new Error('Twitch token expired and has no refresh token');
+  const now = Date.now();
+  const expiresAt = Date.parse(token.expiresAt);
+  const expiresSoon = !Number.isFinite(expiresAt) || expiresAt - now <= 60000;
+  const validationDue = now - Number(runtime.twitchLastValidatedAt || 0) >= twitchValidationIntervalMs;
+  if (!force && !expiresSoon && !validationDue) return token.accessToken;
+  if (runtime.twitchTokenRefreshPromise) return await runtime.twitchTokenRefreshPromise;
+  const authGeneration = runtime.twitchAuthGeneration;
 
-  const params = new URLSearchParams({
-    client_id: runtime.config.twitch.clientId,
-    client_secret: runtime.config.twitch.clientSecret,
-    grant_type: 'refresh_token',
-    refresh_token: token.refreshToken
-  });
-  const response = await fetch(`${twitchId}/token`, { method: 'POST', body: params });
-  const refreshed = await parseTwitchResponse(response);
-  await saveToken(refreshed);
-  return runtime.state.twitchToken.accessToken;
+  const request = (async () => {
+    if (!force && !expiresSoon) {
+      try {
+        const validation = await validateToken(token.accessToken);
+        if (authGeneration !== runtime.twitchAuthGeneration) {
+          throw new Error('Twitch authentication changed while the token was validating');
+        }
+        runtime.twitchLastValidatedAt = Date.now();
+        runtime.state.twitchToken = {
+          ...token,
+          clientId: runtime.config.twitch.clientId,
+          broadcasterId: validation.user_id || token.broadcasterId,
+          broadcasterLogin: validation.login || token.broadcasterLogin,
+          scopes: validation.scopes || token.scopes || [],
+          expiresAt: validation.expires_in
+            ? new Date(Date.now() + validation.expires_in * 1000).toISOString()
+            : token.expiresAt
+        };
+        hydrateTwitchStatus();
+        await persistTwitchTokenBackup();
+        await persistState();
+        return runtime.state.twitchToken.accessToken;
+      } catch (error) {
+        if (!isInvalidTwitchCredentialError(error)) throw error;
+      }
+    }
+
+    if (!token.refreshToken) {
+      const error = new Error('Twitch token expired and has no refresh token');
+      error.statusCode = 401;
+      error.twitchStatus = 401;
+      await invalidateTwitchAuth(error, authGeneration);
+      throw error;
+    }
+    const params = new URLSearchParams({
+      client_id: runtime.config.twitch.clientId,
+      client_secret: runtime.config.twitch.clientSecret,
+      grant_type: 'refresh_token',
+      refresh_token: token.refreshToken
+    });
+    let refreshed;
+    try {
+      refreshed = await fetchWithTimeout(
+        `${twitchId}/token`,
+        { method: 'POST', body: params },
+        twitchRequestTimeoutMs,
+        parseTwitchResponse
+      );
+    } catch (error) {
+      if (isInvalidTwitchCredentialError(error)) await invalidateTwitchAuth(error, authGeneration);
+      throw error;
+    }
+    await saveToken(refreshed, {
+      expectedGeneration: authGeneration,
+      allowDuringPredictionCreation: true
+    });
+    return runtime.state.twitchToken.accessToken;
+  })();
+  runtime.twitchTokenRefreshPromise = request;
+  try {
+    return await request;
+  } finally {
+    if (runtime.twitchTokenRefreshPromise === request) runtime.twitchTokenRefreshPromise = null;
+  }
 }
 
 function requireTwitchScopes(scopes) {
@@ -4240,7 +5250,7 @@ function requireTwitchScopes(scopes) {
   }
 }
 
-function requireTwitchTargetBroadcaster() {
+function requireTwitchTargetBroadcaster(options = {}) {
   if (!runtime.state.twitchToken?.accessToken) {
     throw new Error('Twitch is not authenticated. Connect Twitch from the dashboard.');
   }
@@ -4248,40 +5258,114 @@ function requireTwitchTargetBroadcaster() {
   if (!target.broadcasterId) {
     throw new Error('Target Twitch channel is not resolved. Save or resolve the streamer login first.');
   }
+  if (options.allowDifferentTokenUser !== true
+    && String(target.broadcasterId) !== String(runtime.state.twitchToken.broadcasterId || '')) {
+    throw new Error('Predictions require OAuth from the target broadcaster. Reconnect Twitch while signed in as that channel.');
+  }
   return target.broadcasterId;
 }
 
 async function twitchRequest(path, options = {}) {
-  const accessToken = await refreshTokenIfNeeded();
-  const response = await fetch(`${twitchApi}${path}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Client-Id': runtime.config.twitch.clientId,
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
+  const { timeoutMs = twitchRequestTimeoutMs, ...requestOptions } = options;
+  const authGeneration = runtime.twitchAuthGeneration;
+  const clientId = runtime.config.twitch.clientId;
+  const send = async (accessToken) => await fetchWithTimeout(`${twitchApi}${path}`, {
+      ...requestOptions,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Client-Id': clientId,
+        'Content-Type': 'application/json',
+        ...(requestOptions.headers || {})
+      }
+    }, timeoutMs, parseTwitchResponse);
+  try {
+    const result = await send(await refreshTokenIfNeeded());
+    if (authGeneration !== runtime.twitchAuthGeneration) throw new Error('Twitch authentication changed during the request');
+    return result;
+  } catch (error) {
+    if (Number(error?.twitchStatus) !== 401) throw error;
+    if (authGeneration !== runtime.twitchAuthGeneration) throw error;
+    let refreshedToken;
+    try {
+      refreshedToken = await refreshTokenIfNeeded(true);
+    } catch (refreshError) {
+      if (isInvalidTwitchCredentialError(refreshError)) await invalidateTwitchAuth(refreshError, authGeneration);
+      throw refreshError;
     }
-  });
-  return parseTwitchResponse(response);
+    try {
+      const result = await send(refreshedToken);
+      if (authGeneration !== runtime.twitchAuthGeneration) throw new Error('Twitch authentication changed during the retry');
+      return result;
+    } catch (retryError) {
+      if (Number(retryError?.twitchStatus) === 401) await invalidateTwitchAuth(retryError, authGeneration);
+      throw retryError;
+    }
+  }
 }
 
 async function parseTwitchResponse(response) {
-  const text = await response.text();
-  const json = text ? JSON.parse(text) : {};
+  const text = await readResponseText(response, 2 * 1024 * 1024);
+  let json = {};
+  if (text) {
+    try {
+      json = JSON.parse(text);
+    } catch {
+      if (response.ok) throw new Error('Twitch returned an invalid response');
+    }
+  }
   if (!response.ok) {
     const message = json.message || json.error || response.statusText;
-    throw new Error(`Twitch ${response.status}: ${message}`);
+    const error = new Error(`Twitch ${response.status}: ${message}`);
+    error.statusCode = response.status;
+    error.twitchStatus = response.status;
+    throw error;
   }
   return json;
 }
 
-async function twitchLogout(res) {
+function isInvalidTwitchCredentialError(error) {
+  return [400, 401].includes(Number(error?.twitchStatus || error?.statusCode));
+}
+
+async function invalidateTwitchAuth(error, expectedGeneration = runtime.twitchAuthGeneration) {
+  if (expectedGeneration !== runtime.twitchAuthGeneration) return;
+  runtime.twitchAuthGeneration += 1;
   delete runtime.state.twitchToken;
-  runtime.state.activePrediction = null;
-  runtime.state.activePredictionRecovery = null;
+  runtime.twitchLastValidatedAt = 0;
+  resetTwitchStreamStatus();
   hydrateTwitchStatus();
+  runtime.state.twitch.needsReconnect = true;
+  runtime.state.twitch.authError = error?.message || 'Twitch authentication is no longer valid';
   await deleteTwitchTokenBackup();
   await persistState();
+  broadcast();
+}
+
+async function twitchLogout(req, res) {
+  const body = await readBody(req);
+  if (runtime.twitchAuthMutation) {
+    const error = new Error('Wait for the pending Twitch authentication change before logging out');
+    error.statusCode = 409;
+    throw error;
+  }
+  if (runtime.predictionCreation) {
+    const error = new Error('Wait for the pending prediction creation before logging out of Twitch');
+    error.statusCode = 409;
+    throw error;
+  }
+  if (['ACTIVE', 'LOCKED'].includes(runtime.state.activePrediction?.status) && body.force !== true) {
+    const error = new Error('Resolve or cancel the active prediction before logging out of Twitch');
+    error.statusCode = 409;
+    throw error;
+  }
+  rememberOwnedPrediction(runtime.state.activePrediction, runtime.state.activePredictionMeta);
+  runtime.twitchAuthGeneration += 1;
+  delete runtime.state.twitchToken;
+  resetTwitchStreamStatus();
+  hydrateTwitchStatus();
+  await deleteTwitchTokenBackup();
+  await persistState({ backup: false });
+  await rm(`${statePath}.bak`, { force: true });
   logEvent('twitch', 'Logged out');
   sendJson(res, publicState());
 }
@@ -4299,7 +5383,7 @@ async function sendChatMessage(req, res) {
 
 async function twitchSendChatMessage(message) {
   requireTwitchScopes(['user:write:chat']);
-  const broadcaster = requireTwitchTargetBroadcaster();
+  const broadcaster = requireTwitchTargetBroadcaster({ allowDifferentTokenUser: true });
   const sender = runtime.state.twitchToken?.broadcasterId;
   if (!broadcaster) throw new Error('Twitch is not authenticated');
   const result = await twitchRequest('/chat/messages', {
@@ -4318,10 +5402,25 @@ async function twitchSendChatMessage(message) {
 }
 
 async function resolveTwitchChannelApi(req, res) {
+  if (runtime.twitchAuthMutation || runtime.predictionCreation || ['ACTIVE', 'LOCKED'].includes(runtime.state.activePrediction?.status)) {
+    const error = new Error('Resolve or cancel the active prediction before changing the Twitch channel');
+    error.statusCode = 409;
+    throw error;
+  }
   const body = await readBody(req);
   const login = String(body.login || runtime.config.twitch.targetChannelLogin || '').trim().replace(/^@/, '').toLowerCase();
   if (!login) return sendJson(res, { error: 'Streamer login is required' }, 400);
+  const authGeneration = runtime.twitchAuthGeneration;
   const user = await resolveTwitchUserByLogin(login);
+  if (runtime.twitchAuthMutation
+    || runtime.predictionCreation
+    || authGeneration !== runtime.twitchAuthGeneration
+    || ['ACTIVE', 'LOCKED'].includes(runtime.state.activePrediction?.status)) {
+    const error = new Error('A prediction started while the Twitch channel was being resolved; channel was not changed');
+    error.statusCode = 409;
+    throw error;
+  }
+  runtime.twitchAuthGeneration += 1;
   runtime.config.twitch.channelMode = 'separate';
   runtime.config.twitch.targetChannelLogin = user.login;
   runtime.config.twitch.targetBroadcasterLogin = user.login;
@@ -4332,28 +5431,6 @@ async function resolveTwitchChannelApi(req, res) {
   await persistState();
   logEvent('twitch', `Target channel resolved: ${user.login} (${user.id})`);
   sendJson(res, { ok: true, user });
-}
-
-async function resolveConfiguredTwitchChannel() {
-  if (runtime.config.twitch.channelMode === 'personal') {
-    const token = runtime.state.twitchToken;
-    if (token?.broadcasterId) {
-      runtime.config.twitch.targetChannelLogin = token.broadcasterLogin || '';
-      runtime.config.twitch.targetBroadcasterLogin = token.broadcasterLogin || '';
-      runtime.config.twitch.targetBroadcasterId = token.broadcasterId || '';
-    }
-    return;
-  }
-  if (!runtime.config.twitch.targetChannelLogin || !runtime.state.twitchToken?.accessToken) return;
-  try {
-    const user = await resolveTwitchUserByLogin(runtime.config.twitch.targetChannelLogin);
-    runtime.config.twitch.targetChannelLogin = user.login;
-    runtime.config.twitch.targetBroadcasterLogin = user.login;
-    runtime.config.twitch.targetBroadcasterId = user.id;
-    logEvent('twitch', `Target channel resolved: ${user.login} (${user.id})`);
-  } catch (error) {
-    logEvent('twitch', `Target channel resolve failed: ${error.message}`);
-  }
 }
 
 async function resolveTwitchUserByLogin(login) {
@@ -4379,21 +5456,33 @@ async function isBroadcasterLive(force = false) {
     return cached.isLive;
   }
 
-  const result = await twitchRequest(`/streams?user_id=${encodeURIComponent(broadcaster)}&first=1`);
-  const stream = (result.data || []).find((item) => String(item.user_id) === String(broadcaster) && item.type === 'live') || null;
-  runtime.twitchStreamStatus = {
-    broadcasterId: broadcaster,
-    checkedAt: now,
-    isLive: Boolean(stream),
-    streamId: stream?.id || null,
-    gameName: stream?.game_name || null,
-    title: stream?.title || null
-  };
-  hydrateTwitchStatus();
-  syncStreamerSessionPresence();
-  await persistState();
-  broadcast();
-  return runtime.twitchStreamStatus.isLive;
+  const pending = runtime.twitchStreamStatusPromise;
+  if (pending?.broadcasterId === broadcaster) return await pending.promise;
+
+  const request = (async () => {
+    const result = await twitchRequest(`/streams?user_id=${encodeURIComponent(broadcaster)}&first=1`);
+    if (String(twitchTargetChannel().broadcasterId || '') !== String(broadcaster)) return null;
+    const stream = (result.data || []).find((item) => String(item.user_id) === String(broadcaster) && item.type === 'live') || null;
+    runtime.twitchStreamStatus = {
+      broadcasterId: broadcaster,
+      checkedAt: Date.now(),
+      isLive: Boolean(stream),
+      streamId: stream?.id || null,
+      gameName: stream?.game_name || null,
+      title: stream?.title || null
+    };
+    hydrateTwitchStatus();
+    syncStreamerSessionPresence();
+    await persistState();
+    broadcast();
+    return runtime.twitchStreamStatus.isLive;
+  })();
+  runtime.twitchStreamStatusPromise = { broadcasterId: broadcaster, promise: request };
+  try {
+    return await request;
+  } finally {
+    if (runtime.twitchStreamStatusPromise?.promise === request) runtime.twitchStreamStatusPromise = null;
+  }
 }
 
 async function refreshTwitchStreamStatus() {
@@ -4408,21 +5497,66 @@ async function createPrediction(req, res) {
 }
 
 async function createPredictionFromSettings(overrides = {}, options = {}) {
+  if (runtime.twitchAuthMutation) {
+    const error = new Error('Wait for the pending Twitch authentication change before creating a prediction');
+    error.statusCode = 409;
+    throw error;
+  }
+  if (runtime.predictionCreation) {
+    const error = new Error('A Twitch prediction creation request is already in progress');
+    error.statusCode = 409;
+    throw error;
+  }
+  const creation = { id: randomBytes(12).toString('hex'), startedAt: Date.now() };
+  runtime.predictionCreation = creation;
+  try {
+    return await createPredictionFromSettingsUnlocked(overrides, options);
+  } finally {
+    if (runtime.predictionCreation === creation) runtime.predictionCreation = null;
+  }
+}
+
+async function createPredictionFromSettingsUnlocked(overrides = {}, options = {}) {
   const profile = options.profile || (overrides.profile === 'spectator' ? 'spectator' : predictionProfileForGsi(runtime.state.gsi));
   const settings = predictionSettingsForProfile(profile);
+  const sourceGsi = structuredClone(options.sourceGsi || runtime.state.gsi);
+  const sourceMatchId = sourceGsi.activeMatchId || sourceGsi.matchId || null;
+  const sourceContextKey = predictionOwnershipContextKey(sourceGsi, profile);
+  const bindContext = options.automatic || /HERO_SELECTION|STRATEGY_TIME|TEAM_SHOWCASE|PRE_GAME|GAME_IN_PROGRESS/i.test(String(sourceGsi.gameState || ''));
+  const authGeneration = runtime.twitchAuthGeneration;
   if (runtime.state.gsi?.heroDemoMode) {
     throw new Error('Predictions are disabled in Demo Hero mode');
   }
   await syncOwnedActivePredictionFromTwitch({ force: true });
+  if (options.expectedContextKey
+    && !predictionContextMatches(options.expectedContextKey, runtime.state.gsi, profile)) {
+    throw new Error('Game changed before the automatic prediction could be created');
+  }
+  if (options.automatic && !shouldAutoCreatePrediction(runtime.state.gsi, runtime.state.gsi, profile)) {
+    throw new Error('The game is no longer eligible for an automatic prediction');
+  }
   if (runtime.state.activePrediction && ['ACTIVE', 'LOCKED'].includes(runtime.state.activePrediction.status)) {
     throw new Error('A prediction is already active or locked');
   }
   const broadcaster = requireTwitchTargetBroadcaster();
   if (!broadcaster) throw new Error('Twitch is not authenticated. Connect Twitch from the dashboard.');
+  if (options.automatic && (
+    authGeneration !== runtime.twitchAuthGeneration
+    || predictionSettingsForProfile(profile).autoCreate !== true
+  )) {
+    throw new Error('Automatic prediction settings or Twitch authentication changed before creation');
+  }
   const draft = buildPredictionDraft(overrides, settings, profile);
+  const compatibleCurrentContextKey = options.expectedContextKey
+    && predictionContextMatches(options.expectedContextKey, runtime.state.gsi, profile)
+    ? predictionOwnershipContextKey(runtime.state.gsi, profile)
+    : sourceContextKey;
+  const compatibleCurrentMatchId = runtime.state.gsi.activeMatchId || runtime.state.gsi.matchId || sourceMatchId;
   const predictionWindow = clampInt(overrides.windowSeconds ?? settings.windowSeconds, 30, 1800);
   draft.meta.predictionWindowSeconds = predictionWindow;
   draft.meta.profile = profile;
+  draft.meta.broadcasterId = broadcaster;
+  draft.meta.contextKey = bindContext ? compatibleCurrentContextKey : null;
   const body = {
     broadcaster_id: broadcaster,
     title: draft.title,
@@ -4432,16 +5566,41 @@ async function createPredictionFromSettings(overrides = {}, options = {}) {
   const result = await twitchRequest('/predictions', { method: 'POST', body: JSON.stringify(body) });
   const item = result.data?.[0];
   if (!item) throw new Error('Twitch did not return a prediction');
+  const staleAutomaticContext = options.automatic && (
+    !predictionContextMatches(options.expectedContextKey, runtime.state.gsi, profile)
+    || !shouldAutoCreatePrediction(runtime.state.gsi, runtime.state.gsi, profile)
+    || authGeneration !== runtime.twitchAuthGeneration
+    || predictionSettingsForProfile(profile).autoCreate !== true
+    || String(twitchTargetChannel().broadcasterId || '') !== String(broadcaster)
+  );
   runtime.state.activePredictionMeta = draft.meta;
+  const responseContextMatches = predictionContextMatches(options.expectedContextKey || sourceContextKey, runtime.state.gsi, profile);
+  if (bindContext && responseContextMatches) {
+    runtime.state.activePredictionMeta.contextKey = predictionOwnershipContextKey(runtime.state.gsi, profile);
+  }
   runtime.state.activePrediction = normalizePrediction(item, draft.yesTitle, draft.noTitle, draft.meta);
-  runtime.state.activePredictionMatchId = runtime.state.gsi.activeMatchId || runtime.state.gsi.matchId || null;
+  runtime.state.activePredictionMatchId = responseContextMatches
+    ? (runtime.state.gsi.activeMatchId || runtime.state.gsi.matchId || compatibleCurrentMatchId)
+    : compatibleCurrentMatchId;
   rememberOwnedPrediction(runtime.state.activePrediction, draft.meta);
   runtime.state.predictionCancelCandidate = null;
   runtime.state.activePredictionSyncedAt = new Date().toISOString();
-  if (options.automatic) markAutoPredictionCreated(runtime.state.gsi, profile);
   await persistState();
   logEvent('twitch', `Prediction created: ${draft.title}`);
   broadcast();
+  if (staleAutomaticContext) {
+    logEvent('twitch', 'Automatic prediction became stale while Twitch was creating it; canceling it');
+    try {
+      await twitchEndPrediction(item.id, 'CANCELED');
+    } catch (error) {
+      logEvent('twitch', `Stale automatic prediction could not be canceled: ${error.message}`);
+    }
+    throw new Error('Game or Twitch settings changed while the automatic prediction was being created');
+  }
+  if (options.automatic) {
+    markAutoPredictionCreated(responseContextMatches ? runtime.state.gsi : sourceGsi, profile);
+    await persistState();
+  }
   return runtime.state.activePrediction;
 }
 
@@ -4649,7 +5808,7 @@ async function twitchEndPrediction(id, status, winningOutcomeId = null) {
   } catch (error) {
     if (isCurrentOwnedPredictionId(id) && isMissingTwitchPredictionError(error)) {
       const title = runtime.state.activePrediction?.title || id;
-      clearActivePredictionState();
+      clearActivePredictionState({ keepRecovery: false });
       await persistState();
       broadcast();
       logEvent('twitch', `Our prediction no longer exists on Twitch: ${title}`);
@@ -4774,12 +5933,14 @@ async function detectDotaInstall() {
     if (target) return target;
   }
 
-  const commonDotaPaths = [
-    'C:\\SteamLibrary\\steamapps\\common\\dota 2 beta',
-    'D:\\SteamLibrary\\steamapps\\common\\dota 2 beta',
-    'C:\\Program Files (x86)\\Steam\\steamapps\\common\\dota 2 beta',
-    'C:\\Program Files\\Steam\\steamapps\\common\\dota 2 beta'
-  ];
+  const commonDotaPaths = process.platform === 'win32'
+    ? [
+        'C:\\SteamLibrary\\steamapps\\common\\dota 2 beta',
+        'D:\\SteamLibrary\\steamapps\\common\\dota 2 beta',
+        'C:\\Program Files (x86)\\Steam\\steamapps\\common\\dota 2 beta',
+        'C:\\Program Files\\Steam\\steamapps\\common\\dota 2 beta'
+      ]
+    : platformSteamPaths().map((steamPath) => join(steamPath, 'steamapps', 'common', 'dota 2 beta'));
 
   for (const path of commonDotaPaths) {
     const target = await resolveDotaGsiTarget(path, 'common path');
@@ -4804,7 +5965,10 @@ async function findSteamLibraryRoots() {
     } catch {}
   }
 
-  for (const fallback of ['C:\\SteamLibrary', 'D:\\SteamLibrary', 'C:\\Program Files (x86)\\Steam', 'C:\\Program Files\\Steam']) {
+  const fallbacks = process.platform === 'win32'
+    ? ['C:\\SteamLibrary', 'D:\\SteamLibrary', 'C:\\Program Files (x86)\\Steam', 'C:\\Program Files\\Steam']
+    : platformSteamPaths();
+  for (const fallback of fallbacks) {
     roots.add(normalize(fallback));
   }
 
@@ -4813,6 +5977,10 @@ async function findSteamLibraryRoots() {
 
 async function findSteamInstallPaths() {
   const paths = new Set();
+  if (process.platform !== 'win32') {
+    for (const path of platformSteamPaths()) paths.add(normalize(path));
+    return Array.from(paths);
+  }
   const registryQueries = [
     ['HKCU\\Software\\Valve\\Steam', ['SteamPath', 'SteamExe']],
     ['HKLM\\SOFTWARE\\WOW6432Node\\Valve\\Steam', ['InstallPath']],
@@ -4830,6 +5998,31 @@ async function findSteamInstallPaths() {
   paths.add(normalize('C:\\Program Files (x86)\\Steam'));
   paths.add(normalize('C:\\Program Files\\Steam'));
   return Array.from(paths);
+}
+
+async function refreshInstalledGsiConfig() {
+  const cfgDir = String(runtime.config.dota?.cfgDir || '').trim();
+  if (!cfgDir || !runtime.config.dota?.gsiToken) return;
+  const cfgPath = join(cfgDir, 'gamestate_integration_dotastreamkit.cfg');
+  if (!await pathExists(cfgPath)) return;
+  try {
+    await writeFile(cfgPath, makeGsiConfig(), 'utf8');
+  } catch (error) {
+    console.warn(`Could not refresh Dota GSI config: ${error.message}`);
+  }
+}
+
+function platformSteamPaths() {
+  const home = homedir();
+  if (process.platform === 'darwin') {
+    return [join(home, 'Library', 'Application Support', 'Steam')];
+  }
+  return [
+    join(home, '.steam', 'steam'),
+    join(home, '.steam', 'debian-installation'),
+    join(home, '.local', 'share', 'Steam'),
+    join(home, '.var', 'app', 'com.valvesoftware.Steam', '.local', 'share', 'Steam')
+  ];
 }
 
 async function readRegistryValue(key, name) {
@@ -4913,6 +6106,10 @@ function makeGsiConfig() {
   "buffer" "0.1"
   "throttle" "0.1"
   "heartbeat" "30.0"
+  "auth"
+  {
+    "token" "${runtime.config.dota.gsiToken}"
+  }
   "data"
   {
     "provider" "1"
