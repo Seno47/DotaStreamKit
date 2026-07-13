@@ -6,6 +6,8 @@ import {
   isPredictionProfileCompatibleWithActivity,
   isPredictionUncontested,
   predictionOutcomePoints,
+  shouldAutoLockPredictionAtGameTime,
+  withPredictionCreationLifecycle,
   shouldContinueLeftGameViewCancelCandidate
 } from '../src/prediction-safety.js';
 
@@ -88,5 +90,62 @@ assert.equal(isPredictionProfileCompatibleWithActivity('own', 'spectating'), fal
 assert.equal(isPredictionProfileCompatibleWithActivity('spectator', 'spectating'), true);
 assert.equal(isPredictionProfileCompatibleWithActivity('spectator', 'playing'), false);
 assert.equal(isPredictionProfileCompatibleWithActivity('own', null), true);
+
+const automaticPredictionMeta = withPredictionCreationLifecycle(
+  { type: 'win_loss' },
+  { automatic: true, clockTime: -10 }
+);
+assert.equal(automaticPredictionMeta.creationMode, 'automatic');
+assert.equal(automaticPredictionMeta.createdAtGameSeconds, -10);
+assert.equal(shouldAutoLockPredictionAtGameTime(
+  { id: 'automatic-before-threshold', status: 'ACTIVE' },
+  automaticPredictionMeta,
+  { autoLockAtGameSeconds: 60 },
+  { clockTime: 60 }
+), true);
+
+const manualReplacementMeta = withPredictionCreationLifecycle(
+  { type: 'win_loss' },
+  { automatic: false, clockTime: 135 }
+);
+assert.equal(manualReplacementMeta.creationMode, 'manual');
+assert.equal(manualReplacementMeta.createdAtGameSeconds, 135);
+assert.equal(withPredictionCreationLifecycle({}, { automatic: false }).createdAtGameSeconds, null);
+assert.equal(shouldAutoLockPredictionAtGameTime(
+  { id: 'replacement-after-cancel', status: 'ACTIVE' },
+  manualReplacementMeta,
+  { autoLockAtGameSeconds: 60 },
+  { clockTime: 136 }
+), false);
+
+const lateAutomaticMeta = withPredictionCreationLifecycle(
+  { type: 'win_loss' },
+  { automatic: true, clockTime: 135 }
+);
+assert.equal(shouldAutoLockPredictionAtGameTime(
+  { id: 'late-automatic-retry', status: 'ACTIVE' },
+  lateAutomaticMeta,
+  { autoLockAtGameSeconds: 60 },
+  { clockTime: 136 }
+), false);
+
+assert.equal(shouldAutoLockPredictionAtGameTime(
+  { id: 'before-threshold', status: 'ACTIVE' },
+  automaticPredictionMeta,
+  { autoLockAtGameSeconds: 60 },
+  { clockTime: 59 }
+), false);
+assert.equal(shouldAutoLockPredictionAtGameTime(
+  { id: 'already-locked', status: 'LOCKED' },
+  automaticPredictionMeta,
+  { autoLockAtGameSeconds: 60 },
+  { clockTime: 120 }
+), false);
+assert.equal(shouldAutoLockPredictionAtGameTime(
+  { id: 'legacy-active', status: 'ACTIVE' },
+  { type: 'win_loss' },
+  { autoLockAtGameSeconds: 60 },
+  { clockTime: 120 }
+), true);
 
 console.log('Prediction safety checks passed');

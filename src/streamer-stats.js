@@ -1,4 +1,4 @@
-export const streamOfflineGraceMs = 2 * 60 * 60 * 1000;
+export const streamOfflineGraceMs = 60 * 1000;
 
 export const rankMedalThresholds = [
   { medal: 0, name: 'Unranked', minMmr: 0, starStep: 0 },
@@ -92,6 +92,7 @@ export function normalizeStreamerStatsState(value) {
     wins: clampInt(state.wins, 0, 10000, 0),
     losses: clampInt(state.losses, 0, 10000, 0),
     sessionStartedAt: stringOrNull(state.sessionStartedAt),
+    sessionStreamId: stringOrNull(state.sessionStreamId),
     offlineSince: stringOrNull(state.offlineSince),
     lastMatchId: stringOrNull(state.lastMatchId),
     lastResult: ['win', 'lose'].includes(state.lastResult) ? state.lastResult : null,
@@ -137,7 +138,7 @@ export function selectStreamerMedal({ source, accountRankTier, mmr }) {
   return fromAccount || fromMmr;
 }
 
-export function applyStreamerMatchResult(state, config, result, matchId, now = new Date()) {
+export function applyStreamerMatchResult(state, config, result, matchId, now = new Date(), options = {}) {
   if (!config?.showStreamerStats || !['win', 'lose'].includes(result) || !matchId) {
     return { state, config, changed: false, configChanged: false };
   }
@@ -148,25 +149,28 @@ export function applyStreamerMatchResult(state, config, result, matchId, now = n
   const nextState = normalizeStreamerStatsState(state);
   const nextConfig = { ...config };
   const iso = now.toISOString();
-  nextState.sessionStartedAt ||= iso;
+  const countStreamSession = options.countStreamSession !== false;
+  if (countStreamSession) nextState.sessionStartedAt ||= iso;
   nextState.lastMatchId = String(matchId);
   nextState.lastResult = result;
   nextState.lastResultAt = iso;
   nextState.lastMmrChange = 0;
-  if (result === 'win') nextState.wins += 1;
-  if (result === 'lose') nextState.losses += 1;
+  if (countStreamSession && result === 'win') nextState.wins += 1;
+  if (countStreamSession && result === 'lose') nextState.losses += 1;
   const streamerAccountId = normalizePositiveInt(nextState.streamerAccountId);
   if (streamerAccountId) {
     const accountKey = String(streamerAccountId);
-    const accountSession = normalizeAccountSession(nextState.accountSessions[accountKey]);
-    accountSession.accountId = streamerAccountId;
-    accountSession.sessionStartedAt ||= nextState.sessionStartedAt || iso;
-    accountSession.lastMatchId = String(matchId);
-    accountSession.lastResult = result;
-    accountSession.lastResultAt = iso;
-    if (result === 'win') accountSession.wins += 1;
-    if (result === 'lose') accountSession.losses += 1;
-    nextState.accountSessions[accountKey] = accountSession;
+    if (countStreamSession) {
+      const accountSession = normalizeAccountSession(nextState.accountSessions[accountKey]);
+      accountSession.accountId = streamerAccountId;
+      accountSession.sessionStartedAt ||= nextState.sessionStartedAt || iso;
+      accountSession.lastMatchId = String(matchId);
+      accountSession.lastResult = result;
+      accountSession.lastResultAt = iso;
+      if (result === 'win') accountSession.wins += 1;
+      if (result === 'lose') accountSession.losses += 1;
+      nextState.accountSessions[accountKey] = accountSession;
+    }
 
     const goalRecord = normalizeAccountGoalRecord(nextState.accountGoalRecords[accountKey]);
     goalRecord.accountId = streamerAccountId;
@@ -202,14 +206,31 @@ export function applyStreamerMatchResult(state, config, result, matchId, now = n
   return { state: nextState, config: nextConfig, changed: true, configChanged };
 }
 
-export function updateStreamerSessionPresence(state, effectiveOnline, now = new Date(), graceMs = streamOfflineGraceMs) {
+export function updateStreamerSessionPresence(state, effectiveOnline, now = new Date(), options = {}) {
   const next = normalizeStreamerStatsState(state);
-  const completedMatchId = next.lastMatchId;
+  const presenceOptions = typeof options === 'number' ? { graceMs: options } : options || {};
+  const graceMs = Math.max(0, Number(presenceOptions.graceMs ?? streamOfflineGraceMs) || 0);
+  const streamId = stringOrNull(presenceOptions.streamId);
   const timestamp = now.getTime();
   const iso = now.toISOString();
 
   if (effectiveOnline === true) {
+    const differentKnownStream = Boolean(streamId && next.sessionStreamId && streamId !== next.sessionStreamId);
+    const newStreamAfterObservedOffline = Boolean(
+      streamId
+      && !next.sessionStreamId
+      && next.offlineSince
+      && hasCurrentStreamerSession(next)
+    );
+    if (differentKnownStream || newStreamAfterObservedOffline) {
+      archiveStreamerSession(next, next.offlineSince || iso, iso);
+      next.sessionStartedAt = iso;
+      next.sessionStreamId = streamId;
+      next.offlineSince = null;
+      return { state: next, changed: true };
+    }
     next.sessionStartedAt ||= iso;
+    if (streamId) next.sessionStreamId ||= streamId;
     next.offlineSince = null;
     return { state: next, changed: JSON.stringify(next) !== JSON.stringify(state || {}) };
   }
@@ -228,29 +249,13 @@ export function updateStreamerSessionPresence(state, effectiveOnline, now = new 
     return { state: next, changed: JSON.stringify(next) !== JSON.stringify(state || {}) };
   }
 
-  if (next.wins > 0 || next.losses > 0 || next.sessionStartedAt) {
-    next.previousSession = {
-      wins: next.wins,
-      losses: next.losses,
-      accountSessions: next.accountSessions,
-      sessionStartedAt: next.sessionStartedAt,
-      sessionEndedAt: next.offlineSince,
-      archivedAt: iso,
-      lastMatchId: next.lastMatchId,
-      lastResult: next.lastResult
-    };
+  if (!hasCurrentStreamerSession(next)) {
+    return { state: next, changed: JSON.stringify(next) !== JSON.stringify(state || {}) };
   }
-  next.wins = 0;
-  next.losses = 0;
-  next.accountSessions = {};
+
+  archiveStreamerSession(next, next.offlineSince, iso);
   next.sessionStartedAt = null;
-  next.offlineSince = iso;
-  // The same POST_GAME payload may keep arriving while the stream is offline.
-  // Preserve it as a dedupe barrier across the automatic session reset.
-  next.lastMatchId = completedMatchId;
-  next.lastResult = null;
-  next.lastMmrChange = 0;
-  next.lastResultAt = null;
+  next.sessionStreamId = null;
   return { state: next, changed: true };
 }
 
@@ -262,6 +267,7 @@ export function restorePreviousStreamerSession(state, now = new Date()) {
   next.losses = previous.losses;
   next.accountSessions = normalizeAccountSessions(previous.accountSessions);
   next.sessionStartedAt = previous.sessionStartedAt || now.toISOString();
+  next.sessionStreamId = previous.sessionStreamId || null;
   next.lastMatchId = previous.lastMatchId || null;
   next.lastResult = previous.lastResult || null;
   next.offlineSince = null;
@@ -272,12 +278,13 @@ export function restorePreviousStreamerSession(state, now = new Date()) {
 export function resetStreamerSession(state, now = new Date()) {
   const next = normalizeStreamerStatsState(state);
   const completedMatchId = next.lastMatchId;
-  if (next.wins > 0 || next.losses > 0 || next.sessionStartedAt) {
+  if (hasCurrentStreamerSession(next)) {
     next.previousSession = {
       wins: next.wins,
       losses: next.losses,
       accountSessions: next.accountSessions,
       sessionStartedAt: next.sessionStartedAt,
+      sessionStreamId: next.sessionStreamId,
       sessionEndedAt: now.toISOString(),
       archivedAt: now.toISOString(),
       lastMatchId: next.lastMatchId,
@@ -315,11 +322,48 @@ function normalizePreviousSession(value) {
     losses: clampInt(value.losses, 0, 10000, 0),
     accountSessions: normalizeAccountSessions(value.accountSessions),
     sessionStartedAt: stringOrNull(value.sessionStartedAt),
+    sessionStreamId: stringOrNull(value.sessionStreamId),
     sessionEndedAt: stringOrNull(value.sessionEndedAt),
     archivedAt: stringOrNull(value.archivedAt),
     lastMatchId: stringOrNull(value.lastMatchId),
     lastResult: ['win', 'lose'].includes(value.lastResult) ? value.lastResult : null
   };
+}
+
+function hasCurrentStreamerSession(state) {
+  return Boolean(
+    state.wins > 0
+    || state.losses > 0
+    || state.sessionStartedAt
+    || state.sessionStreamId
+    || Object.keys(state.accountSessions || {}).length > 0
+  );
+}
+
+function archiveStreamerSession(state, sessionEndedAt, archivedAt) {
+  const completedMatchId = state.lastMatchId;
+  if (hasCurrentStreamerSession(state)) {
+    state.previousSession = {
+      wins: state.wins,
+      losses: state.losses,
+      accountSessions: state.accountSessions,
+      sessionStartedAt: state.sessionStartedAt,
+      sessionStreamId: state.sessionStreamId,
+      sessionEndedAt,
+      archivedAt,
+      lastMatchId: state.lastMatchId,
+      lastResult: state.lastResult
+    };
+  }
+  state.wins = 0;
+  state.losses = 0;
+  state.accountSessions = {};
+  // The same POST_GAME payload may keep arriving after an automatic reset.
+  // Preserve it as a dedupe barrier without touching persistent goal records.
+  state.lastMatchId = completedMatchId;
+  state.lastResult = null;
+  state.lastMmrChange = 0;
+  state.lastResultAt = null;
 }
 
 function starsFromMmr(mmr, medal) {

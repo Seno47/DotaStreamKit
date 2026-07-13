@@ -225,6 +225,10 @@ let session = updateStreamerSessionPresence(
     losses: 1,
     lastMatchId: 'offline-repeat-post-game',
     sessionStartedAt: '2026-05-01T08:00:00Z',
+    sessionStreamId: 'stream-a',
+    accountSessions: {
+      456: { accountId: 456, wins: 2, losses: 1, sessionStartedAt: '2026-05-01T08:00:00Z' }
+    },
     accountGoalRecords: {
       456: { accountId: 456, wins: 9, losses: 4 }
     }
@@ -235,7 +239,7 @@ let session = updateStreamerSessionPresence(
 assert.equal(session.state.wins, 2);
 assert.ok(session.state.offlineSince);
 
-session = updateStreamerSessionPresence(session.state, false, new Date('2026-05-01T11:01:00Z'));
+session = updateStreamerSessionPresence(session.state, false, new Date('2026-05-01T09:01:01Z'));
 assert.equal(session.state.wins, 0);
 assert.equal(session.state.losses, 0);
 assert.deepEqual(session.state.accountSessions, {});
@@ -243,6 +247,16 @@ assert.equal(session.state.accountGoalRecords['456'].wins, 9);
 assert.equal(session.state.accountGoalRecords['456'].losses, 4);
 assert.equal(session.state.previousSession.wins, 2);
 assert.equal(session.state.lastMatchId, 'offline-repeat-post-game');
+assert.equal(session.state.sessionStartedAt, null);
+assert.equal(session.state.sessionStreamId, null);
+
+const repeatedOfflinePresence = updateStreamerSessionPresence(
+  session.state,
+  false,
+  new Date('2026-05-01T09:02:00Z')
+);
+assert.equal(repeatedOfflinePresence.changed, false);
+assert.deepEqual(repeatedOfflinePresence.state, session.state);
 
 const repeatedAfterOfflineReset = applyStreamerMatchResult(
   session.state,
@@ -259,6 +273,7 @@ assert.equal(restored.state.wins, 2);
 assert.equal(restored.state.losses, 1);
 assert.equal(restored.state.accountGoalRecords['456'].wins, 9);
 assert.equal(restored.state.accountGoalRecords['456'].losses, 4);
+assert.equal(restored.state.sessionStreamId, 'stream-a');
 assert.equal(restored.state.previousSession, null);
 
 const reset = resetStreamerSession(restored.state, new Date('2026-05-01T11:03:00Z'));
@@ -283,5 +298,93 @@ assert.equal(repeatedPostGame.state.wins, 0);
 const goalReset = resetStreamerGoalRecord(reset.state, 456);
 assert.equal(goalReset.state.accountGoalRecords['456'], undefined);
 assert.equal(goalReset.state.previousSession.wins, 2);
+
+const transientOffline = updateStreamerSessionPresence(
+  {
+    wins: 3,
+    losses: 2,
+    sessionStartedAt: '2026-05-01T12:00:00Z',
+    sessionStreamId: 'stream-a',
+    accountSessions: { 456: { accountId: 456, wins: 3, losses: 2 } },
+    accountGoalRecords: { 456: { accountId: 456, wins: 30, losses: 20 } }
+  },
+  false,
+  new Date('2026-05-01T13:00:00Z')
+);
+const sameStreamResumed = updateStreamerSessionPresence(
+  transientOffline.state,
+  true,
+  new Date('2026-05-01T13:00:30Z'),
+  { streamId: 'stream-a' }
+);
+assert.equal(sameStreamResumed.state.wins, 3);
+assert.equal(sameStreamResumed.state.losses, 2);
+assert.equal(sameStreamResumed.state.offlineSince, null);
+
+const newStreamStarted = updateStreamerSessionPresence(
+  transientOffline.state,
+  true,
+  new Date('2026-05-01T13:00:30Z'),
+  { streamId: 'stream-b' }
+);
+assert.equal(newStreamStarted.state.wins, 0);
+assert.equal(newStreamStarted.state.losses, 0);
+assert.deepEqual(newStreamStarted.state.accountSessions, {});
+assert.equal(newStreamStarted.state.accountGoalRecords['456'].wins, 30);
+assert.equal(newStreamStarted.state.accountGoalRecords['456'].losses, 20);
+assert.equal(newStreamStarted.state.previousSession.wins, 3);
+assert.equal(newStreamStarted.state.previousSession.losses, 2);
+assert.equal(newStreamStarted.state.previousSession.sessionStreamId, 'stream-a');
+assert.equal(newStreamStarted.state.sessionStreamId, 'stream-b');
+assert.equal(newStreamStarted.state.offlineSince, null);
+
+const migratedMidStream = updateStreamerSessionPresence(
+  { wins: 4, losses: 1, sessionStartedAt: '2026-05-01T14:00:00Z' },
+  true,
+  new Date('2026-05-01T15:00:00Z'),
+  { streamId: 'stream-c' }
+);
+assert.equal(migratedMidStream.state.wins, 4);
+assert.equal(migratedMidStream.state.sessionStreamId, 'stream-c');
+
+const migratedAfterOffline = updateStreamerSessionPresence(
+  {
+    wins: 4,
+    losses: 1,
+    sessionStartedAt: '2026-05-01T14:00:00Z',
+    offlineSince: '2026-05-01T14:30:00Z',
+    accountGoalRecords: { 456: { accountId: 456, wins: 40, losses: 10 } }
+  },
+  true,
+  new Date('2026-05-01T15:00:00Z'),
+  { streamId: 'stream-d' }
+);
+assert.equal(migratedAfterOffline.state.wins, 0);
+assert.equal(migratedAfterOffline.state.losses, 0);
+assert.equal(migratedAfterOffline.state.accountGoalRecords['456'].wins, 40);
+assert.equal(migratedAfterOffline.state.previousSession.wins, 4);
+assert.equal(migratedAfterOffline.state.sessionStreamId, 'stream-d');
+
+const offlineMatch = applyStreamerMatchResult(
+  {
+    streamerAccountId: 456,
+    accountGoalRecords: { 456: { accountId: 456, wins: 9, losses: 4 } }
+  },
+  {
+    ...config,
+    streamerAccounts: [{ accountId: 456, label: 'Main', mmr: 6000 }]
+  },
+  'win',
+  'offline-match',
+  new Date('2026-05-01T16:00:00Z'),
+  { countStreamSession: false }
+);
+assert.equal(offlineMatch.state.wins, 0);
+assert.equal(offlineMatch.state.losses, 0);
+assert.deepEqual(offlineMatch.state.accountSessions, {});
+assert.equal(offlineMatch.state.accountGoalRecords['456'].wins, 10);
+assert.equal(offlineMatch.state.accountGoalRecords['456'].losses, 4);
+assert.equal(offlineMatch.config.streamerAccounts[0].mmr, 6025);
+assert.equal(offlineMatch.state.lastMatchId, 'offline-match');
 
 console.log('Streamer stats checks passed');

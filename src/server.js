@@ -14,7 +14,9 @@ import {
   isLeftActiveGameViewCancelSignal,
   isPredictionProfileCompatibleWithActivity,
   isPredictionUncontested,
-  shouldContinueLeftGameViewCancelCandidate
+  shouldAutoLockPredictionAtGameTime,
+  shouldContinueLeftGameViewCancelCandidate,
+  withPredictionCreationLifecycle
 } from './prediction-safety.js';
 import {
   collectMatchPlayers,
@@ -1935,7 +1937,7 @@ function publicStreamerStats() {
           ? 'account'
           : 'mmr'
     } : null,
-    effectiveStreamOnline: effectiveStreamerStreamOnline()
+    effectiveStreamOnline: actualStreamerStreamOnline()
   };
 }
 
@@ -3182,7 +3184,14 @@ function applyStreamerStatsMatchResult(previous, gsi) {
   const settings = runtime.config.protection.matchIntel;
   const result = inferResult(gsi);
   const matchId = gsi.matchId || gsi.activeMatchId || previous.matchId || previous.activeMatchId;
-  const applied = applyStreamerMatchResult(runtime.state.streamerStats, settings, result, matchId);
+  const applied = applyStreamerMatchResult(
+    runtime.state.streamerStats,
+    settings,
+    result,
+    matchId,
+    new Date(),
+    { countStreamSession: actualStreamerStreamOnline() !== false }
+  );
   runtime.state.streamerStats = applied.state;
   if (applied.configChanged) {
     runtime.config.protection.matchIntel = {
@@ -3231,19 +3240,35 @@ async function refreshStreamerAccountRank() {
 
 function syncStreamerSessionPresence() {
   if (!runtime.config.protection.matchIntel?.showStreamerStats) return false;
-  const result = updateStreamerSessionPresence(runtime.state.streamerStats, effectiveStreamerStreamOnline());
+  const online = actualStreamerStreamOnline();
+  const result = updateStreamerSessionPresence(runtime.state.streamerStats, online, new Date(), {
+    streamId: online === true ? actualStreamerStreamId() : null
+  });
   runtime.state.streamerStats = result.state;
   return result.changed;
 }
 
-function effectiveStreamerStreamOnline() {
-  if (runtime.config.predictions?.forceStreamOnline) return true;
+function actualStreamerStreamOnline() {
   if (typeof runtime.state.twitch?.isLive === 'boolean') return runtime.state.twitch.isLive;
   const targetBroadcasterId = twitchTargetChannel().broadcasterId;
   if (targetBroadcasterId
     && String(runtime.twitchStreamStatus?.broadcasterId || '') === String(targetBroadcasterId)
     && typeof runtime.twitchStreamStatus?.isLive === 'boolean') {
     return runtime.twitchStreamStatus.isLive;
+  }
+  return null;
+}
+
+function actualStreamerStreamId() {
+  const targetBroadcasterId = twitchTargetChannel().broadcasterId;
+  if (!targetBroadcasterId) return null;
+  if (runtime.state.twitch?.isLive === true
+    && String(runtime.state.twitch?.effectiveBroadcasterId || '') === String(targetBroadcasterId)) {
+    return runtime.state.twitch.streamId || null;
+  }
+  if (String(runtime.twitchStreamStatus?.broadcasterId || '') === String(targetBroadcasterId)
+    && runtime.twitchStreamStatus?.isLive === true) {
+    return runtime.twitchStreamStatus.streamId || null;
   }
   return null;
 }
@@ -4098,9 +4123,12 @@ async function maybeAutomatePrediction(previous, gsi, context = {}) {
     const latestAfterCancel = runtime.state.activePrediction;
     if (latestAfterCancel && ['ACTIVE', 'LOCKED'].includes(latestAfterCancel.status)) {
       if (
-        latestAfterCancel.status === 'ACTIVE'
-        && activeSettings.autoLockAtGameSeconds > 0
-        && gsi.clockTime >= activeSettings.autoLockAtGameSeconds
+        shouldAutoLockPredictionAtGameTime(
+          latestAfterCancel,
+          runtime.state.activePredictionMeta,
+          activeSettings,
+          gsi
+        )
         && activePredictionMatchesGsi(gsi)
         && claimPredictionActionAttempt('lock', latestAfterCancel.id)
       ) {
@@ -5547,6 +5575,10 @@ async function createPredictionFromSettingsUnlocked(overrides = {}, options = {}
     throw new Error('Automatic prediction settings or Twitch authentication changed before creation');
   }
   const draft = buildPredictionDraft(overrides, settings, profile);
+  draft.meta = withPredictionCreationLifecycle(draft.meta, {
+    automatic: options.automatic === true,
+    clockTime: sourceGsi.clockTime
+  });
   const compatibleCurrentContextKey = options.expectedContextKey
     && predictionContextMatches(options.expectedContextKey, runtime.state.gsi, profile)
     ? predictionOwnershipContextKey(runtime.state.gsi, profile)

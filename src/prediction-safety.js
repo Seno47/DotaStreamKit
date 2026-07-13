@@ -58,3 +58,35 @@ export function isPredictionProfileCompatibleWithActivity(profile, playerActivit
   if (activity === 'playing') return normalizedProfile === 'own';
   return true;
 }
+
+export function withPredictionCreationLifecycle(meta, { automatic = false, clockTime = null } = {}) {
+  const gameSeconds = optionalFiniteNumber(clockTime);
+  return {
+    ...(meta || {}),
+    creationMode: automatic === true ? 'automatic' : 'manual',
+    createdAtGameSeconds: Number.isFinite(gameSeconds) ? gameSeconds : null
+  };
+}
+
+export function shouldAutoLockPredictionAtGameTime(prediction, meta, settings, gsi) {
+  if (prediction?.status !== 'ACTIVE') return false;
+  const lockAtGameSeconds = optionalFiniteNumber(settings?.autoLockAtGameSeconds);
+  const currentGameSeconds = optionalFiniteNumber(gsi?.clockTime);
+  if (!Number.isFinite(lockAtGameSeconds) || lockAtGameSeconds <= 0 || !Number.isFinite(currentGameSeconds)) return false;
+  if (meta?.creationMode === 'manual') return false;
+
+  const createdAtGameSeconds = Number(meta?.createdAtGameSeconds);
+  if (meta?.createdAtGameSeconds !== null
+    && meta?.createdAtGameSeconds !== undefined
+    && Number.isFinite(createdAtGameSeconds)
+    && createdAtGameSeconds >= lockAtGameSeconds) {
+    return false;
+  }
+  return currentGameSeconds >= lockAtGameSeconds;
+}
+
+function optionalFiniteNumber(value) {
+  if (value === null || value === undefined || value === '') return NaN;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : NaN;
+}
