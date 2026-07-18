@@ -60,11 +60,42 @@ try {
   });
   assert.equal(spoofedForwardedChain.status, 401);
 
-  const authorization = `Basic ${Buffer.from(`viewer:${password}`).toString('base64')}`;
+  const validCredentials = Buffer.from(`viewer:${password}`).toString('base64');
+  const authorization = `Basic ${validCredentials}`;
+  const requestRemoteState = (value, timeoutMs = 5_000) => fetch(`${baseUrl}/api/state`, {
+    headers: {
+      ...remoteHeaders,
+      ...(value === undefined ? {} : { authorization: value })
+    },
+    signal: AbortSignal.timeout(timeoutMs)
+  });
   const authenticated = await fetch(`${baseUrl}/api/state`, {
     headers: { ...remoteHeaders, authorization }
   });
   assert.equal(authenticated.status, 200);
+
+  const compatibleWhitespace = await requestRemoteState(`bAsIc \t  ${validCredentials}`);
+  assert.equal(compatibleWhitespace.status, 200);
+
+  for (const [label, value] of [
+    ['non-Basic scheme', `Bearer ${validCredentials}`],
+    ['missing credentials', 'Basic'],
+    ['malformed Base64', 'Basic !!!not-base64!!!'],
+    ['wrong password', `Basic ${Buffer.from('viewer:wrong-secret').toString('base64')}`]
+  ]) {
+    const response = await requestRemoteState(value);
+    assert.equal(response.status, 401, label);
+    assert.match(response.headers.get('www-authenticate') || '', /^Basic/i, label);
+  }
+
+  const hostileAuthorization = `Basic ${' '.repeat(8_192)}!`;
+  const hostileResponse = await requestRemoteState(hostileAuthorization, 2_000);
+  assert.equal(hostileResponse.status, 401);
+  assert.match(hostileResponse.headers.get('www-authenticate') || '', /^Basic/i);
+  assert.equal(child.exitCode, null);
+
+  const recoveredResponse = await requestRemoteState(authorization, 2_000);
+  assert.equal(recoveredResponse.status, 200);
 
   const crossSite = await fetch(`${baseUrl}/api/config`, {
     method: 'POST',

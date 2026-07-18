@@ -1648,10 +1648,19 @@ function serverNetworkingEnabled() {
 }
 
 function hasValidServerAuthorization(header) {
-  const match = String(header || '').match(/^Basic\s+(.+)$/i);
-  if (!match) return false;
+  const value = String(header || '');
+  if (value.slice(0, 5).toLowerCase() !== 'basic') return false;
+
+  let credentialsStart = 5;
+  while (credentialsStart < value.length) {
+    const code = value.charCodeAt(credentialsStart);
+    if (code !== 0x20 && code !== 0x09) break;
+    credentialsStart += 1;
+  }
+  if (credentialsStart === 5 || credentialsStart >= value.length) return false;
+
   try {
-    const decoded = Buffer.from(match[1], 'base64').toString('utf8');
+    const decoded = Buffer.from(value.slice(credentialsStart), 'base64').toString('utf8');
     const separator = decoded.indexOf(':');
     const password = separator >= 0 ? decoded.slice(separator + 1) : '';
     const actual = Buffer.from(password);
