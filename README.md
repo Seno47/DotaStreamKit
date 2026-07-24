@@ -358,6 +358,8 @@ DotaStreamKit может автоматически создавать прог�
 
 DotaStreamKit специально не подхватывает чужие активные прогнозы на канале. Если на Twitch уже есть прогноз, созданный вручную или другим ботом, программа не будет его закрывать, отменять или завершать.
 
+`Максимальное время приёма Twitch` задаёт общий таймер приёма баллов. Галочка `Закрывать приём после начала игры` включает отдельный ранний предел только для автоматически созданных прогнозов, а поле под ней задаёт количество секунд. По умолчанию включено `60`: приём закрывается на `1:00` игрового времени, даже если таймер Twitch ещё не закончился. Если снять галочку, закрытие по игровому времени отключается. Опция `Автоматически завершать прогноз по результату` выбирает исход, когда результат прогноза уже однозначно известен — иногда это происходит ещё во время матча.
+
 Опция `Отменять незасчитанную игру` отменяет активный прогноз при сильных сигналах, что матч не должен засчитываться: долгий disconnect, новый match id при старом прогнозе, ранний post-game без победителя или выход из активного лобби/матча. Для краша/перезахода используется задержка, чтобы обычные 5 минут reconnect не отменяли прогноз сразу.
 
 Опция `Отменять, если один исход без ставок` отменяет прогноз после игры, если хотя бы на один исход не поставили баллы канала. Перед отменой или завершением программа перечитывает состояние прогноза с Twitch, чтобы не решать исход по устаревшим локальным данным.
@@ -747,6 +749,8 @@ Custom templates can use variables such as:
 The OBS overlay can show only the prediction created and tracked by DotaStreamKit. The block shows the prediction title, time until betting closes, outcome names, channel points, and percentages. The outcome bar animates smoothly when the split changes, and a very small outcome still keeps readable text.
 
 DotaStreamKit intentionally does not adopt unrelated active predictions on the channel. If Twitch already has a prediction created manually or by another bot, the app will not lock, cancel, or resolve it.
+
+`Maximum Twitch entry time` sets the overall Channel Points entry timer. `Lock entries after the game starts` enables a separate early cutoff for automatically created predictions only, and the field below it sets the number of seconds. It is enabled at `60` by default, so entries lock at `1:00` game time even if the Twitch timer has not ended. Clear the checkbox to disable game-time locking. `Resolve automatically when the result is known` selects the outcome as soon as the prediction result is unambiguous, which can happen before the match ends.
 
 The `Cancel invalid game` option cancels active predictions on strong signals that a match should not count: long disconnect, a new match id while an old prediction is active, early post-game without a winner, or leaving an active lobby/match view. Crash/reconnect handling uses a delay so a normal reconnect window does not cancel instantly.
 

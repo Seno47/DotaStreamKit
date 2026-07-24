@@ -535,12 +535,15 @@
             </div>
           </details>
           <form id="predictionForm" class="prediction-grid">
-            <label>Окно, сек<input id="predictionWindow" type="number" min="30" max="1800"></label>
+            <label>Максимальное время приёма Twitch, сек<input id="predictionWindow" type="number" min="30" max="1800"></label>
+            <label class="check"><input type="checkbox" id="autoLockAtGameStart" aria-controls="autoLockAtGameSecondsWrap autoLockAtGameSecondsHint" aria-expanded="false"> Закрывать приём после начала игры</label>
+            <label id="autoLockAtGameSecondsWrap" hidden>Через сколько секунд<input id="autoLockAtGameSeconds" type="number" min="1" max="3600" step="1" aria-describedby="autoLockAtGameSecondsHint"></label>
             <label class="check"><input type="checkbox" id="autoCreate"> Создавать автоматически</label>
             <label class="check"><input type="checkbox" id="forceStreamOnline"> Считать стрим онлайн для авто-прогнозов</label>
-            <label class="check"><input type="checkbox" id="autoResolve"> Закрывать автоматически</label>
+            <label class="check"><input type="checkbox" id="autoResolve"> Автоматически завершать прогноз по результату</label>
             <label class="check"><input type="checkbox" id="cancelUncontestedPrediction"> Отменять, если один исход без ставок</label>
             <label class="check"><input type="checkbox" id="autoCancelInvalidGame"> Отменять незасчитанную игру</label>
+            <p id="autoLockAtGameSecondsHint" class="prediction-note" hidden>Только для автоматически созданных прогнозов. Этот предел может закрыть приём раньше максимального таймера Twitch.</p>
             <p id="forceStreamOnlineHint" class="prediction-warning" hidden>Если включить, бот будет создавать авто-прогнозы даже когда Twitch показывает offline. Используй только если статус канала определяется неверно.</p>
             <p id="cancelUncontestedHint" class="prediction-note" hidden>Если после игры хотя бы на один исход не поставили баллы канала, бот отменит прогноз вместо выбора победившего исхода.</p>
           </form>

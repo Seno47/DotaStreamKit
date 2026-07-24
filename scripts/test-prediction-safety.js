@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {
+  buildTwitchPredictionCreateBody,
   hasCompletePredictionOutcomePoints,
   hasPointsOnEveryPredictionOutcome,
   isLeftActiveGameViewCancelSignal,
@@ -91,6 +92,19 @@ assert.equal(isPredictionProfileCompatibleWithActivity('spectator', 'spectating'
 assert.equal(isPredictionProfileCompatibleWithActivity('spectator', 'playing'), false);
 assert.equal(isPredictionProfileCompatibleWithActivity('own', null), true);
 
+assert.deepEqual(buildTwitchPredictionCreateBody({
+  broadcasterId: 'broadcaster-1',
+  title: 'Seven minute prediction',
+  yesTitle: 'Yes',
+  noTitle: 'No',
+  windowSeconds: 420
+}), {
+  broadcaster_id: 'broadcaster-1',
+  title: 'Seven minute prediction',
+  outcomes: [{ title: 'Yes' }, { title: 'No' }],
+  prediction_window: 420
+});
+
 const automaticPredictionMeta = withPredictionCreationLifecycle(
   { type: 'win_loss' },
   { automatic: true, clockTime: -10 }
@@ -102,7 +116,22 @@ assert.equal(shouldAutoLockPredictionAtGameTime(
   automaticPredictionMeta,
   { autoLockAtGameSeconds: 60 },
   { clockTime: 60 }
-), true);
+), true, 'the game-time cutoff may precede the seven-minute Twitch window');
+
+for (const clockTime of [0, 60, 120, 420, 900]) {
+  assert.equal(shouldAutoLockPredictionAtGameTime(
+    { id: 'game-time-lock-disabled', status: 'ACTIVE' },
+    automaticPredictionMeta,
+    { autoLockAtGameSeconds: 0 },
+    { clockTime }
+  ), false, `disabled game-time lock at ${clockTime}s`);
+}
+assert.equal(shouldAutoLockPredictionAtGameTime(
+  { id: 'legacy-game-time-lock-disabled', status: 'ACTIVE' },
+  { type: 'win_loss' },
+  { autoLockAtGameSeconds: 0 },
+  { clockTime: 900 }
+), false, 'zero also disables the game-time lock for legacy prediction metadata');
 
 const manualReplacementMeta = withPredictionCreationLifecycle(
   { type: 'win_loss' },

@@ -9,6 +9,7 @@ import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import sharp from 'sharp';
 import {
+  buildTwitchPredictionCreateBody,
   hasCompletePredictionOutcomePoints,
   hasPointsOnEveryPredictionOutcome,
   isLeftActiveGameViewCancelSignal,
@@ -5598,12 +5599,13 @@ async function createPredictionFromSettingsUnlocked(overrides = {}, options = {}
   draft.meta.profile = profile;
   draft.meta.broadcasterId = broadcaster;
   draft.meta.contextKey = bindContext ? compatibleCurrentContextKey : null;
-  const body = {
-    broadcaster_id: broadcaster,
+  const body = buildTwitchPredictionCreateBody({
+    broadcasterId: broadcaster,
     title: draft.title,
-    outcomes: [{ title: draft.yesTitle }, { title: draft.noTitle }],
-    prediction_window: predictionWindow
-  };
+    yesTitle: draft.yesTitle,
+    noTitle: draft.noTitle,
+    windowSeconds: predictionWindow
+  });
   const result = await twitchRequest('/predictions', { method: 'POST', body: JSON.stringify(body) });
   const item = result.data?.[0];
   if (!item) throw new Error('Twitch did not return a prediction');

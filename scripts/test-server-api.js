@@ -13,7 +13,11 @@ const gsiToken = 'a'.repeat(64);
 let output = '';
 
 await mkdir(join(dataDir, 'assets'), { recursive: true });
-await writeFile(join(dataDir, 'config.json'), JSON.stringify({ dota: { gsiToken } }));
+await writeFile(join(dataDir, 'config.json'), JSON.stringify({
+  dota: { gsiToken },
+  predictions: { windowSeconds: 420, autoLockAtGameSeconds: 0 },
+  spectatorPredictions: { windowSeconds: 420, autoLockAtGameSeconds: 75 }
+}));
 const startupState = JSON.stringify({
   streamerStats: { wins: 7, losses: 3 },
   events: [{ at: '2026-01-01T00:00:00.000Z', type: 'test', message: 'startup sentinel' }]
@@ -97,6 +101,10 @@ try {
   assert.equal(snapshot.state.streamerStats.wins, 7);
   assert.equal(snapshot.state.streamerStats.losses, 3);
   assert.equal(snapshot.config.dota.gsiToken, '********');
+  assert.equal(snapshot.config.predictions.windowSeconds, 420);
+  assert.equal(snapshot.config.predictions.autoLockAtGameSeconds, 0);
+  assert.equal(snapshot.config.spectatorPredictions.windowSeconds, 420);
+  assert.equal(snapshot.config.spectatorPredictions.autoLockAtGameSeconds, 75);
   assert.ok(snapshot.state.events.some((event) => event.message === 'startup sentinel'));
   assert.equal((await request('/api/streamer-stats/reset', {})).response.status, 200);
 
@@ -127,6 +135,14 @@ try {
   assert.deepEqual(region.json.region, { x: -1920, y: -200, width: 120, height: 30 });
 
   const configUpdate = await request('/api/config', {
+    predictions: {
+      windowSeconds: 420,
+      autoLockAtGameSeconds: 0
+    },
+    spectatorPredictions: {
+      windowSeconds: 420,
+      autoLockAtGameSeconds: 120
+    },
     protection: {
       matchIntel: {
         showStreamerStats: true,
@@ -137,6 +153,15 @@ try {
     }
   });
   assert.equal(configUpdate.response.status, 200);
+  assert.equal(configUpdate.json.config.predictions.windowSeconds, 420);
+  assert.equal(configUpdate.json.config.predictions.autoLockAtGameSeconds, 0);
+  assert.equal(configUpdate.json.config.spectatorPredictions.windowSeconds, 420);
+  assert.equal(configUpdate.json.config.spectatorPredictions.autoLockAtGameSeconds, 120);
+  const persistedConfig = JSON.parse(await readFile(join(dataDir, 'config.json'), 'utf8'));
+  assert.equal(persistedConfig.predictions.windowSeconds, 420);
+  assert.equal(persistedConfig.predictions.autoLockAtGameSeconds, 0);
+  assert.equal(persistedConfig.spectatorPredictions.windowSeconds, 420);
+  assert.equal(persistedConfig.spectatorPredictions.autoLockAtGameSeconds, 120);
 
   const spectator = await request('/gsi/dota2', {
     map: { game_state: 'DOTA_GAMERULES_STATE_GAME_IN_PROGRESS', matchid: 'spectated-1', clock_time: 100 },

@@ -68,6 +68,21 @@ export function withPredictionCreationLifecycle(meta, { automatic = false, clock
   };
 }
 
+export function buildTwitchPredictionCreateBody({
+  broadcasterId,
+  title,
+  yesTitle,
+  noTitle,
+  windowSeconds
+}) {
+  return {
+    broadcaster_id: broadcasterId,
+    title,
+    outcomes: [{ title: yesTitle }, { title: noTitle }],
+    prediction_window: windowSeconds
+  };
+}
+
 export function shouldAutoLockPredictionAtGameTime(prediction, meta, settings, gsi) {
   if (prediction?.status !== 'ACTIVE') return false;
   const lockAtGameSeconds = optionalFiniteNumber(settings?.autoLockAtGameSeconds);

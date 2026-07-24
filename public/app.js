@@ -9,8 +9,19 @@ function cloneSpectatorPredictionPanel() {
   clone.dataset.page = 'spectatorPredictions';
   clone.dataset.predictionProfile = 'spectator';
   source.dataset.predictionProfile = 'own';
+  const clonedIds = new Map();
   for (const element of clone.querySelectorAll('[id]')) {
-    element.id = `spectator${element.id[0].toUpperCase()}${element.id.slice(1)}`;
+    const sourceId = element.id;
+    const spectatorId = `spectator${sourceId[0].toUpperCase()}${sourceId.slice(1)}`;
+    clonedIds.set(sourceId, spectatorId);
+    element.id = spectatorId;
+  }
+  for (const element of clone.querySelectorAll('[aria-controls], [aria-describedby]')) {
+    for (const attribute of ['aria-controls', 'aria-describedby']) {
+      const value = element.getAttribute(attribute);
+      if (!value) continue;
+      element.setAttribute(attribute, value.split(/\s+/).map((id) => clonedIds.get(id) || id).join(' '));
+    }
   }
   const heading = clone.querySelector('h2');
   if (heading) heading.textContent = 'Ставки при просмотре игр';
@@ -369,6 +380,10 @@ const els = {
   predictionForm: document.querySelector('#predictionForm'),
   predictionTypeForm: document.querySelector('#predictionTypeForm'),
   predictionWindow: document.querySelector('#predictionWindow'),
+  autoLockAtGameStart: document.querySelector('#autoLockAtGameStart'),
+  autoLockAtGameSecondsWrap: document.querySelector('#autoLockAtGameSecondsWrap'),
+  autoLockAtGameSeconds: document.querySelector('#autoLockAtGameSeconds'),
+  autoLockAtGameSecondsHint: document.querySelector('#autoLockAtGameSecondsHint'),
   autoCreate: document.querySelector('#autoCreate'),
   forceStreamOnline: document.querySelector('#forceStreamOnline'),
   forceStreamOnlineHint: document.querySelector('#forceStreamOnlineHint'),
@@ -401,6 +416,10 @@ const els = {
   spectatorPredictionForm: document.querySelector('#spectatorPredictionForm'),
   spectatorPredictionTypeForm: document.querySelector('#spectatorPredictionTypeForm'),
   spectatorPredictionWindow: document.querySelector('#spectatorPredictionWindow'),
+  spectatorAutoLockAtGameStart: document.querySelector('#spectatorAutoLockAtGameStart'),
+  spectatorAutoLockAtGameSecondsWrap: document.querySelector('#spectatorAutoLockAtGameSecondsWrap'),
+  spectatorAutoLockAtGameSeconds: document.querySelector('#spectatorAutoLockAtGameSeconds'),
+  spectatorAutoLockAtGameSecondsHint: document.querySelector('#spectatorAutoLockAtGameSecondsHint'),
   spectatorAutoCreate: document.querySelector('#spectatorAutoCreate'),
   spectatorForceStreamOnline: document.querySelector('#spectatorForceStreamOnline'),
   spectatorForceStreamOnlineHint: document.querySelector('#spectatorForceStreamOnlineHint'),
@@ -1094,14 +1113,17 @@ const translations = {
     varTotalDeaths: 'смерти обеих команд',
     varTotalAssists: 'ассисты обеих команд',
     title: 'Заголовок',
-    windowSec: 'Окно, сек',
+    windowSec: 'Максимальное время приёма Twitch, сек',
+    autoLockAtGameStart: 'Закрывать приём после начала игры',
+    autoLockAtGameSeconds: 'Через сколько секунд',
+    autoLockAtGameSecondsHint: 'Только для автоматически созданных прогнозов. Этот предел может закрыть приём раньше максимального таймера Twitch.',
     outcome1: 'Исход 1',
     outcome2: 'Исход 2',
     autoCreate: 'Создавать автоматически',
     forceStreamOnline: 'Считать стрим онлайн для авто-прогнозов',
     forceStreamOnlineHint: 'Если включить, бот будет создавать авто-прогнозы даже когда Twitch показывает offline. Используй только если статус канала определяется неверно.',
     streamForcedShort: 'принудительно online',
-    autoResolve: 'Закрывать автоматически',
+    autoResolve: 'Автоматически завершать прогноз по результату',
     cancelUncontestedPrediction: 'Отменять, если один исход без ставок',
     cancelUncontestedHint: 'Если после игры хотя бы на один исход не поставили баллы канала, бот отменит прогноз вместо выбора победившего исхода.',
     autoCancelInvalidGame: 'Отменять незасчитанную игру',
@@ -1541,14 +1563,17 @@ const translations = {
     varTotalDeaths: 'both teams deaths',
     varTotalAssists: 'both teams assists',
     title: 'Title',
-    windowSec: 'Window, sec',
+    windowSec: 'Maximum Twitch entry time, sec',
+    autoLockAtGameStart: 'Lock entries after the game starts',
+    autoLockAtGameSeconds: 'After how many seconds',
+    autoLockAtGameSecondsHint: 'Automatic predictions only. This cutoff may lock entries before the maximum Twitch timer ends.',
     outcome1: 'Outcome 1',
     outcome2: 'Outcome 2',
     autoCreate: 'Create automatically',
     forceStreamOnline: 'Treat stream as online for auto predictions',
     forceStreamOnlineHint: 'When enabled, the bot creates automatic predictions even if Twitch reports the channel as offline. Use it only when Twitch status detection is wrong.',
     streamForcedShort: 'forced online',
-    autoResolve: 'Resolve automatically',
+    autoResolve: 'Resolve automatically when the result is known',
     cancelUncontestedPrediction: 'Cancel if one outcome has no points',
     cancelUncontestedHint: 'After the game, if at least one outcome has no Channel Points, the bot cancels the prediction instead of resolving it.',
     autoCancelInvalidGame: 'Cancel invalid game',
@@ -2057,6 +2082,9 @@ function applyLanguage(config) {
     if (span) span.textContent = variableLabel(chip.dataset.var);
   });
   setLabelText(els.predictionWindow.closest('label'), t('windowSec'));
+  setLabelText(els.autoLockAtGameStart.closest('label'), t('autoLockAtGameStart'));
+  setLabelText(els.autoLockAtGameSeconds.closest('label'), t('autoLockAtGameSeconds'));
+  els.autoLockAtGameSecondsHint.textContent = t('autoLockAtGameSecondsHint');
   setLabelText(els.autoCreate.closest('label'), t('autoCreate'));
   setLabelText(els.forceStreamOnline.closest('label'), t('forceStreamOnline'));
   els.forceStreamOnlineHint.textContent = t('forceStreamOnlineHint');
@@ -2081,6 +2109,9 @@ function applyLanguage(config) {
     const ctx = predictionEditor(profile);
     if (profile === 'own') continue;
     setLabelText(ctx.predictionWindow.closest('label'), t('windowSec'));
+    setLabelText(ctx.autoLockAtGameStart.closest('label'), t('autoLockAtGameStart'));
+    setLabelText(ctx.autoLockAtGameSeconds.closest('label'), t('autoLockAtGameSeconds'));
+    ctx.autoLockAtGameSecondsHint.textContent = t('autoLockAtGameSecondsHint');
     setLabelText(ctx.autoCreate.closest('label'), t('autoCreate'));
     setLabelText(ctx.forceStreamOnline.closest('label'), t('forceStreamOnline'));
     ctx.forceStreamOnlineHint.textContent = t('forceStreamOnlineHint');
@@ -2522,6 +2553,11 @@ function renderPredictionEditorConfig(profile, config) {
   const ctx = predictionEditor(profile);
   if (!ctx.form || !config) return;
   setInputValue(ctx.predictionWindow, config.windowSeconds);
+  const autoLockAtGameSeconds = Number(config.autoLockAtGameSeconds ?? 60);
+  const autoLockAtGameStart = Number.isFinite(autoLockAtGameSeconds) && autoLockAtGameSeconds > 0;
+  ctx.autoLockAtGameStart.checked = autoLockAtGameStart;
+  setInputValue(ctx.autoLockAtGameSeconds, autoLockAtGameStart ? autoLockAtGameSeconds : 60);
+  updatePredictionAutoLockVisibility(ctx);
   ctx.autoCreate.checked = config.autoCreate;
   ctx.forceStreamOnline.checked = config.forceStreamOnline === true;
   ctx.forceStreamOnlineHint.hidden = !ctx.forceStreamOnline.checked;
@@ -2596,6 +2632,10 @@ function predictionEditor(profile = 'own') {
     form: spectator ? els.spectatorPredictionForm : els.predictionForm,
     typeForm: spectator ? els.spectatorPredictionTypeForm : els.predictionTypeForm,
     predictionWindow: spectator ? els.spectatorPredictionWindow : els.predictionWindow,
+    autoLockAtGameStart: spectator ? els.spectatorAutoLockAtGameStart : els.autoLockAtGameStart,
+    autoLockAtGameSecondsWrap: spectator ? els.spectatorAutoLockAtGameSecondsWrap : els.autoLockAtGameSecondsWrap,
+    autoLockAtGameSeconds: spectator ? els.spectatorAutoLockAtGameSeconds : els.autoLockAtGameSeconds,
+    autoLockAtGameSecondsHint: spectator ? els.spectatorAutoLockAtGameSecondsHint : els.autoLockAtGameSecondsHint,
     autoCreate: spectator ? els.spectatorAutoCreate : els.autoCreate,
     forceStreamOnline: spectator ? els.spectatorForceStreamOnline : els.forceStreamOnline,
     forceStreamOnlineHint: spectator ? els.spectatorForceStreamOnlineHint : els.forceStreamOnlineHint,
@@ -2627,6 +2667,13 @@ function predictionProfileFromElement(element) {
 
 function predictionProfiles() {
   return ['own', 'spectator'];
+}
+
+function updatePredictionAutoLockVisibility(ctx) {
+  const hidden = ctx.autoLockAtGameStart?.checked !== true;
+  ctx.autoLockAtGameStart?.setAttribute('aria-expanded', String(!hidden));
+  if (ctx.autoLockAtGameSecondsWrap) ctx.autoLockAtGameSecondsWrap.hidden = hidden;
+  if (ctx.autoLockAtGameSecondsHint) ctx.autoLockAtGameSecondsHint.hidden = hidden;
 }
 
 function buildPredictionTypeControls(profile = 'own') {
@@ -4798,6 +4845,10 @@ for (const profile of predictionProfiles()) {
     ctx.forceStreamOnlineHint.hidden = !ctx.forceStreamOnline.checked;
     schedulePredictionConfigSave(profile);
   });
+  ctx.autoLockAtGameStart?.addEventListener('change', () => {
+    updatePredictionAutoLockVisibility(ctx);
+    schedulePredictionConfigSave(profile);
+  });
   ctx.cancelUncontestedPrediction?.addEventListener('change', () => {
     ctx.cancelUncontestedHint.hidden = !ctx.cancelUncontestedPrediction.checked;
     schedulePredictionConfigSave(profile);
@@ -4826,8 +4877,10 @@ function schedulePredictionConfigSave(profile = 'own') {
 
 function predictionConfigFromForm(profile = 'own') {
   const ctx = predictionEditor(profile);
+  const autoLockAtGameSeconds = Math.max(1, Number(ctx.autoLockAtGameSeconds.value) || 60);
   return {
     windowSeconds: Number(ctx.predictionWindow.value),
+    autoLockAtGameSeconds: ctx.autoLockAtGameStart.checked ? autoLockAtGameSeconds : 0,
     autoCreate: ctx.autoCreate.checked,
     forceStreamOnline: ctx.forceStreamOnline.checked,
     autoResolve: ctx.autoResolve.checked,
