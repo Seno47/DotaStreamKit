@@ -1,6 +1,6 @@
 {
   "name": "dotastreamkit",
-  "version": "1.5.10",
+  "version": "1.5.11",
   "private": true,
   "description": "Local Dota 2 stream protection and Twitch Channel Points prediction automation.",
   "type": "module",
@@ -27,12 +27,12 @@
     "build:mac": "powershell -ExecutionPolicy Bypass -File scripts/build-macos-release.ps1"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20.9.0"
   },
   "license": "MIT",
   "dependencies": {
     "node-screenshots": "^0.2.8",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.3",
     "tesseract.js": "^7.0.0"
   }
 }
