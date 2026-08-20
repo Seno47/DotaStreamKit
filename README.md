@@ -1,14 +1,38 @@
-# DotaStreamKit
+# DotaStreamKit — Dota 2 OBS Overlay & Twitch Predictions
 
-Local desktop tool for Dota 2 streamers: stream protection overlays for OBS plus Twitch Channel Points Predictions automation.
+<p align="center">
+  <img src="./assets/readme/hero.webp" width="100%" alt="DotaStreamKit: local Dota 2 streamer toolkit with OBS stream protection, MMR overlays, and Twitch Predictions automation">
+</p>
 
-Русская версия ниже. English version is after it.
+<p align="center">
+  <a href="https://github.com/Seno47/DotaStreamKit/releases/latest"><img alt="Latest DotaStreamKit release" src="https://img.shields.io/github/v/release/Seno47/DotaStreamKit?display_name=tag&sort=semver"></a>
+  <a href="https://github.com/Seno47/DotaStreamKit/actions/workflows/codeql.yml"><img alt="CodeQL status" src="https://github.com/Seno47/DotaStreamKit/actions/workflows/codeql.yml/badge.svg"></a>
+  <a href="./LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/Seno47/DotaStreamKit"></a>
+</p>
 
-> [!IMPORTANT]
-> **Sponsor: [XyraNet VPN](https://xyranet.pro)**
-> VPN service for streamers and gamers. Website: [xyranet.pro](https://xyranet.pro), Telegram bot: [@XyraNet_bot](https://t.me/XyraNet_bot).
+**DotaStreamKit is a free, open-source toolkit for Dota 2 streamers.** It adds OBS Browser Source overlays for anti-stream-sniping draft and minimap protection, Match Intel, streamer MMR statistics, and automated Twitch Channel Points Predictions powered by Dota 2 Game State Integration (GSI).
 
-If the project helps you, please leave a star on GitHub: https://github.com/Seno47/DotaStreamKit
+**DotaStreamKit — бесплатный локальный набор инструментов для стримеров Dota 2.** Он добавляет защиту от стримснайпинга в OBS, скрывает драфт и миникарту, показывает Match Intel и MMR-статистику, а также автоматизирует прогнозы Twitch за баллы канала через Dota 2 GSI.
+
+**[Download the latest release](https://github.com/Seno47/DotaStreamKit/releases/latest)** · [Быстрый старт на русском](#быстрый-старт-через-релиз) · [Quick start in English](#quick-start-with-a-release) · [OBS setup](#obs-setup)
+
+Windows x64, Linux x64, and macOS arm64/x64 builds are available. DotaStreamKit runs locally, uses the official Dota 2 GSI interface, and does not inject into the game client.
+
+Key capabilities:
+
+- protect the stream by covering draft picks, top-bar picks, minimap ward information, and queue/search areas;
+- add OBS overlays for rank medals, MMR goals, W-L, notable players, Aegis/Roshan timers, and live prediction status;
+- create, lock, resolve, and safely cancel Twitch Channel Points Predictions from live match state;
+- configure streamer and spectator profiles independently from a bilingual RU/EN dashboard.
+
+<p align="center">
+  <img src="./docs/readme/overlay-preview.webp" width="100%" alt="DotaStreamKit OBS overlay editor preview with an in-game MMR goal positioned over Dota 2">
+</p>
+
+> [!NOTE]
+> Project sponsor / Спонсор проекта: **[XyraNet VPN](https://xyranet.pro)** · [Website](https://xyranet.pro) · [Telegram bot](https://t.me/XyraNet_bot)
+
+If DotaStreamKit helps your stream, please [star the repository](https://github.com/Seno47/DotaStreamKit). It helps other Dota 2 streamers discover the project.
 
 ## Навигация
 

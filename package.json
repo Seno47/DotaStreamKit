@@ -2,7 +2,26 @@
   "name": "dotastreamkit",
   "version": "1.5.11",
   "private": true,
-  "description": "Local Dota 2 stream protection and Twitch Channel Points prediction automation.",
+  "description": "Local Dota 2 streamer toolkit with OBS anti-stream-sniping overlays and Twitch Channel Points Predictions automation.",
+  "keywords": [
+    "dota2",
+    "twitch",
+    "obs",
+    "obs-overlay",
+    "streamer-tools",
+    "anti-stream-sniping",
+    "channel-points",
+    "twitch-predictions",
+    "game-state-integration"
+  ],
+  "homepage": "https://github.com/Seno47/DotaStreamKit#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Seno47/DotaStreamKit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Seno47/DotaStreamKit/issues"
+  },
   "type": "module",
   "scripts": {
     "start": "node src/server.js",

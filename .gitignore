@@ -4,3 +4,5 @@ node_modules/
 tools/
 npm-debug.log*
 .env
+.playwright-cli/
+output/
