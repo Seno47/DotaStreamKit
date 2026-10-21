@@ -51,7 +51,7 @@
   "license": "MIT",
   "dependencies": {
     "node-screenshots": "^0.2.8",
-    "sharp": "^0.35.3",
+    "sharp": "^0.35.5",
     "tesseract.js": "^7.0.0"
   }
 }
